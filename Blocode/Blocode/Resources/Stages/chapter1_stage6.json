@@ -1,0 +1,22 @@
+{
+  "id": "ch1_stage6",
+  "chapter": 1,
+  "stageNumber": 6,
+  "name": "종합",
+  "mapData": {
+    "grid": [
+      [0, 0, 1, 1, 1],
+      [0, 0, 1, 0, 1],
+      [1, 1, 1, 0, 1],
+      [1, 0, 0, 0, 1],
+      [1, 1, 0, 1, 1]
+    ],
+    "start": { "x": 0, "y": 2 },
+    "startDirection": "up",
+    "goal":  { "x": 4, "y": 0 }
+  },
+  "starThresholds": {
+    "threeStar": 7,
+    "twoStar": 9
+  }
+}

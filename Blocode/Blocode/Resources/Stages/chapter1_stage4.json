@@ -1,0 +1,20 @@
+{
+  "id": "ch1_stage4",
+  "chapter": 1,
+  "stageNumber": 4,
+  "name": "지그재그",
+  "mapData": {
+    "grid": [
+      [0, 1, 1],
+      [1, 1, 0],
+      [1, 0, 0]
+    ],
+    "start": { "x": 0, "y": 2 },
+    "startDirection": "up",
+    "goal":  { "x": 2, "y": 0 }
+  },
+  "starThresholds": {
+    "threeStar": 7,
+    "twoStar": 9
+  }
+}

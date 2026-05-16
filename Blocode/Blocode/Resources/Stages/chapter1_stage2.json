@@ -1,0 +1,22 @@
+{
+  "id": "ch1_stage2",
+  "chapter": 1,
+  "stageNumber": 2,
+  "name": "한 발 더",
+  "mapData": {
+    "grid": [
+      [0, 1, 0],
+      [0, 1, 0],
+      [0, 1, 0],
+      [0, 1, 0],
+      [0, 1, 0]
+    ],
+    "start": { "x": 1, "y": 4 },
+    "startDirection": "up",
+    "goal":  { "x": 1, "y": 0 }
+  },
+  "starThresholds": {
+    "threeStar": 3,
+    "twoStar": 5
+  }
+}

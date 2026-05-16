@@ -1,0 +1,47 @@
+# ========================
+# 프로젝트 내부 문서 (GitHub 비공개)
+# ========================
+BlackX.md
+UserProfile.md
+Blocode — UI 컨셉.pdf
+
+# ========================
+# Xcode
+# ========================
+*.xcuserstate
+*.xcworkspace/xcuserdata/
+*.xcworkspace/xcshareddata/
+xcuserdata/
+*.moved-aside
+*.pbxuser
+*.mode1v3
+*.mode2v3
+*.perspectivev3
+*.orig
+DerivedData/
+*.hmap
+*.ipa
+*.dSYM.zip
+*.dSYM
+
+# ========================
+# Swift Package Manager
+# ========================
+.build/
+.swiftpm/
+Packages/
+
+# ========================
+# macOS
+# ========================
+.DS_Store
+.AppleDouble
+.LSOverride
+Thumbs.db
+
+# ========================
+# 빌드 결과물
+# ========================
+build/
+*.o
+*.d
