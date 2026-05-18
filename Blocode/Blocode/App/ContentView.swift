@@ -131,11 +131,7 @@ struct ContentView: View {
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundStyle(Color(UIColor.secondaryLabel))
                     .frame(width: 36, height: 36)
-                    .background(Color(UIColor { traits in
-                        traits.userInterfaceStyle == .dark
-                            ? UIColor(red: 0.14, green: 0.15, blue: 0.18, alpha: 1.0)
-                            : UIColor(red: 0.984, green: 0.965, blue: 0.910, alpha: 1.0)
-                    }))
+                    .background(Color.cardBackground)
                     .clipShape(RoundedRectangle(cornerRadius: 10))
                     .shadow(color: Color.black.opacity(0.08), radius: 8, x: 0, y: 2)
             }
@@ -295,11 +291,7 @@ struct ContentView: View {
         .padding(.horizontal, 14)
         .padding(.vertical, 14)
         // 카드 배경 — 팔레트와 동일한 크림색
-        .background(Color(UIColor { traits in
-            traits.userInterfaceStyle == .dark
-                ? UIColor(red: 0.18, green: 0.19, blue: 0.23, alpha: 1.0)
-                : UIColor(red: 251/255, green: 246/255, blue: 232/255, alpha: 1.0)
-        }))
+        .background(Color.statCardBackground)
         .clipShape(RoundedRectangle(cornerRadius: 16))
         .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 2)
     }

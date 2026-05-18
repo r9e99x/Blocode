@@ -56,4 +56,61 @@ extension Color {
         return Color(NSColor.windowBackgroundColor)
         #endif
     }
+
+    // MARK: - 공통 UI 색상
+
+    /// 별점 골드 색상 — 획득한 별 아이콘에 일괄 사용
+    static var starGold: Color {
+        Color(red: 0.95, green: 0.72, blue: 0.28)
+    }
+
+    /// 카드/소형 버튼 배경 — 설정 버튼, 홈 버튼 등
+    /// 라이트: #fbf6e8 (크림) / 다크: #23262e (짙은 남색)
+    static var cardBackground: Color {
+        Color(UIColor { traits in
+            traits.userInterfaceStyle == .dark
+                ? UIColor(red: 0.14, green: 0.15, blue: 0.18, alpha: 1.0)
+                : UIColor(red: 0.984, green: 0.965, blue: 0.910, alpha: 1.0)
+        })
+    }
+
+    /// 코드 패널 배경 — 게임 화면 하단 코드 편집 패널
+    /// 라이트: #fbf6e8 (크림) / 다크: #1c1f29 (더 짙은 남색)
+    static var panelBackground: Color {
+        Color(UIColor { traits in
+            traits.userInterfaceStyle == .dark
+                ? UIColor(red: 0.11, green: 0.12, blue: 0.16, alpha: 1.0)
+                : UIColor(red: 0.984, green: 0.965, blue: 0.910, alpha: 1.0)
+        })
+    }
+
+    /// 통계 카드 배경 — 홈 화면 별/챕터/연속 카드
+    /// 라이트: #fbf6e8 (크림) / 다크: #2e3148 (미드 남색)
+    static var statCardBackground: Color {
+        Color(UIColor { traits in
+            traits.userInterfaceStyle == .dark
+                ? UIColor(red: 0.18, green: 0.19, blue: 0.23, alpha: 1.0)
+                : UIColor(red: 251/255, green: 246/255, blue: 232/255, alpha: 1.0)
+        })
+    }
+
+    /// 잠금 상태 배경 — 잠긴 스테이지/챕터 아이콘 배경
+    /// 라이트: #e5ded1 (연한 베이지) / 다크: #33353f (차콜 그레이)
+    static var lockedBackground: Color {
+        Color(UIColor { traits in
+            traits.userInterfaceStyle == .dark
+                ? UIColor(red: 0.20, green: 0.21, blue: 0.25, alpha: 1.0)
+                : UIColor(red: 229/255, green: 222/255, blue: 209/255, alpha: 1.0)
+        })
+    }
+
+    /// 게임 맵 배경 — SpriteKit 맵 영역 배경
+    /// 라이트: #efe5cd (따뜻한 크림) / 다크: #1a1f2e (짙은 남색)
+    static var mapBackground: Color {
+        Color(UIColor { traits in
+            traits.userInterfaceStyle == .dark
+                ? UIColor(red: 0.10, green: 0.12, blue: 0.18, alpha: 1.0)
+                : UIColor(red: 239/255, green: 229/255, blue: 205/255, alpha: 1.0)
+        })
+    }
 }

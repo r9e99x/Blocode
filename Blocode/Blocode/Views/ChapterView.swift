@@ -39,16 +39,7 @@ struct ChapterView: View {
         }
     }
 
-    /// 잠금 아이콘 배경색 — 앱 배경(#f4ecd7)보다 확실히 어둡게
-    private var lockedIconBg: Color {
-        Color(UIColor { traits in
-            traits.userInterfaceStyle == .dark
-                ? UIColor(red: 0.20, green: 0.21, blue: 0.25, alpha: 1.0)
-                : UIColor(red: 229/255, green: 222/255, blue: 209/255, alpha: 1.0) // #e5ded1
-        })
-    }
-
-    /// 아직 클리어하지 않은 첫 번째 스테이지 번호 (현재 진행 위치)
+/// 아직 클리어하지 않은 첫 번째 스테이지 번호 (현재 진행 위치)
     /// — "지금 여기" 레이블을 이 스테이지에 표시
     private var currentStageNumber: Int? {
         stages.first {
@@ -172,17 +163,7 @@ struct ChapterView: View {
 
         return HStack(alignment: .center, spacing: 8) {
             // 개별 별 아이콘 나열 — 획득한 만큼 채워짐
-            HStack(spacing: 2) {
-                ForEach(0..<maxStar, id: \.self) { i in
-                    Image(systemName: i < total ? "star.fill" : "star")
-                        .font(.system(size: 10))
-                        .foregroundStyle(
-                            i < total
-                                ? Color(red: 0.95, green: 0.72, blue: 0.28)  // 골드
-                                : Color.primary.opacity(0.22)                  // 연한 빈 별
-                        )
-                }
-            }
+            StarRatingView(earned: total, total: maxStar, size: 10, spacing: 2)
 
             Spacer()
 
@@ -259,17 +240,7 @@ struct ChapterView: View {
                         .foregroundStyle(.primary)
                 } else if !locked {
                     // 획득한 별 수에 따라 채워진 별 / 빈 별 표시
-                    HStack(spacing: 3) {
-                        ForEach(0..<3, id: \.self) { i in
-                            Image(systemName: i < earned ? "star.fill" : "star")
-                                .font(.system(size: 14))
-                                .foregroundStyle(
-                                    i < earned
-                                        ? Color(red: 0.95, green: 0.72, blue: 0.28)
-                                        : Color.primary.opacity(0.20)
-                                )
-                        }
-                    }
+                    StarRatingView(earned: earned)
                 }
             }
             .padding(.horizontal, 20)
@@ -278,14 +249,10 @@ struct ChapterView: View {
         .buttonStyle(.plain)
         .opacity(locked ? 0.72 : 1.0)
         // 눌림 상태 추적
-        .simultaneousGesture(DragGesture(minimumDistance: 0)
-            .onChanged { _ in
-                withAnimation(.easeInOut(duration: 0.08)) { pressedStageNumber = stage.stageNumber }
-            }
-            .onEnded { _ in
-                withAnimation(.easeInOut(duration: 0.08)) { pressedStageNumber = nil }
-            }
-        )
+        .onPressState(isPressed: Binding(
+            get: { pressedStageNumber == stage.stageNumber },
+            set: { pressed in pressedStageNumber = pressed ? stage.stageNumber : nil }
+        ))
     }
 
     // MARK: - 스테이지 아이콘 (챕터 버튼과 동일한 3D 구조)
@@ -295,7 +262,7 @@ struct ChapterView: View {
         let darkFace = Color(red: 42/255, green: 37/255, blue: 32/255)
 
         let faceColor: Color = {
-            if locked    { return lockedIconBg }
+            if locked    { return Color.lockedBackground }
             if isCurrent { return darkFace }
             return chapterColor
         }()

@@ -7,17 +7,6 @@
 
 import SwiftUI
 
-// MARK: - ChapterInfo
-/// 챕터 선택 화면에서 사용하는 챕터 정보 모델
-private struct ChapterInfo: Identifiable {
-    let id: Int                     // 챕터 번호 (1~5)
-    var number: Int { id }          // id의 alias — 가독성을 위한 computed property
-    let title: String               // 챕터 이름 (예: "기본기")
-    let stageCount: Int             // 챕터 내 스테이지 수
-    let color: Color                // 챕터 카드 색상
-    let requiredStarsFromPrev: Int  // 이전 챕터에서 필요한 최소 별점 (잠금 해제 조건)
-}
-
 // MARK: - ChapterSelectView
 /// 모든 챕터를 지그재그 맵 형태로 표시하는 화면
 struct ChapterSelectView: View {
@@ -114,7 +103,7 @@ struct ChapterSelectView: View {
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundStyle(Color(UIColor.secondaryLabel))
                     .frame(width: 36, height: 36)
-                    .background(cardColor)
+                    .background(Color.cardBackground)
                     .clipShape(RoundedRectangle(cornerRadius: 10))
                     .shadow(color: Color.black.opacity(0.08), radius: 8, x: 0, y: 2)
             }
@@ -214,7 +203,7 @@ struct ChapterSelectView: View {
 
                     // ① 위 뒷면 — 눌리면 사라짐
                     ZStack {
-                        RoundedRectangle(cornerRadius: 26).fill(unlocked ? chapter.color : lockedCardColor)
+                        RoundedRectangle(cornerRadius: 26).fill(unlocked ? chapter.color : Color.lockedBackground)
                         RoundedRectangle(cornerRadius: 26).fill(Color.white.opacity(unlocked ? 0.32 : 0.18))
                     }
                     .frame(width: cardSize, height: cardSize)
@@ -222,7 +211,7 @@ struct ChapterSelectView: View {
 
                     // ② 아래 뒷면 — 눌리면 사라짐
                     ZStack {
-                        RoundedRectangle(cornerRadius: 26).fill(unlocked ? chapter.color : lockedCardColor)
+                        RoundedRectangle(cornerRadius: 26).fill(unlocked ? chapter.color : Color.lockedBackground)
                         RoundedRectangle(cornerRadius: 26).fill(Color.black.opacity(unlocked ? 0.28 : 0.10))
                     }
                     .frame(width: cardSize, height: cardSize)
@@ -232,7 +221,7 @@ struct ChapterSelectView: View {
                     // ③ 앞면 — 눌리면 아래 뒷면 자리까지 완전히 내려감
                     ZStack {
                         RoundedRectangle(cornerRadius: 26)
-                            .fill(unlocked ? chapter.color : lockedCardColor)
+                            .fill(unlocked ? chapter.color : Color.lockedBackground)
                         if isPressed {
                             RoundedRectangle(cornerRadius: 26).fill(Color.black.opacity(0.10))
                         }
@@ -272,49 +261,26 @@ struct ChapterSelectView: View {
                 navPath.append(AppRoute.chapter(chapter.number))
             }
             // 눌림 상태 추적 — 탭과 동시 실행
-            .simultaneousGesture(DragGesture(minimumDistance: 0)
-                .onChanged { _ in
-                    withAnimation(.easeInOut(duration: 0.08)) { pressedChapterId = chapter.id }
-                }
-                .onEnded { _ in
-                    withAnimation(.easeInOut(duration: 0.08)) { pressedChapterId = nil }
-                }
-            )
+            .onPressState(isPressed: Binding(
+                get: { pressedChapterId == chapter.id },
+                set: { pressed in pressedChapterId = pressed ? chapter.id : nil }
+            ))
 
             // 챕터 이름
             Text(chapter.title)
                 .font(.system(size: 13, weight: .medium))
                 .foregroundStyle(unlocked ? Color.primary : Color.secondary)
 
-            // 별 진행도 (최대 3개로 정규화)
-            starsRow(earned: earned, maxStars: max(chapter.stageCount * 3, 3))
+            // 별 진행도 (비율 기반으로 최대 3개 표시)
+            let maxStars = max(chapter.stageCount * 3, 3)
+            let filledCount: Int = {
+                guard maxStars > 0, earned > 0 else { return 0 }
+                return max(1, min(3, Int(Double(earned) / Double(maxStars) * 3 + 0.5)))
+            }()
+            StarRatingView(earned: filledCount, size: 11)
                 .opacity(unlocked ? 1.0 : 0.35)  // 잠긴 챕터는 흐리게
         }
         .frame(width: cardSize + 20)  // 레이블이 카드보다 조금 넓게
-    }
-
-    // MARK: - 별 행
-
-    /// 획득 별을 최대 3개 기준으로 시각화하는 별 행
-    private func starsRow(earned: Int, maxStars: Int) -> some View {
-        // 비율에 따라 채워진 별 수 계산 (1~3개 범위로 클램핑)
-        let filledCount: Int = {
-            guard maxStars > 0, earned > 0 else { return 0 }
-            return max(1, min(3, Int(Double(earned) / Double(maxStars) * 3 + 0.5)))
-        }()
-
-        return HStack(spacing: 3) {
-            ForEach(0..<3, id: \.self) { i in
-                // 채워진 별: 골드 / 빈 별: 연한 색
-                Image(systemName: i < filledCount ? "star.fill" : "star")
-                    .font(.system(size: 11))
-                    .foregroundStyle(
-                        i < filledCount
-                            ? Color(red: 0.95, green: 0.72, blue: 0.28)  // 골드
-                            : Color.primary.opacity(0.22)                  // 연한 빈 별
-                    )
-            }
-        }
     }
 
     // MARK: - 헬퍼
@@ -341,25 +307,6 @@ struct ChapterSelectView: View {
         }.count
     }
 
-    // MARK: - 색상 헬퍼
-
-    /// 홈 버튼 배경색 — 다크/라이트 모드 대응
-    private var cardColor: Color {
-        Color(UIColor { traits in
-            traits.userInterfaceStyle == .dark
-                ? UIColor(red: 0.14, green: 0.15, blue: 0.18, alpha: 1.0)
-                : UIColor(red: 0.984, green: 0.965, blue: 0.910, alpha: 1.0) // #fbf6e8
-        })
-    }
-
-    /// 잠긴 챕터 카드 배경색 — 따뜻한 회색 계열
-    private var lockedCardColor: Color {
-        Color(UIColor { traits in
-            traits.userInterfaceStyle == .dark
-                ? UIColor(red: 0.20, green: 0.21, blue: 0.25, alpha: 1.0)
-                : UIColor(red: 0.90, green: 0.87, blue: 0.82, alpha: 1.0) // 따뜻한 회색
-        })
-    }
 }
 
 // MARK: - Preview

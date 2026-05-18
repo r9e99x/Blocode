@@ -58,13 +58,7 @@ struct SettingsView: View {
                                 .font(.system(size: 12, weight: .bold))
                                 .foregroundStyle(Color(UIColor.secondaryLabel))
                                 .frame(width: 34, height: 34)
-                                .background(
-                                    Color(UIColor { traits in
-                                        traits.userInterfaceStyle == .dark
-                                            ? UIColor(red: 0.14, green: 0.15, blue: 0.18, alpha: 1.0)
-                                            : UIColor(red: 0.984, green: 0.965, blue: 0.910, alpha: 1.0) // #fbf6e8
-                                    })
-                                )
+                                .background(Color.cardBackground)
                                 .clipShape(RoundedRectangle(cornerRadius: 10))
                                 .shadow(color: Color.black.opacity(0.08), radius: 8, x: 0, y: 2)
                         }
@@ -409,11 +403,7 @@ struct SettingsView: View {
     @ViewBuilder
     private func settingsCard<Content: View>(@ViewBuilder content: () -> Content) -> some View {
         content()
-            .background(Color(UIColor { traits in
-                traits.userInterfaceStyle == .dark
-                    ? UIColor(red: 0.14, green: 0.15, blue: 0.18, alpha: 1.0)   // 다크: 약간 밝은 패널
-                    : UIColor(red: 0.984, green: 0.965, blue: 0.910, alpha: 1.0) // 라이트: #fbf6e8
-            }))
+            .background(Color.cardBackground)
             .clipShape(RoundedRectangle(cornerRadius: 16))
             .shadow(color: Color.black.opacity(0.07), radius: 10, x: 0, y: 3)
     }
