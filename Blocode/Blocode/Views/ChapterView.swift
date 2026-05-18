@@ -16,7 +16,8 @@ struct ChapterView: View {
 
     private let stages: [Stage]                     // 챕터 내 모든 스테이지 데이터
     @ObservedObject private var progress = ProgressService.shared  // 진행도 감지
-    @State private var retryAlertStage: Stage? = nil  // 재도전 확인 알럿 대상 스테이지
+    @State private var retryAlertStage:    Stage? = nil  // 재도전 확인 알럿 대상 스테이지
+    @State private var pressedStageNumber: Int?   = nil  // 눌린 스테이지 아이콘 번호 추적
 
     init(navPath: Binding<NavigationPath>, chapter: Int) {
         self._navPath = navPath
@@ -233,7 +234,8 @@ struct ChapterView: View {
 
                 // 3D 스테이지 아이콘 (숫자 / 체크 / 자물쇠)
                 stageIcon(number: stage.stageNumber,
-                          locked: locked, cleared: cleared, isCurrent: isCurrent)
+                          locked: locked, cleared: cleared, isCurrent: isCurrent,
+                          isPressed: pressedStageNumber == stage.stageNumber)
 
                 // 스테이지 텍스트 정보
                 VStack(alignment: .leading, spacing: 3) {
@@ -274,43 +276,50 @@ struct ChapterView: View {
             .padding(.vertical, 12)
         }
         .buttonStyle(.plain)
-        .opacity(locked ? 0.72 : 1.0)  // 잠긴 스테이지는 흐리게 표시
+        .opacity(locked ? 0.72 : 1.0)
+        // 눌림 상태 추적
+        .simultaneousGesture(DragGesture(minimumDistance: 0)
+            .onChanged { _ in
+                withAnimation(.easeInOut(duration: 0.08)) { pressedStageNumber = stage.stageNumber }
+            }
+            .onEnded { _ in
+                withAnimation(.easeInOut(duration: 0.08)) { pressedStageNumber = nil }
+            }
+        )
     }
 
     // MARK: - 스테이지 아이콘 (챕터 버튼과 동일한 3D 구조)
 
     /// 스테이지 번호/상태를 표시하는 3D 아이콘
-    private func stageIcon(number: Int, locked: Bool, cleared: Bool, isCurrent: Bool) -> some View {
-        // 따뜻한 다크 브라운 #2a2520 — "현재 진행 중" 아이콘 색상
+    private func stageIcon(number: Int, locked: Bool, cleared: Bool, isCurrent: Bool, isPressed: Bool = false) -> some View {
         let darkFace = Color(red: 42/255, green: 37/255, blue: 32/255)
 
-        // 상태에 따른 앞면 색상 결정
         let faceColor: Color = {
-            if locked    { return lockedIconBg }   // 잠금: 회색
-            if isCurrent { return darkFace }        // 현재: 다크 브라운
-            return chapterColor                     // 기본: 챕터 색상
+            if locked    { return lockedIconBg }
+            if isCurrent { return darkFace }
+            return chapterColor
         }()
 
-        let iconSize: CGFloat = 52  // 아이콘 전체 크기
-        let radius:   CGFloat = 18  // 모서리 반지름
-        let topDepth: CGFloat = 1   // 위 뒷면 높이
-        let botDepth: CGFloat = 2   // 아래 뒷면 높이
+        let iconSize: CGFloat = 52
+        let radius:   CGFloat = 18
+        let topDepth: CGFloat = 1
+        let botDepth: CGFloat = 2
 
         return ZStack(alignment: .top) {
 
-            // ① 위 뒷면 — 밝게 (앞면보다 위에 보임)
+            // ① 위 뒷면 — 눌리면 사라짐
             ZStack {
                 RoundedRectangle(cornerRadius: radius).fill(faceColor)
                 RoundedRectangle(cornerRadius: radius).fill(Color.white.opacity(isCurrent ? 0.18 : 0.32))
             }
             .frame(width: iconSize, height: iconSize)
+            .opacity(isPressed ? 0 : 1)
 
-            // ② 아래 뒷면 — 어둡게 (앞면보다 아래에 보임)
+            // ② 아래 뒷면 — 눌리면 사라짐
             Group {
                 if isCurrent {
-                    // 현재 진행 중: 특별한 하단 색상 (밝은 베이지)
                     RoundedRectangle(cornerRadius: radius)
-                        .fill(Color(red: 195/255, green: 189/255, blue: 172/255)) // #c3bdac
+                        .fill(Color(red: 195/255, green: 189/255, blue: 172/255))
                 } else {
                     ZStack {
                         RoundedRectangle(cornerRadius: radius).fill(faceColor)
@@ -319,24 +328,24 @@ struct ChapterView: View {
                 }
             }
             .frame(width: iconSize, height: iconSize)
-            .offset(y: topDepth + botDepth)  // 앞면 아래로 이동
+            .offset(y: topDepth + botDepth)
+            .opacity(isPressed ? 0 : 1)
 
-            // ③ 앞면 — topDepth만큼 내려서 위 뒷면이 보이게
+            // ③ 앞면 — 눌리면 아래 뒷면 자리까지 완전히 내려감
             ZStack {
                 RoundedRectangle(cornerRadius: radius).fill(faceColor)
-                // 상태에 따른 내부 콘텐츠
+                if isPressed {
+                    RoundedRectangle(cornerRadius: radius).fill(Color.black.opacity(0.10))
+                }
                 if locked {
-                    // 자물쇠 — 잠긴 상태
                     Image(systemName: "lock.fill")
                         .font(.system(size: 18))
                         .foregroundStyle(Color.primary.opacity(0.55))
                 } else if cleared {
-                    // 체크마크 — 클리어 완료
                     Image(systemName: "checkmark")
                         .font(.system(size: 20, weight: .bold))
                         .foregroundStyle(.white)
                 } else {
-                    // 스테이지 번호 — 미클리어 or 현재 진행 중
                     Text("\(number)")
                         .font(.system(size: 26, weight: .bold, design: .serif))
                         .italic()
@@ -344,7 +353,7 @@ struct ChapterView: View {
                 }
             }
             .frame(width: iconSize, height: iconSize)
-            .offset(y: topDepth)
+            .offset(y: isPressed ? topDepth + botDepth : topDepth)
         }
         .frame(width: iconSize, height: iconSize + topDepth + botDepth)
     }

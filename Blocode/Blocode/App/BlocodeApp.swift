@@ -34,14 +34,23 @@ struct BlocodeApp: App {
         }
     }()
 
+    // MARK: - 온보딩 표시 여부
+    /// 앱 최초 설치 시 false → 온보딩 표시 후 true로 저장
+    @AppStorage("hasSeenOnboarding") private var hasSeenOnboarding = false
+
     // MARK: - 앱 진입점
     var body: some Scene {
-        // 단일 윈도우 그룹으로 앱 화면 구성
         WindowGroup {
-            // 앱 시작 시 홈 화면으로 진입
-            ContentView()
+            if hasSeenOnboarding {
+                // 온보딩 완료 → 홈 화면
+                ContentView()
+            } else {
+                // 첫 실행 → 온보딩 화면
+                OnboardingView {
+                    hasSeenOnboarding = true
+                }
+            }
         }
-        // 모든 하위 뷰에서 SwiftData 컨테이너를 사용할 수 있도록 환경에 주입
         .modelContainer(sharedModelContainer)
     }
 }

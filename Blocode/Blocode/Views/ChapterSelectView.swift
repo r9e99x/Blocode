@@ -57,7 +57,8 @@ struct ChapterSelectView: View {
     }
 
     /// 스크롤 시 헤더 축소 여부
-    @State private var isCompact = false
+    @State private var isCompact        = false
+    @State private var pressedChapterId: Int? = nil  // 눌린 챕터 카드 ID 추적
 
     var body: some View {
         VStack(spacing: 0) {
@@ -198,38 +199,43 @@ struct ChapterSelectView: View {
 
     /// 개별 챕터를 표현하는 3D 카드 + 이름 + 별점 요약 뷰
     private func chapterNode(_ chapter: ChapterInfo) -> some View {
-        let unlocked = isUnlocked(chapter)     // 잠금 해제 여부
-        let earned   = chapterStars(chapter)   // 획득한 별 수
+        let unlocked  = isUnlocked(chapter)
+        let earned    = chapterStars(chapter)
+        let isPressed = pressedChapterId == chapter.id  // 현재 눌린 카드 여부
+
+        let topD: CGFloat = 2   // 위 뒷면 두께
+        let botD: CGFloat = 4   // 아래 뒷면 두께
 
         return VStack(spacing: 7) {
 
             // 카드
             ZStack(alignment: .topTrailing) {
-                // ── 3D 카드 본체 ──────────────────────────────────────
-                // ZStack(alignment: .top) 으로 앞면/뒷면 적층
                 ZStack(alignment: .top) {
 
-                    // ① 위 뒷면 — 밝게 (앞면보다 위에 살짝 보임)
+                    // ① 위 뒷면 — 눌리면 사라짐
                     ZStack {
                         RoundedRectangle(cornerRadius: 26).fill(unlocked ? chapter.color : lockedCardColor)
                         RoundedRectangle(cornerRadius: 26).fill(Color.white.opacity(unlocked ? 0.32 : 0.18))
                     }
                     .frame(width: cardSize, height: cardSize)
+                    .opacity(isPressed ? 0 : 1)
 
-                    // ② 아래 뒷면 — 어둡게 (그림자 효과)
+                    // ② 아래 뒷면 — 눌리면 사라짐
                     ZStack {
                         RoundedRectangle(cornerRadius: 26).fill(unlocked ? chapter.color : lockedCardColor)
                         RoundedRectangle(cornerRadius: 26).fill(Color.black.opacity(unlocked ? 0.28 : 0.10))
                     }
                     .frame(width: cardSize, height: cardSize)
-                    .offset(y: 6)   // topDepth(2) + botDepth(4)
+                    .offset(y: topD + botD)
+                    .opacity(isPressed ? 0 : 1)
 
-                    // ③ 앞면 — 5pt 내려서 위 뒷면이 보이게
+                    // ③ 앞면 — 눌리면 아래 뒷면 자리까지 완전히 내려감
                     ZStack {
                         RoundedRectangle(cornerRadius: 26)
                             .fill(unlocked ? chapter.color : lockedCardColor)
-
-                        // 잠금 해제: 챕터 번호 / 잠금: 자물쇠 아이콘
+                        if isPressed {
+                            RoundedRectangle(cornerRadius: 26).fill(Color.black.opacity(0.10))
+                        }
                         if unlocked {
                             Text("\(chapter.number)")
                                 .font(.system(size: 48, weight: .bold, design: .serif))
@@ -242,11 +248,11 @@ struct ChapterSelectView: View {
                         }
                     }
                     .frame(width: cardSize, height: cardSize)
-                    .offset(y: 2)   // topDepth
+                    .offset(y: isPressed ? topD + botD : topD)
                 }
-                .frame(width: cardSize, height: cardSize + 6)
+                .frame(width: cardSize, height: cardSize + topD + botD)
 
-                // 진행 배지 — 스테이지 클리어 수 표시 (예: "3/6")
+                // 진행 배지
                 if unlocked && chapter.stageCount > 0 {
                     let cleared = clearedStageCount(chapter)
                     Text("\(cleared)/\(chapter.stageCount)")
@@ -256,16 +262,24 @@ struct ChapterSelectView: View {
                         .padding(.vertical, 4)
                         .background(Color(red: 0.13, green: 0.13, blue: 0.13))
                         .clipShape(Capsule())
-                        .offset(x: 8, y: -8)  // 카드 우상단에 오버레이
+                        .offset(x: 8, y: -8)
                 }
             }
             .frame(width: cardSize + 10, height: cardSize + 10)
             .contentShape(Rectangle())
             .onTapGesture {
-                // 잠금 해제된 챕터이고 스테이지가 있을 때만 이동
                 guard unlocked && chapter.stageCount > 0 else { return }
                 navPath.append(AppRoute.chapter(chapter.number))
             }
+            // 눌림 상태 추적 — 탭과 동시 실행
+            .simultaneousGesture(DragGesture(minimumDistance: 0)
+                .onChanged { _ in
+                    withAnimation(.easeInOut(duration: 0.08)) { pressedChapterId = chapter.id }
+                }
+                .onEnded { _ in
+                    withAnimation(.easeInOut(duration: 0.08)) { pressedChapterId = nil }
+                }
+            )
 
             // 챕터 이름
             Text(chapter.title)

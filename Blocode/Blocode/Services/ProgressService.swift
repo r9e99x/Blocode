@@ -29,13 +29,19 @@ final class ProgressService: ObservableObject {
     @Published private(set) var results: [String: StageResult] = [:]
 
     // UserDefaults 저장 키
-    private let userDefaultsKey = "blocode_stage_results"
+    private let userDefaultsKey    = "blocode_stage_results"
+    private let streakKey          = "blocode_streak"
+    private let lastClearDateKey   = "blocode_last_clear_date"
+
+    // 연속 클리어 일수
+    @Published private(set) var streak: Int = 0
 
     // MARK: 초기화
 
     /// 초기화 시 UserDefaults에서 저장된 진행도 로드
     init() {
         load()
+        streak = UserDefaults.standard.integer(forKey: streakKey)
     }
 
     // MARK: - 읽기
@@ -86,6 +92,37 @@ final class ProgressService: ObservableObject {
 
     // MARK: - 쓰기
 
+    // MARK: - 홈 화면용 헬퍼
+
+    /// 전체 획득 별 수 (모든 챕터 합산)
+    func totalEarnedStars(chapters: [(id: Int, stageCount: Int)]) -> Int {
+        chapters.reduce(0) { total, ch in
+            total + totalStars(chapter: ch.id, stageCount: ch.stageCount)
+        }
+    }
+
+    /// 완료된 챕터 수 (해당 챕터의 모든 스테이지를 클리어한 경우)
+    func completedChapterCount(chapters: [(id: Int, stageCount: Int)]) -> Int {
+        chapters.filter { ch in
+            guard ch.stageCount > 0 else { return false }
+            return (1...ch.stageCount).allSatisfy { stageNum in
+                isCleared("ch\(ch.id)_stage\(stageNum)")
+            }
+        }.count
+    }
+
+    /// 이어서 할 다음 스테이지 (첫 번째 미클리어 스테이지)
+    func nextStage(chapters: [(id: Int, stageCount: Int)]) -> (chapter: Int, stage: Int)? {
+        for ch in chapters {
+            for stageNum in 1...max(ch.stageCount, 1) {
+                if !isCleared("ch\(ch.id)_stage\(stageNum)") {
+                    return (ch.id, stageNum)
+                }
+            }
+        }
+        return nil
+    }
+
     /// 스테이지 클리어 기록 저장 (별점/블럭수가 기존보다 좋을 때만 갱신)
     func recordClear(stageId: String, stars: Int, blockCount: Int) {
         let existing = results[stageId]
@@ -101,6 +138,29 @@ final class ProgressService: ObservableObject {
         )
         // 변경 사항 UserDefaults에 저장
         save()
+        // 연속 일수 갱신
+        updateStreak()
+    }
+
+    /// 오늘 처음 클리어 시 streak 증가, 하루 넘기면 리셋
+    private func updateStreak() {
+        let today = Calendar.current.startOfDay(for: Date())
+        let lastDate = UserDefaults.standard.object(forKey: lastClearDateKey) as? Date
+        let lastDay  = lastDate.map { Calendar.current.startOfDay(for: $0) }
+
+        if lastDay == today {
+            // 오늘 이미 클리어 기록 있음 — streak 유지
+            return
+        } else if let last = lastDay,
+                  Calendar.current.dateComponents([.day], from: last, to: today).day == 1 {
+            // 어제 클리어 — 연속 증가
+            streak += 1
+        } else {
+            // 하루 이상 비었음 — 리셋
+            streak = 1
+        }
+        UserDefaults.standard.set(today, forKey: lastClearDateKey)
+        UserDefaults.standard.set(streak, forKey: streakKey)
     }
 
     // MARK: - UserDefaults 영속성

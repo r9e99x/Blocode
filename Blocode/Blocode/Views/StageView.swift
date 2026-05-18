@@ -32,7 +32,10 @@ struct StageView: View {
     @State private var showSettings = false
 
     /// 코드 패널 확장 여부 (기본: 확장)
-    @State private var isPanelExpanded = true
+    @State private var isPanelExpanded  = true
+    @State private var isResetPressed    = false  // 리셋 버튼 눌림 상태
+    @State private var isRunPressed      = false  // 실행 버튼 눌림 상태
+    @State private var isSettingsPressed = false  // 설정 버튼 눌림 상태
 
     @Environment(\.colorScheme) private var colorScheme  // 다크/라이트 모드 감지
 
@@ -555,33 +558,33 @@ struct StageView: View {
 
             // 왼쪽: 리셋 / 전체 초기화 버튼
             Button {
-                // 캐릭터가 움직였으면 리셋 / 아직 안 움직였으면 전체 초기화
                 if viewModel.characterMoved { viewModel.reset() }
                 else { viewModel.fullReset() }
             } label: {
-                button3D(color: panelBackground, width: 54, height: 54, cornerRadius: 17) {
-                    // 캐릭터가 움직였으면 되돌리기 아이콘 / 아니면 전체 리셋 아이콘
+                button3D(color: panelBackground, width: 54, height: 54, cornerRadius: 17, isPressed: isResetPressed) {
                     Image(systemName: viewModel.characterMoved ? "arrow.uturn.backward" : "arrow.counterclockwise")
                         .font(.system(size: 20, weight: .medium))
                         .foregroundStyle(Color(UIColor.secondaryLabel))
                 }
             }
             .buttonStyle(.plain)
-            .disabled(viewModel.gameState == .running)  // 실행 중 비활성
+            .disabled(viewModel.gameState == .running)
+            .simultaneousGesture(DragGesture(minimumDistance: 0)
+                .onChanged { _ in withAnimation(.easeInOut(duration: 0.08)) { isResetPressed = true } }
+                .onEnded   { _ in withAnimation(.easeInOut(duration: 0.08)) { isResetPressed = false } }
+            )
             .frame(maxWidth: .infinity)
 
-            // 가운데: 실행 버튼 (블럭이 있고 idle 상태일 때 활성)
+            // 가운데: 실행 버튼
             Button { viewModel.run() } label: {
-                button3D(color: runButtonColor, width: 152, height: 54, cornerRadius: 27) {
+                button3D(color: runButtonColor, width: 152, height: 54, cornerRadius: 27, isPressed: isRunPressed) {
                     HStack(spacing: 8) {
                         if viewModel.gameState == .running {
-                            // 실행 중: 로딩 스피너
                             ProgressView()
                                 .progressViewStyle(.circular)
                                 .tint(.white)
                                 .scaleEffect(0.8)
                         } else {
-                            // 대기 중: 플레이 아이콘
                             Image(systemName: "play.fill")
                                 .font(.system(size: 15, weight: .bold))
                         }
@@ -592,20 +595,27 @@ struct StageView: View {
                 }
             }
             .buttonStyle(.plain)
-            // 블럭이 없거나 실행 중이면 터치 차단
             .allowsHitTesting(!(viewModel.codeBlocks.isEmpty || viewModel.gameState == .running))
+            .simultaneousGesture(DragGesture(minimumDistance: 0)
+                .onChanged { _ in withAnimation(.easeInOut(duration: 0.08)) { isRunPressed = true } }
+                .onEnded   { _ in withAnimation(.easeInOut(duration: 0.08)) { isRunPressed = false } }
+            )
             .animation(.easeInOut(duration: 0.15), value: viewModel.gameState)
 
             // 오른쪽: 설정 버튼
             Button { showSettings = true } label: {
-                button3D(color: panelBackground, width: 54, height: 54, cornerRadius: 17) {
+                button3D(color: panelBackground, width: 54, height: 54, cornerRadius: 17, isPressed: isSettingsPressed) {
                     Image(systemName: "gearshape")
                         .font(.system(size: 20, weight: .medium))
                         .foregroundStyle(Color(UIColor.secondaryLabel))
                 }
             }
             .buttonStyle(.plain)
-            .disabled(viewModel.gameState == .running)  // 실행 중 비활성
+            .disabled(viewModel.gameState == .running)
+            .simultaneousGesture(DragGesture(minimumDistance: 0)
+                .onChanged { _ in withAnimation(.easeInOut(duration: 0.08)) { isSettingsPressed = true } }
+                .onEnded   { _ in withAnimation(.easeInOut(duration: 0.08)) { isSettingsPressed = false } }
+            )
             .frame(maxWidth: .infinity)
             // 설정 화면 — 진행도 초기화 시 홈으로 이동
             .fullScreenCover(isPresented: $showSettings) {
@@ -619,6 +629,7 @@ struct StageView: View {
     }
 
     /// 3D 버튼 — 챕터/스테이지 버튼과 동일한 3레이어 구조
+    /// isPressed = true 시 뒷면 사라지고 앞면이 중앙으로 이동
     @ViewBuilder
     private func button3D<Content: View>(
         color: Color,
@@ -627,31 +638,38 @@ struct StageView: View {
         cornerRadius: CGFloat,
         topDepth: CGFloat = 2,
         botDepth: CGFloat = 2.5,
+        isPressed: Bool = false,
         @ViewBuilder label: () -> Content
     ) -> some View {
         ZStack(alignment: .top) {
-            // ① 위 뒷면 — color + white 0.28 (밝게)
+            // ① 위 뒷면 — 눌리면 사라짐
             ZStack {
                 RoundedRectangle(cornerRadius: cornerRadius).fill(color)
                 RoundedRectangle(cornerRadius: cornerRadius).fill(Color.white.opacity(0.28))
             }
             .frame(width: width, height: height)
+            .opacity(isPressed ? 0 : 1)
 
-            // ② 아래 뒷면 — color + black 0.22 (어둡게, 그림자 효과)
+            // ② 아래 뒷면 — 눌리면 사라짐
             ZStack {
                 RoundedRectangle(cornerRadius: cornerRadius).fill(color)
                 RoundedRectangle(cornerRadius: cornerRadius).fill(Color.black.opacity(0.22))
             }
             .frame(width: width, height: height)
             .offset(y: topDepth + botDepth)
+            .opacity(isPressed ? 0 : 1)
 
-            // ③ 앞면 — color + 라벨 콘텐츠
+            // ③ 앞면 — 눌리면 아래 뒷면 자리까지 완전히 내려감
             ZStack {
                 RoundedRectangle(cornerRadius: cornerRadius).fill(color)
+                // 눌렸을 때 살짝 어두워지는 오버레이
+                if isPressed {
+                    RoundedRectangle(cornerRadius: cornerRadius).fill(Color.black.opacity(0.10))
+                }
                 label()
             }
             .frame(width: width, height: height)
-            .offset(y: topDepth)
+            .offset(y: isPressed ? topDepth + botDepth : topDepth)
         }
         .frame(width: width, height: height + topDepth + botDepth)
     }
