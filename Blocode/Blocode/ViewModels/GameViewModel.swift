@@ -57,6 +57,10 @@ class GameViewModel: ObservableObject {
     /// 현재 스테이지 데이터 — 별점 기준, 맵 정보 포함
     private(set) var stage: Stage
 
+    /// 스테이지 로딩 실패 여부 — true이면 View가 폴백 UI를 표시
+    /// (init에서 한 번만 결정되며 이후 변하지 않음)
+    let loadFailed: Bool
+
     /// GameScene 참조 (캐릭터 이동 명령용) — weak으로 순환 참조 방지
     weak var scene: GameScene?
 
@@ -70,9 +74,30 @@ class GameViewModel: ObservableObject {
 
     // MARK: - 초기화
 
-    /// 스테이지 데이터로 ViewModel 초기화
+    /// 스테이지 데이터로 ViewModel 초기화 (프리뷰/테스트용 — 직접 주입)
     init(stage: Stage) {
         self.stage = stage
+        self.loadFailed = false
+    }
+
+    /// 챕터/스테이지 번호로 ViewModel 초기화 (프로덕션)
+    /// 데이터 소스(StageLoader) 접근은 View가 아닌 ViewModel의 책임
+    init(chapter: Int, stageNumber: Int) {
+        if let loaded = StageLoader.load(chapter: chapter, stage: stageNumber) {
+            self.stage = loaded
+            self.loadFailed = false
+        } else {
+            // 로딩 실패 — 타입 불변식(비옵셔널 Stage) 유지를 위한 안전 플레이스홀더
+            // (실제로는 View가 loadFailed를 보고 폴백 UI를 띄우므로 사용되지 않음)
+            self.stage = Stage.placeholder(chapter: chapter, stageNumber: stageNumber)
+            self.loadFailed = true
+        }
+    }
+
+    /// 다음 스테이지 존재 여부 — 챕터 마지막 스테이지이면 false
+    /// (데이터 접근은 StageLoader(Service)에 위임)
+    var hasNextStage: Bool {
+        StageLoader.load(chapter: stage.chapter, stage: stage.stageNumber + 1) != nil
     }
 
     // MARK: - 블럭 관리

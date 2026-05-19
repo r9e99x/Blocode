@@ -13,7 +13,8 @@ import SpriteKit
 /// 상단 네비게이션 + 맵(SpriteKit) + 스테이지 정보 + 코드 패널로 구성
 struct StageView: View {
 
-    let stage: Stage  // 현재 스테이지 데이터
+    /// 현재 스테이지 데이터 — 원본은 ViewModel이 보유 (로딩 책임도 VM)
+    private var stage: Stage { viewModel.stage }
 
     @StateObject private var viewModel: GameViewModel  // 게임 로직 ViewModel
     @State private var scene: GameScene?               // SpriteKit 씬 참조
@@ -34,19 +35,64 @@ struct StageView: View {
 
     @Environment(\.colorScheme) private var colorScheme  // 다크/라이트 모드 감지
 
-    init(stage: Stage, navPath: Binding<NavigationPath>) {
-        self.stage = stage
+    /// 프로덕션 진입점 — 챕터/스테이지 번호만 받고 로딩은 ViewModel(VM)이 수행
+    /// (View 계층에서 데이터 소스(StageLoader)를 직접 호출하지 않음 = 정석 MVVM)
+    init(chapter: Int, number: Int, navPath: Binding<NavigationPath>) {
         self._navPath = navPath
-        // 스테이지 데이터로 GameViewModel 초기화
+        _viewModel = StateObject(wrappedValue: GameViewModel(chapter: chapter, stageNumber: number))
+    }
+
+    /// 프리뷰/테스트용 — Stage를 직접 주입 (#Preview 전용)
+    init(stage: Stage, navPath: Binding<NavigationPath>) {
+        self._navPath = navPath
         _viewModel = StateObject(wrappedValue: GameViewModel(stage: stage))
     }
 
-    /// 다음 스테이지 존재 여부 — 챕터 마지막 스테이지이면 false
-    private var hasNextStage: Bool {
-        StageLoader.load(chapter: stage.chapter, stage: stage.stageNumber + 1) != nil
+    // MARK: - Body (로딩 성공/실패 분기)
+
+    var body: some View {
+        if viewModel.loadFailed {
+            // 스테이지 로딩 실패 — 빈 화면 대신 폴백 UI (정상 콘텐츠에서는 절대 진입 안 함)
+            stageLoadFailedView
+        } else {
+            loadedBody
+        }
     }
 
-var body: some View {
+    /// 스테이지 로딩 실패 시 표시되는 폴백 화면
+    private var stageLoadFailedView: some View {
+        VStack(spacing: 16) {
+            Image(systemName: "exclamationmark.triangle")
+                .font(.system(size: 40, weight: .semibold))
+                .foregroundStyle(Color.primary.opacity(0.45))
+            Text("스테이지를 불러올 수 없어요")
+                .font(.system(size: 18, weight: .bold))
+                .foregroundStyle(.primary)
+            Text("데이터가 없거나 손상됐어요.\n잠시 후 다시 시도해주세요.")
+                .font(.system(size: 14))
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+
+            Button {
+                navPath.removeLast()  // 이전 화면으로 복귀
+            } label: {
+                Text("돌아가기")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 28)
+                    .padding(.vertical, 12)
+                    .background(Color(red: 42/255, green: 37/255, blue: 32/255))
+                    .clipShape(RoundedRectangle(cornerRadius: 24))
+            }
+            .buttonStyle(.plain)
+            .padding(.top, 4)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Color.appBackground.ignoresSafeArea())
+        .navigationBarHidden(true)
+    }
+
+    private var loadedBody: some View {
         ZStack(alignment: .top) {
             VStack(spacing: 0) {
 
@@ -104,10 +150,10 @@ var body: some View {
                     stageLabel: "\(stage.chapter)-\(stage.stageNumber)",
                     stageName: stage.name,
                     threeStarCut: stage.starThresholds.threeStar,
-                    isLastStage: !hasNextStage,
+                    isLastStage: !viewModel.hasNextStage,
                     onClose: {
-                        // 닫기 → 챕터 화면으로 이동
-                        navPath.removeLast()
+                        // 닫기 → 챕터 화면으로 이동 (빈 스택이면 무시 — 언더플로우 방지)
+                        if !navPath.isEmpty { navPath.removeLast() }
                     },
                     onRetry: {
                         // 다시 도전 → 블럭 유지, 캐릭터만 리셋
@@ -118,22 +164,26 @@ var body: some View {
                         // 별 3개 + 마지막 스테이지: 챕터 선택 화면까지 2번 pop
                         viewModel.reset()
                         DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
-                            if hasNextStage {
-                                navPath.removeLast()
+                            if viewModel.hasNextStage {
+                                if !navPath.isEmpty { navPath.removeLast() }
                                 navPath.append(AppRoute.stage(
                                     chapter: stage.chapter,
                                     number: stage.stageNumber + 1
                                 ))
                             } else {
-                                // 마지막 스테이지(별 3개): stage → chapter → chapterSelect 2번 pop
-                                navPath.removeLast()
-                                navPath.removeLast()
+                                // 마지막(종합) 스테이지를 별 3개로 클리어 → "챕터 목록으로"
+                                // 진입 경로(홈 바로 시작 / 챕터 둘러보기)와 무관하게
+                                // 항상 챕터 선택 화면으로 결정적 이동 (pop 횟수 의존 제거)
+                                navPath = NavigationPath()
+                                navPath.append(AppRoute.chapterSelect)
                             }
                         }
                     },
                     onFinish: {
-                        // 마무리 버튼 (별 1~2개 + 마지막 스테이지): 스테이지 목록으로 1번 pop
-                        navPath.removeLast()
+                        // 마무리 버튼 (별 1~2개 + 마지막/종합 스테이지):
+                        // 진입 경로와 무관하게 항상 챕터 선택 화면으로 결정적 이동
+                        navPath = NavigationPath()
+                        navPath.append(AppRoute.chapterSelect)
                     }
                 )
                 .transition(.opacity)

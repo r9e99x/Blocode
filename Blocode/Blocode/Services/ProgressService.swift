@@ -7,9 +7,12 @@
 
 import Foundation
 import Combine
+import SwiftData
 
 // MARK: - StageResult
-/// 스테이지 하나의 클리어 기록 — UserDefaults에 JSON으로 저장
+/// 스테이지 하나의 클리어 기록을 뷰에 전달하기 위한 경량 값 타입(DTO)
+/// 실제 영속 저장은 SwiftData의 `StageProgress` 모델이 담당하며,
+/// 이 구조체는 SwiftData 모델을 뷰가 그대로 쓰지 않도록 감싸는 읽기 전용 미러임
 struct StageResult: Codable {
     var isCleared: Bool       // 클리어 여부
     var stars: Int            // 획득 별 수 0~3
@@ -17,31 +20,86 @@ struct StageResult: Codable {
 }
 
 // MARK: - ProgressService
-/// 스테이지 클리어 기록을 UserDefaults에 저장/불러오는 서비스
-/// 앱 전역에서 @EnvironmentObject 로 주입하여 사용
+/// 스테이지 클리어 기록을 SwiftData(`StageProgress`)에 저장/불러오는 서비스
+/// 앱 전역에서 `@ObservedObject ProgressService.shared` 로 주입하여 사용
+///
+/// 설계 메모:
+/// - 저장소는 SwiftData이지만, 외부 공개 API와 `@Published` 프로퍼티는
+///   기존(UserDefaults 시절)과 100% 동일하게 유지함 → 뷰/뷰모델 변경 없음
+/// - SwiftData 모델 변화를 뷰가 즉시 감지하도록, 메모리 미러(`results`)를
+///   `@Published`로 두고 쓰기 후 매번 다시 채움(=동기 읽기 API 유지)
+/// - 모든 호출은 메인 스레드 가정(뷰 body / MainActor.run / 설정 화면) →
+///   SwiftData `mainContext`를 안전하게 사용
+///
+/// iCloud 동기화: 현재 의도적으로 비활성(CloudKit 미연결). Apple Developer
+/// 등록이 필요한 기능이라, 등록 완료 후 ModelConfiguration에 CloudKit
+/// 컨테이너를 연결하면 별도 코드 변경 없이 동기화가 활성화됨.
 final class ProgressService: ObservableObject {
 
     // MARK: 싱글톤
     static let shared = ProgressService()
 
-    // MARK: Published — 뷰가 감지하는 진행도 딕셔너리
+    // MARK: SwiftData 컨테이너 / 컨텍스트
+    /// 앱 전역에서 공유하는 단일 ModelContainer
+    /// (BlocodeApp의 `.modelContainer(...)`도 이 인스턴스를 주입받아 사용 →
+    ///  스토어가 하나로 일원화되고, 추후 커스텀 맵 @Query도 같은 컨테이너 사용)
+    let modelContainer: ModelContainer
+    /// 메인 스레드 전용 컨텍스트 (모든 호출이 메인이라 안전)
+    private var context: ModelContext { modelContainer.mainContext }
+
+    // MARK: Published — 뷰가 감지하는 진행도 미러
     /// key: stageId (예: "ch1_stage1"), value: StageResult
+    /// SwiftData가 원본(source of truth)이고, 이 딕셔너리는 읽기 가속용 미러
     @Published private(set) var results: [String: StageResult] = [:]
 
-    // UserDefaults 저장 키
-    private let userDefaultsKey    = "blocode_stage_results"
-    private let streakKey          = "blocode_streak"
-    private let lastClearDateKey   = "blocode_last_clear_date"
-
-    // 연속 클리어 일수
+    // 연속 클리어 일수 — 단일 스칼라값이라 SwiftData가 아닌 UserDefaults 유지
+    // (관계형 데이터가 아니고 작아서, 작은 설정성 값은 UserDefaults가 적합)
     @Published private(set) var streak: Int = 0
+
+    // UserDefaults 저장 키 (streak 전용)
+    private let streakKey        = "blocode_streak"
+    private let lastClearDateKey = "blocode_last_clear_date"
 
     // MARK: 초기화
 
-    /// 초기화 시 UserDefaults에서 저장된 진행도 로드
-    init() {
-        load()
+    /// 초기화 시 SwiftData 컨테이너를 생성하고 저장된 진행도를 미러로 로드
+    private init() {
+        // 진행도 모델 스키마로 컨테이너 생성
+        let schema = Schema([StageProgress.self])
+        let config = ModelConfiguration(
+            schema: schema,
+            isStoredInMemoryOnly: false  // 영구 저장 (앱 종료 후에도 유지)
+            // 주의: iCloud 동기화 시 여기에 cloudKitDatabase 옵션 추가 예정
+            //       (Apple Developer 등록 필요 → 현재는 비활성)
+        )
+        do {
+            modelContainer = try ModelContainer(for: schema, configurations: [config])
+        } catch {
+            // 컨테이너 생성 실패 시 앱 종료 (치명적 오류)
+            fatalError("SwiftData 컨테이너 생성 실패: \(error)")
+        }
+
+        // SwiftData → 메모리 미러 채우기
+        reloadMirror()
+        // streak는 UserDefaults에서 로드
         streak = UserDefaults.standard.integer(forKey: streakKey)
+    }
+
+    // MARK: - 미러 동기화
+
+    /// SwiftData에 저장된 모든 StageProgress를 읽어 `results` 미러를 재구성
+    /// (쓰기 직후 호출하여 @Published 변경 → 뷰 자동 갱신)
+    private func reloadMirror() {
+        let all = (try? context.fetch(FetchDescriptor<StageProgress>())) ?? []
+        var dict: [String: StageResult] = [:]
+        for p in all {
+            dict[p.stageId] = StageResult(
+                isCleared: p.isCleared,
+                stars: p.stars,
+                bestBlockCount: p.bestBlockCount
+            )
+        }
+        results = dict  // @Published 할당 → 뷰 갱신
     }
 
     // MARK: - 읽기
@@ -90,8 +148,6 @@ final class ProgressService: ObservableObject {
         return !isCleared(prevId)
     }
 
-    // MARK: - 쓰기
-
     // MARK: - 홈 화면용 헬퍼
 
     /// 전체 획득 별 수 (모든 챕터 합산)
@@ -123,21 +179,33 @@ final class ProgressService: ObservableObject {
         return nil
     }
 
-    /// 스테이지 클리어 기록 저장 (별점/블럭수가 기존보다 좋을 때만 갱신)
-    func recordClear(stageId: String, stars: Int, blockCount: Int) {
-        let existing = results[stageId]
-        // 블럭 수는 더 적은 값(최솟값)으로 갱신
-        let newBest = min(blockCount, existing?.bestBlockCount ?? blockCount)
-        // 별점은 더 높은 값(최댓값)으로 갱신
-        let newStars = max(stars, existing?.stars ?? 0)
+    // MARK: - 쓰기
 
-        results[stageId] = StageResult(
-            isCleared: true,
-            stars: newStars,
-            bestBlockCount: newBest
+    /// 스테이지 클리어 기록 저장 (별점/블럭수가 기존보다 좋을 때만 갱신)
+    /// SwiftData에 upsert(있으면 갱신, 없으면 생성) 후 미러를 다시 채움
+    func recordClear(stageId: String, stars: Int, blockCount: Int) {
+        // 동일 stageId의 기존 기록 조회
+        let descriptor = FetchDescriptor<StageProgress>(
+            predicate: #Predicate { $0.stageId == stageId }
         )
-        // 변경 사항 UserDefaults에 저장
-        save()
+        let existing = (try? context.fetch(descriptor))?.first
+
+        let progress: StageProgress
+        if let existing {
+            progress = existing
+        } else {
+            // 신규 기록 생성 후 컨텍스트에 삽입
+            progress = StageProgress(stageId: stageId)
+            context.insert(progress)
+        }
+
+        // 더 좋은 기록(별 최댓값 / 블럭 최솟값)으로만 갱신 — 기존 로직과 동일
+        progress.update(stars: stars, blockCount: blockCount)
+
+        // 변경 사항 영속화
+        try? context.save()
+        // 메모리 미러 재구성 → @Published 변경으로 뷰 자동 갱신
+        reloadMirror()
         // 연속 일수 갱신
         updateStreak()
     }
@@ -163,27 +231,15 @@ final class ProgressService: ObservableObject {
         UserDefaults.standard.set(streak, forKey: streakKey)
     }
 
-    // MARK: - UserDefaults 영속성
+    // MARK: - 진행도 초기화 (설정 화면 / 테스트 편의)
 
-    /// 현재 results를 JSON으로 인코딩하여 UserDefaults에 저장
-    private func save() {
-        guard let data = try? JSONEncoder().encode(results) else { return }
-        UserDefaults.standard.set(data, forKey: userDefaultsKey)
-    }
-
-    /// UserDefaults에서 JSON 데이터를 읽어 results로 복원
-    private func load() {
-        guard let data = UserDefaults.standard.data(forKey: userDefaultsKey),
-              let saved = try? JSONDecoder().decode([String: StageResult].self, from: data) else {
-            return
-        }
-        results = saved
-    }
-
-    // MARK: - 개발용 리셋 (테스트 편의)
-    /// 모든 진행도 초기화 — UserDefaults에서도 삭제
+    /// 모든 스테이지 클리어 기록 초기화 — SwiftData에서도 전부 삭제
+    /// (streak는 기존 동작과 동일하게 건드리지 않음)
     func resetAll() {
+        // SwiftData의 StageProgress 전체 삭제
+        try? context.delete(model: StageProgress.self)
+        try? context.save()
+        // 메모리 미러 비우기 → @Published 변경으로 뷰 자동 갱신
         results = [:]
-        UserDefaults.standard.removeObject(forKey: userDefaultsKey)
     }
 }

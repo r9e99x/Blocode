@@ -12,24 +12,23 @@ import SwiftUI
 struct ChapterView: View {
 
     @Binding var navPath: NavigationPath    // 화면 이동 제어
-    let chapter: Int                        // 현재 챕터 번호
 
-    private let stages: [Stage]                     // 챕터 내 모든 스테이지 데이터
-    @ObservedObject private var progress = ProgressService.shared  // 진행도 감지
+    /// 챕터 화면 상태/로직 — 스테이지 로딩·진행 계산은 ViewModel이 담당 (MVVM)
+    @StateObject private var vm: ChapterViewModel
     @State private var retryAlertStage:    Stage? = nil  // 재도전 확인 알럿 대상 스테이지
     @State private var pressedStageNumber: Int?   = nil  // 눌린 스테이지 아이콘 번호 추적
 
     init(navPath: Binding<NavigationPath>, chapter: Int) {
         self._navPath = navPath
-        self.chapter  = chapter
-        // 챕터 JSON 파일에서 스테이지 목록 로드
-        self.stages   = StageLoader.loadChapter(chapter, stageCount: 6)
+        // ViewModel 초기화 (스테이지 로딩은 VM 생성 시 수행)
+        self._vm = StateObject(wrappedValue: ChapterViewModel(chapter: chapter))
     }
 
     // MARK: - 챕터 색상 (챕터 번호 → 색상)
     /// 챕터 번호에 따른 고유 색상 반환 — 헤더 배경과 스테이지 아이콘에 사용
+    /// (색상은 순수 UI 매핑이라 View에 유지 — VM은 UI 타입 비의존)
     var chapterColor: Color {
-        switch chapter {
+        switch vm.chapter {
         case 1:  return Color(red: 0.576, green: 0.788, blue: 0.671) // #93c9ab — 민트
         case 2:  return Color(red: 0.580, green: 0.760, blue: 0.880)
         case 3:  return Color(red: 0.930, green: 0.620, blue: 0.420)
@@ -37,15 +36,6 @@ struct ChapterView: View {
         case 5:  return Color(red: 0.880, green: 0.500, blue: 0.680)
         default: return Color.accentColor
         }
-    }
-
-/// 아직 클리어하지 않은 첫 번째 스테이지 번호 (현재 진행 위치)
-    /// — "지금 여기" 레이블을 이 스테이지에 표시
-    private var currentStageNumber: Int? {
-        stages.first {
-            !progress.isLocked(chapter: $0.chapter, stageNumber: $0.stageNumber) &&
-            !progress.isCleared($0.id)
-        }?.stageNumber
     }
 
     // status bar 높이 (safe area top) — 헤더 레이아웃 계산에 사용
@@ -106,7 +96,7 @@ struct ChapterView: View {
                 HStack(spacing: 4) {
                     Image(systemName: "chevron.left")
                         .font(.system(size: 12, weight: .bold))
-                    Text("CHAPTER \(String(format: "%02d", chapter))")
+                    Text("CHAPTER \(String(format: "%02d", vm.chapter))")
                         .font(.system(size: 12, weight: .bold))
                         .tracking(2)  // 자간 넓게
                 }
@@ -116,7 +106,7 @@ struct ChapterView: View {
             .padding(.top, 16)
 
             // 챕터 제목 (한국어)
-            Text(chapterTitle)
+            Text(vm.chapterTitle)
                 .font(.system(size: 42, weight: .bold))
                 .foregroundStyle(.primary)
                 .padding(.top, 6)
@@ -142,24 +132,12 @@ struct ChapterView: View {
         }
     }
 
-    /// 챕터 번호에 따른 한국어 제목 반환
-    private var chapterTitle: String {
-        switch chapter {
-        case 1: return "기본기"
-        case 2: return "변수"
-        case 3: return "조건문"
-        case 4: return "반복문"
-        case 5: return "함수"
-        default: return "챕터 \(chapter)"
-        }
-    }
-
     // MARK: - 별 진행도 바
 
     /// 챕터 전체 별 획득 현황을 시각화하는 바 (개별 별 아이콘 + 숫자)
     private var starProgressBar: some View {
-        let total  = progress.totalStars(chapter: chapter, stageCount: stages.count)  // 현재 획득 별
-        let maxStar = stages.count * 3  // 챕터 최대 별 수 (스테이지 수 × 3)
+        let total  = vm.totalStars()       // 현재 획득 별
+        let maxStar = vm.stages.count * 3  // 챕터 최대 별 수 (스테이지 수 × 3)
 
         return HStack(alignment: .center, spacing: 8) {
             // 개별 별 아이콘 나열 — 획득한 만큼 채워짐
@@ -184,11 +162,11 @@ struct ChapterView: View {
     /// 모든 스테이지를 세로로 나열하는 리스트 (구분선 포함)
     private var stageList: some View {
         VStack(spacing: 0) {
-            ForEach(stages) { stage in
+            ForEach(vm.stages) { stage in
                 stageRow(stage)
 
                 // 구분선 (마지막 스테이지 제외)
-                if stage.stageNumber < stages.count {
+                if stage.stageNumber < vm.stages.count {
                     Divider()
                         .padding(.leading, 76)   // 아이콘 너비 맞춤 들여쓰기
                         .padding(.trailing, 20)
@@ -201,10 +179,10 @@ struct ChapterView: View {
 
     /// 스테이지 하나를 표시하는 행 (아이콘 + 텍스트 + 별점 or "지금 여기")
     private func stageRow(_ stage: Stage) -> some View {
-        let locked    = progress.isLocked(chapter: stage.chapter, stageNumber: stage.stageNumber)
-        let cleared   = progress.isCleared(stage.id)
-        let earned    = progress.stars(for: stage.id)
-        let isCurrent = (stage.stageNumber == currentStageNumber)  // 현재 진행 위치 여부
+        let locked    = vm.isLocked(stage)
+        let cleared   = vm.isCleared(stage)
+        let earned    = vm.stars(stage)
+        let isCurrent = vm.isCurrent(stage)  // 현재 진행 위치 여부
 
         return Button {
             guard !locked else { return }  // 잠긴 스테이지는 탭 무효

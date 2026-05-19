@@ -12,26 +12,9 @@ import SwiftUI
 struct ChapterSelectView: View {
 
     @Binding var navPath: NavigationPath  // 뒤로가기 및 다음 화면 이동용
-    @ObservedObject private var progress = ProgressService.shared  // 진행도 감지
 
-    /// 챕터 목록 — 순서대로 잠금/해제 상태 계산
-    private let chapters: [ChapterInfo] = [
-        ChapterInfo(id: 1, title: "기본기",  stageCount: 6,
-                    color: Color(red: 0.576, green: 0.788, blue: 0.671), // #93c9ab
-                    requiredStarsFromPrev: 0),  // 챕터 1은 잠금 없음
-        ChapterInfo(id: 2, title: "변수",   stageCount: 0,
-                    color: Color(red: 0.58, green: 0.76, blue: 0.88),
-                    requiredStarsFromPrev: 12), // 챕터 1에서 별 12개 이상 필요
-        ChapterInfo(id: 3, title: "조건문", stageCount: 0,
-                    color: Color(red: 0.93, green: 0.62, blue: 0.42),
-                    requiredStarsFromPrev: 0),
-        ChapterInfo(id: 4, title: "반복문", stageCount: 0,
-                    color: Color(red: 0.45, green: 0.78, blue: 0.62),
-                    requiredStarsFromPrev: 0),
-        ChapterInfo(id: 5, title: "함수",   stageCount: 0,
-                    color: Color(red: 0.88, green: 0.50, blue: 0.68),
-                    requiredStarsFromPrev: 0),
-    ]
+    /// 챕터 선택 화면 상태/로직 — 챕터 목록·잠금·별점 계산은 ViewModel이 담당 (MVVM)
+    @StateObject private var vm = ChapterSelectViewModel()
 
     /// 각 챕터 카드 중심의 X 비율 (지그재그 배치) — 화면 너비 기준 0.0~1.0
     private let xCenterFracs: [CGFloat] = [0.26, 0.70, 0.22, 0.68, 0.30]
@@ -42,7 +25,7 @@ struct ChapterSelectView: View {
 
     /// 전체 맵 스크롤 영역 높이 계산
     private var totalMapHeight: CGFloat {
-        topPad + CGFloat(chapters.count) * rowSpacing + 60
+        topPad + CGFloat(vm.chapters.count) * rowSpacing + 60
     }
 
     /// 스크롤 시 헤더 축소 여부
@@ -131,7 +114,7 @@ struct ChapterSelectView: View {
             ZStack(alignment: .topLeading) {
 
                 // 포물선 점선 커넥터 — 챕터 간 연결선
-                ForEach(0..<chapters.count - 1, id: \.self) { i in
+                ForEach(0..<vm.chapters.count - 1, id: \.self) { i in
                     connectorPath(
                         from: CGPoint(
                             x: xCenterFracs[i]     * w,
@@ -145,7 +128,7 @@ struct ChapterSelectView: View {
                 }
 
                 // 챕터 노드 (카드 + 레이블 + 별)
-                ForEach(Array(chapters.enumerated()), id: \.element.id) { i, ch in
+                ForEach(Array(vm.chapters.enumerated()), id: \.element.id) { i, ch in
                     chapterNode(ch)
                         // 카드 중심을 xCenterFracs 위치에 맞춤
                         .offset(
@@ -188,8 +171,8 @@ struct ChapterSelectView: View {
 
     /// 개별 챕터를 표현하는 3D 카드 + 이름 + 별점 요약 뷰
     private func chapterNode(_ chapter: ChapterInfo) -> some View {
-        let unlocked  = isUnlocked(chapter)
-        let earned    = chapterStars(chapter)
+        let unlocked  = vm.isUnlocked(chapter)
+        let earned    = vm.chapterStars(chapter)
         let isPressed = pressedChapterId == chapter.id  // 현재 눌린 카드 여부
 
         let topD: CGFloat = 2   // 위 뒷면 두께
@@ -243,7 +226,7 @@ struct ChapterSelectView: View {
 
                 // 진행 배지
                 if unlocked && chapter.stageCount > 0 {
-                    let cleared = clearedStageCount(chapter)
+                    let cleared = vm.clearedStageCount(chapter)
                     Text("\(cleared)/\(chapter.stageCount)")
                         .font(.system(size: 11, weight: .bold))
                         .foregroundStyle(.white)
@@ -281,30 +264,6 @@ struct ChapterSelectView: View {
                 .opacity(unlocked ? 1.0 : 0.35)  // 잠긴 챕터는 흐리게
         }
         .frame(width: cardSize + 20)  // 레이블이 카드보다 조금 넓게
-    }
-
-    // MARK: - 헬퍼
-
-    /// 챕터 잠금 해제 여부 확인
-    private func isUnlocked(_ chapter: ChapterInfo) -> Bool {
-        if chapter.number == 1 { return true }  // 챕터 1은 항상 열림
-        // 이전 챕터의 별점이 requiredStarsFromPrev 이상이고 스테이지가 있을 때 열림
-        let prevStars = progress.totalStars(chapter: chapter.number - 1, stageCount: 6)
-        return prevStars >= chapter.requiredStarsFromPrev && chapter.stageCount > 0
-    }
-
-    /// 챕터에서 획득한 총 별점 반환
-    private func chapterStars(_ chapter: ChapterInfo) -> Int {
-        guard chapter.stageCount > 0 else { return 0 }
-        return progress.totalStars(chapter: chapter.number, stageCount: chapter.stageCount)
-    }
-
-    /// 챕터에서 클리어한 스테이지 수 반환
-    private func clearedStageCount(_ chapter: ChapterInfo) -> Int {
-        guard chapter.stageCount > 0 else { return 0 }
-        return (1...chapter.stageCount).filter {
-            progress.isCleared("ch\(chapter.number)_stage\($0)")
-        }.count
     }
 
 }

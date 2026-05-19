@@ -21,22 +21,8 @@ struct ContentView: View {
     /// 테마 변경 감지 — SettingsService 변경 시 뷰 자동 갱신
     @ObservedObject private var settings = SettingsService.shared
 
-    /// 진행도 감지 — 별점/챕터/연속 등 실시간 반영
-    @ObservedObject private var progress = ProgressService.shared
-
-    /// 홈화면에서 사용할 챕터 목록 (id, stageCount)
-    private let chapters: [(id: Int, stageCount: Int)] = [
-        (id: 1, stageCount: 6),
-        (id: 2, stageCount: 0),
-        (id: 3, stageCount: 0),
-        (id: 4, stageCount: 0),
-        (id: 5, stageCount: 0),
-    ]
-
-    /// 전체 획득 가능 별 수 (모든 챕터 합산)
-    private var totalPossibleStars: Int {
-        chapters.reduce(0) { $0 + $1.stageCount * 3 }
-    }
+    /// 홈 화면 상태/로직 — 진행도 가공은 ViewModel이 담당 (MVVM)
+    @StateObject private var vm = HomeViewModel()
 
     var body: some View {
         // 루트 NavigationStack — path 바인딩으로 화면 전환 관리
@@ -52,10 +38,9 @@ struct ContentView: View {
                         ChapterView(navPath: $navPath, chapter: number)
 
                     case .stage(let chapter, let number):
-                        if let stage = StageLoader.load(chapter: chapter, stage: number) {
-                            StageView(stage: stage, navPath: $navPath)
-                                .id(stage.id)
-                        }
+                        // 로딩은 StageView의 ViewModel이 담당 (View 계층 데이터 호출 제거)
+                        StageView(chapter: chapter, number: number, navPath: $navPath)
+                            .id("stage-\(chapter)-\(number)")
                     }
                 }
         }
@@ -205,34 +190,10 @@ struct ContentView: View {
             }
 
             // 진행도에 따른 동적 서브타이틀
-            Text(dynamicSubtitle)
+            Text(vm.dynamicSubtitle)
                 .font(.system(size: 14, weight: .regular))
                 .foregroundStyle(.secondary)
                 .padding(.top, 4)
-        }
-    }
-
-    /// 진행 상황에 따라 달라지는 서브타이틀 문구
-    private var dynamicSubtitle: String {
-        let earned  = progress.totalEarnedStars(chapters: chapters)
-        let total   = totalPossibleStars
-        let completed = progress.completedChapterCount(chapters: chapters)
-
-        if earned == 0 {
-            // 아직 시작 전
-            return "첫 번째 블럭을 놓아볼까요?"
-        } else if completed == chapters.count {
-            // 모든 챕터 완료
-            return "모든 챕터를 완료했어요! 대단해요 🎉"
-        } else if progress.streak >= 7 {
-            // 연속 7일 이상
-            return "\(progress.streak)일 연속! 꾸준함이 실력이 돼요."
-        } else if earned >= total / 2 {
-            // 절반 이상 달성
-            return "절반을 넘었어요! 계속 달려봐요."
-        } else {
-            // 일반 진행 중
-            return "오늘도 한 스테이지씩 나아가요."
         }
     }
 
@@ -244,21 +205,21 @@ struct ContentView: View {
             statCard(
                 icon: "star.fill",
                 iconColor: Color(red: 1.0, green: 0.82, blue: 0.25),
-                value: "\(progress.totalEarnedStars(chapters: chapters))/\(totalPossibleStars)",
+                value: "\(vm.earnedStars)/\(vm.totalPossibleStars)",
                 label: "획득 별"
             )
             // 완료 챕터 수 카드
             statCard(
                 icon: "checkmark.seal.fill",
                 iconColor: Color(red: 0.576, green: 0.788, blue: 0.671),
-                value: "\(progress.completedChapterCount(chapters: chapters))/\(chapters.count)",
+                value: "\(vm.completedChapters)/\(vm.chapterCount)",
                 label: "챕터 완료"
             )
             // 연속 학습 일수 카드
             statCard(
                 icon: "flame.fill",
                 iconColor: Color(red: 1.0, green: 0.55, blue: 0.30),
-                value: "\(progress.streak)일째",
+                value: "\(vm.streak)일째",
                 label: "연속"
             )
         }
@@ -326,9 +287,9 @@ struct ContentView: View {
         let botBackColor  = Color(red: 190/255, green: 181/255, blue: 159/255)
 
         // 다음 스테이지 정보 (없으면 모든 완료 상태)
-        let next = progress.nextStage(chapters: chapters)
+        let next = vm.nextStage
         // 진행 기록이 없으면 "시작하기" 모드
-        let isFirstTime = progress.totalEarnedStars(chapters: chapters) == 0
+        let isFirstTime = vm.isFirstTime
 
         return Button {
             if let next = next {
