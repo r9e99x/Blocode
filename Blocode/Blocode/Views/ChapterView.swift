@@ -140,12 +140,12 @@ struct ChapterView: View {
         let maxStar = vm.stages.count * 3  // 챕터 최대 별 수 (스테이지 수 × 3)
 
         return HStack(alignment: .center, spacing: 8) {
-            // 개별 별 아이콘 나열 — 획득한 만큼 채워짐
+            // 별 아이콘 — 남은 공간을 채우고, 넘치면 잘림 (스테이지 수 많을수록 별도 많아짐)
             StarRatingView(earned: total, total: maxStar, size: 10, spacing: 2)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .clipped()
 
-            Spacer()
-
-            // 숫자 요약 (X / Y stars)
+            // 숫자 요약 (X / Y stars) — .fixedSize()로 텍스트가 절대 압축되지 않음
             VStack(alignment: .trailing, spacing: 0) {
                 Text("\(total) / \(maxStar)")
                     .font(.system(size: 14, weight: .semibold))
@@ -154,6 +154,7 @@ struct ChapterView: View {
                     .font(.system(size: 11))
                     .foregroundStyle(Color.primary.opacity(0.55))
             }
+            .fixedSize()
         }
     }
 

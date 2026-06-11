@@ -122,23 +122,74 @@ class GameViewModel: ObservableObject {
         codeBlocks.move(fromOffsets: source, toOffset: destination)
     }
 
-    /// repeat 블럭의 자식 블럭 추가 — 해당 인덱스가 repeat 블럭일 때만 동작
+    /// 컨테이너 블럭(repeat / if / function)에 자식 블럭 추가
     func addChildBlock(_ type: BlockType, to parentIndex: Int) {
         guard gameState == .idle,
               codeBlocks.indices.contains(parentIndex),
-              codeBlocks[parentIndex].isRepeatBlock else { return }
+              codeBlocks[parentIndex].hasChildren else { return }  // repeat·if·function 모두 허용
         let child = Block(type: type)
         codeBlocks[parentIndex].children?.append(child)
     }
 
-    /// repeat 블럭의 자식 블럭 삭제
+    /// 컨테이너 블럭(repeat / if / function)의 자식 블럭 삭제
     func removeChildBlock(at childIndex: Int, from parentIndex: Int) {
         guard gameState == .idle,
               codeBlocks.indices.contains(parentIndex),
-              codeBlocks[parentIndex].isRepeatBlock,
+              codeBlocks[parentIndex].hasChildren,  // repeat·if·function 모두 허용
               let children = codeBlocks[parentIndex].children,
               children.indices.contains(childIndex) else { return }
         codeBlocks[parentIndex].children?.remove(at: childIndex)
+    }
+
+    /// if 블럭의 조건(pathClear / pathBlocked) 변경
+    func setIfCondition(_ condition: IfCondition, at index: Int) {
+        guard gameState == .idle,
+              codeBlocks.indices.contains(index),
+              codeBlocks[index].type == .ifBlock else { return }
+        codeBlocks[index].ifCondition = condition
+    }
+
+    // MARK: - 중첩 블럭 관리 (컨테이너 블럭의 자식 컨테이너 조작)
+
+    /// 자식 컨테이너(repeat/if)에 손자 블럭 추가
+    func addGrandchildBlock(_ type: BlockType, parentIndex: Int, childIndex: Int) {
+        guard gameState == .idle,
+              codeBlocks.indices.contains(parentIndex),
+              let children = codeBlocks[parentIndex].children,
+              children.indices.contains(childIndex),
+              codeBlocks[parentIndex].children![childIndex].hasChildren else { return }
+        codeBlocks[parentIndex].children![childIndex].children?.append(Block(type: type))
+    }
+
+    /// 자식 컨테이너(repeat/if)에서 손자 블럭 삭제
+    func removeGrandchildBlock(grandchildIndex: Int, parentIndex: Int, childIndex: Int) {
+        guard gameState == .idle,
+              codeBlocks.indices.contains(parentIndex),
+              let children = codeBlocks[parentIndex].children,
+              children.indices.contains(childIndex),
+              let grandchildren = codeBlocks[parentIndex].children![childIndex].children,
+              grandchildren.indices.contains(grandchildIndex) else { return }
+        codeBlocks[parentIndex].children![childIndex].children?.remove(at: grandchildIndex)
+    }
+
+    /// 자식 if 블럭의 조건 변경
+    func setChildIfCondition(_ condition: IfCondition, parentIndex: Int, childIndex: Int) {
+        guard gameState == .idle,
+              codeBlocks.indices.contains(parentIndex),
+              let children = codeBlocks[parentIndex].children,
+              children.indices.contains(childIndex),
+              codeBlocks[parentIndex].children![childIndex].type == .ifBlock else { return }
+        codeBlocks[parentIndex].children![childIndex].ifCondition = condition
+    }
+
+    /// 자식 repeat 블럭의 반복 횟수 변경
+    func setChildRepeatCount(_ count: Int, parentIndex: Int, childIndex: Int) {
+        guard gameState == .idle,
+              codeBlocks.indices.contains(parentIndex),
+              let children = codeBlocks[parentIndex].children,
+              children.indices.contains(childIndex),
+              codeBlocks[parentIndex].children![childIndex].type == .repeatBlock else { return }
+        codeBlocks[parentIndex].children![childIndex].repeatCount = max(1, min(10, count))
     }
 
     /// 특정 위치에 블럭 삽입 (팔레트 드래그-앤-드롭 위치 지정 삽입)
@@ -269,12 +320,62 @@ class GameViewModel: ObservableObject {
                     // 자식 블럭을 재귀적으로 실행 (startIndex는 부모 인덱스 + 1)
                     await executeBlocks(children, startIndex: globalIndex + 1)
                 }
+
+            case .ifBlock:
+                // if 블럭: 앞 칸 상태를 확인하고 조건이 참이면 자식 블럭 실행
+                let condition = block.ifCondition ?? .pathClear
+                let shouldExecute = await checkIfCondition(condition)
+                if shouldExecute {
+                    let children = block.children ?? []
+                    await executeBlocks(children, startIndex: globalIndex + 1)
+                }
+
+            case .functionBlock:
+                // function 블럭: 자식 블럭들을 서브루틴으로 실행
+                // 추후 챕터4 UI에서 함수 정의-호출 분리 구조로 확장 예정
+                let children = block.children ?? []
+                await executeBlocks(children, startIndex: globalIndex + 1)
             }
 
             // 각 블럭 실행 후 목표 도달 여부 확인
             if await checkGoal() {
                 await handleSuccess()
                 return
+            }
+        }
+    }
+
+    // MARK: - 팔레트 블럭 목록
+
+    /// 현재 스테이지 팔레트에 표시할 블럭 타입 목록
+    /// Stage.paletteBlocks를 래핑 — CodePanelView/PaletteView에서 사용
+    var availableBlocks: [BlockType] {
+        stage.paletteBlocks
+    }
+
+    // MARK: - 조건문 평가
+
+    /// ifBlock 조건 평가: 앞 칸 이동 가능 여부를 확인 (GameScene 메인스레드 접근)
+    /// - Parameter condition: 확인할 조건 타입 (pathClear / pathBlocked)
+    /// - Returns: 조건이 참이면 true (자식 블럭 실행), 거짓이면 false (자식 블럭 스킵)
+    private func checkIfCondition(_ condition: IfCondition) async -> Bool {
+        return await withCheckedContinuation { continuation in
+            DispatchQueue.main.async { [weak self] in
+                guard let self = self, let scene = self.scene else {
+                    // scene이 없으면 조건 판단 불가 → false 반환 (실행 안 함)
+                    continuation.resume(returning: false)
+                    return
+                }
+                // 현재 방향 기준 한 칸 앞 위치 계산
+                let nextPos = scene.characterPosition.next(direction: scene.characterDirection)
+                // 맵 데이터로 이동 가능 여부 확인 (범위 밖 = 벽으로 처리)
+                let isWalkable = scene.mapData.isFloor(nextPos)
+                switch condition {
+                case .pathClear:
+                    continuation.resume(returning: isWalkable)   // 뚫려있으면 실행
+                case .pathBlocked:
+                    continuation.resume(returning: !isWalkable)  // 막혀있으면 실행
+                }
             }
         }
     }

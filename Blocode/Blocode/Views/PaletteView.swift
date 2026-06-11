@@ -12,6 +12,9 @@ import SwiftUI
 /// 탭으로 블럭 추가, 롱프레스 + 드래그로 위치 지정 삽입 지원
 struct PaletteView: View {
 
+    /// 이 스테이지에서 표시할 블럭 타입 목록 — Stage.availableBlocks에서 전달
+    let availableBlocks: [BlockType]
+
     /// 블럭 탭 선택 콜백 — 선택된 BlockType을 전달
     let onSelect: (BlockType) -> Void
 
@@ -34,8 +37,8 @@ struct PaletteView: View {
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 10) {
-                // 모든 블럭 타입을 가로로 나열
-                ForEach(BlockType.allCases, id: \.self) { type in
+                // 스테이지별 허용 블럭만 가로로 나열 (availableBlocks 기준)
+                ForEach(availableBlocks, id: \.self) { type in
                     PaletteCardView(
                         type: type,
                         onTap:        { onSelect(type) },
@@ -157,7 +160,10 @@ struct PaletteCardView: View {
 
 // MARK: - Preview
 #Preview {
-    PaletteView(onSelect: { type in print("선택: \(type.displayName)") })
-        .padding(.vertical)
-        .background(Color(red: 0.957, green: 0.925, blue: 0.843))
+    PaletteView(
+        availableBlocks: BlockType.allCases,
+        onSelect: { type in print("선택: \(type.displayName)") }
+    )
+    .padding(.vertical)
+    .background(Color(red: 0.957, green: 0.925, blue: 0.843))
 }

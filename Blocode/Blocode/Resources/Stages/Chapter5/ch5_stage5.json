@@ -1,0 +1,23 @@
+{
+  "id": "ch5_stage5",
+  "chapter": 5,
+  "stageNumber": 5,
+  "name": "대형 미로",
+  "mapData": {
+    "grid": [
+      [1, 1, 1, 1, 1, 1, 1],
+      [0, 0, 0, 0, 0, 0, 1],
+      [0, 0, 0, 0, 0, 0, 1],
+      [0, 0, 0, 0, 0, 0, 1],
+      [0, 0, 0, 0, 0, 0, 0]
+    ],
+    "start": { "x": 0, "y": 0 },
+    "startDirection": "right",
+    "goal":  { "x": 6, "y": 3 }
+  },
+  "availableBlocks": ["moveForward", "moveBackward", "turnLeft", "turnRight", "repeat", "if", "function"],
+  "starThresholds": {
+    "threeStar": 2,
+    "twoStar": 9
+  }
+}

@@ -23,12 +23,13 @@ final class HomeViewModel: ObservableObject {
     private var cancellables = Set<AnyCancellable>()
 
     /// 홈 화면에서 사용할 챕터 목록 (id, stageCount)
+    /// 스테이지 추가 시 ChapterViewModel.stageCount(for:)와 함께 수정
     let chapters: [(id: Int, stageCount: Int)] = [
         (id: 1, stageCount: 6),
-        (id: 2, stageCount: 0),
-        (id: 3, stageCount: 0),
-        (id: 4, stageCount: 0),
-        (id: 5, stageCount: 0),
+        (id: 2, stageCount: 8),
+        (id: 3, stageCount: 8),
+        (id: 4, stageCount: 7),
+        (id: 5, stageCount: 6),
     ]
 
     init() {

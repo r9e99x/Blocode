@@ -1,0 +1,23 @@
+{
+  "id": "ch5_stage3",
+  "chapter": 5,
+  "stageNumber": 3,
+  "name": "역방향 계단",
+  "mapData": {
+    "grid": [
+      [0, 0, 0, 0, 1],
+      [0, 0, 0, 1, 1],
+      [0, 0, 1, 1, 0],
+      [0, 1, 1, 0, 0],
+      [1, 1, 0, 0, 0]
+    ],
+    "start": { "x": 0, "y": 4 },
+    "startDirection": "right",
+    "goal":  { "x": 4, "y": 0 }
+  },
+  "availableBlocks": ["moveForward", "moveBackward", "turnLeft", "turnRight", "repeat", "if", "function"],
+  "starThresholds": {
+    "threeStar": 4,
+    "twoStar": 12
+  }
+}

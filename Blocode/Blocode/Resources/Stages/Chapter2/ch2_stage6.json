@@ -1,0 +1,23 @@
+{
+  "id": "ch2_stage6",
+  "chapter": 2,
+  "stageNumber": 6,
+  "name": "큰 C자",
+  "mapData": {
+    "grid": [
+      [1, 1, 1, 1, 1],
+      [0, 0, 0, 0, 1],
+      [0, 0, 0, 0, 1],
+      [0, 0, 0, 0, 1],
+      [1, 1, 1, 1, 1]
+    ],
+    "start": { "x": 0, "y": 0 },
+    "startDirection": "right",
+    "goal":  { "x": 0, "y": 4 }
+  },
+  "availableBlocks": ["moveForward", "turnLeft", "turnRight", "repeat"],
+  "starThresholds": {
+    "threeStar": 5,
+    "twoStar": 12
+  }
+}

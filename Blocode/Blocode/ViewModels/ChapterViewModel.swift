@@ -29,8 +29,8 @@ final class ChapterViewModel: ObservableObject {
 
     init(chapter: Int) {
         self.chapter = chapter
-        // 챕터 JSON 파일에서 스테이지 목록 로드
-        self.stages  = StageLoader.loadChapter(chapter, stageCount: 6)
+        // 챕터 JSON 파일에서 스테이지 목록 로드 (챕터별 스테이지 수는 헬퍼로 관리)
+        self.stages  = StageLoader.loadChapter(chapter, stageCount: ChapterViewModel.stageCount(for: chapter))
 
         // ProgressService 변경을 그대로 전파 → 뷰 자동 갱신 유지
         progress.objectWillChange
@@ -42,11 +42,23 @@ final class ChapterViewModel: ObservableObject {
     var chapterTitle: String {
         switch chapter {
         case 1: return "기본기"
-        case 2: return "변수"
+        case 2: return "반복"
         case 3: return "조건문"
-        case 4: return "반복문"
-        case 5: return "함수"
+        case 4: return "함수"
+        case 5: return "심화"
         default: return "챕터 \(chapter)"
+        }
+    }
+
+    /// 챕터별 스테이지 수 (스테이지 추가 시 여기만 수정)
+    static func stageCount(for chapter: Int) -> Int {
+        switch chapter {
+        case 1: return 6
+        case 2: return 8
+        case 3: return 8
+        case 4: return 7
+        case 5: return 6
+        default: return 0
         }
     }
 

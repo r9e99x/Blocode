@@ -16,13 +16,21 @@ struct BlockRowView: View {
     let index: Int              // 코드 순서에서의 인덱스 (1부터 표시)
     let isActive: Bool          // 현재 실행 중인 블럭 여부 (흰 테두리 하이라이트)
     let isFailed: Bool          // 실패한 블럭 여부 (빨간 막대 표시)
-    let onDelete: (() -> Void)?               // 블럭 삭제 콜백
-    let onAddChild: ((BlockType) -> Void)?    // repeat 자식 블럭 추가 콜백
-    let onRemoveChild: ((Int) -> Void)?       // repeat 자식 블럭 삭제 콜백 (자식 인덱스 전달)
-    let onRepeatCountChange: ((Int) -> Void)? // repeat 횟수 변경 콜백
+    let onDelete: (() -> Void)?                                      // 블럭 삭제 콜백
+    let onAddChild: ((BlockType) -> Void)?                           // 자식 블럭 추가 콜백
+    let onRemoveChild: ((Int) -> Void)?                              // 자식 블럭 삭제 콜백
+    let onRepeatCountChange: ((Int) -> Void)?                        // repeat 횟수 변경 콜백
+    let onIfConditionChange: ((IfCondition) -> Void)?                // if 조건 변경 콜백
+    // 중첩 블럭 (자식 컨테이너의 손자 블럭) 관리 콜백
+    let onAddGrandchild: ((BlockType, Int) -> Void)?                 // (type, childIndex)
+    let onRemoveGrandchild: ((Int, Int) -> Void)?                    // (grandchildIndex, childIndex)
+    let onSetChildIfCondition: ((IfCondition, Int) -> Void)?         // (condition, childIndex)
+    let onSetChildRepeatCount: ((Int, Int) -> Void)?                 // (count, childIndex)
 
-    // repeat 내부 블럭 추가용 미니 팔레트 펼침 여부
+    // 자식 블럭 추가 팔레트 펼침 여부
     @State private var showChildPalette = false
+    // 손자 블럭 추가 팔레트 펼침 여부 (자식 인덱스별 관리)
+    @State private var showGrandchildPalette: [Int: Bool] = [:]
 
     // 3D 카드 파라미터
     private let frontH:  CGFloat = 48  // 앞면 높이
@@ -34,8 +42,8 @@ struct BlockRowView: View {
         VStack(alignment: .leading, spacing: 0) {
             // 메인 블럭 행 항상 표시
             blockRow
-            // repeat 블럭이면 자식 블럭 영역 추가 표시
-            if block.isRepeatBlock {
+            // 컨테이너 블럭(repeat/if/function)이면 자식 블럭 영역 추가 표시
+            if block.hasChildren {
                 repeatChildArea
             }
         }
@@ -99,6 +107,32 @@ struct BlockRowView: View {
                         // repeat 블럭 전용 — 반복 횟수 스테퍼
                         if block.isRepeatBlock, let count = block.repeatCount {
                             repeatCountStepper(count: count)
+                        }
+
+                        // if 블럭 전용 — 조건 선택 토글 버튼
+                        if block.type == .ifBlock, let condition = block.ifCondition {
+                            Button {
+                                // 탭할 때마다 pathClear ↔ pathBlocked 전환
+                                let next: IfCondition = condition == .pathClear ? .pathBlocked : .pathClear
+                                onIfConditionChange?(next)
+                            } label: {
+                                HStack(spacing: 4) {
+                                    Text(condition.displayName)
+                                        .font(.system(size: 11, weight: .semibold))
+                                        .foregroundStyle(.white)
+                                        .lineLimit(1)
+                                    // 전환 가능함을 나타내는 화살표 아이콘
+                                    Image(systemName: "arrow.up.arrow.down")
+                                        .font(.system(size: 9, weight: .bold))
+                                        .foregroundStyle(.white.opacity(0.7))
+                                }
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 5)
+                                .background(Color.white.opacity(0.20))
+                                .clipShape(Capsule())
+                            }
+                            .buttonStyle(.borderless)
+                            .disabled(isActive)  // 실행 중에는 변경 불가
                         }
 
                         // 삭제 버튼 — 실행 중에는 숨김
@@ -178,6 +212,18 @@ struct BlockRowView: View {
         .clipShape(Capsule())
     }
 
+    // MARK: - 컨테이너 블럭 공통 헬퍼
+
+    /// 컨테이너 블럭 종류에 따른 끝 레이블 텍스트
+    private var containerEndLabel: String {
+        switch block.type {
+        case .repeatBlock:   return "end repeat"
+        case .ifBlock:       return "end if"
+        case .functionBlock: return "end function"
+        default:             return "end"
+        }
+    }
+
     // MARK: - repeat 블럭 자식 영역
 
     /// repeat 블럭 아래에 표시되는 자식 블럭 목록 및 추가 UI
@@ -236,8 +282,8 @@ struct BlockRowView: View {
                     .transition(.opacity.combined(with: .scale(scale: 0.95, anchor: .topLeading)))
             }
 
-            // repeat 블럭 끝 레이블
-            Text("end repeat")
+            // 컨테이너 블럭 끝 레이블 — 블럭 타입별로 다른 텍스트 표시
+            Text(containerEndLabel)
                 .font(.system(size: 11, weight: .medium, design: .monospaced))
                 .foregroundStyle(block.type.blockColor.opacity(0.5))
                 .padding(.top, 2)
@@ -247,50 +293,207 @@ struct BlockRowView: View {
     }
 
     /// 자식 블럭 하나를 표시하는 미니 행 뷰
-    private func childBlockMiniRow(_ child: Block, index: Int) -> some View {
-        HStack(spacing: 8) {
-            // 자식 블럭 아이콘
-            Image(systemName: child.type.iconName)
-                .font(.system(size: 13, weight: .semibold))
-                .foregroundStyle(child.type.blockColor)
-            // 자식 블럭 이름
-            Text(child.type.displayName)
-                .font(.system(size: 13, weight: .medium))
-                .foregroundStyle(.primary)
-            Spacer()
-            // 자식 블럭 삭제 버튼
-            Button {
-                withAnimation(.easeInOut(duration: 0.2)) {
-                    onRemoveChild?(index)
+    /// 자식이 컨테이너(repeat/if)이면 손자 블럭 영역과 조건/횟수 컨트롤도 함께 표시
+    private func childBlockMiniRow(_ child: Block, index childIndex: Int) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+
+            // ── 자식 블럭 헤더 행 ──
+            HStack(spacing: 8) {
+                Image(systemName: child.type.iconName)
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(child.type.blockColor)
+                Text(child.type.displayName)
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundStyle(.primary)
+
+                Spacer()
+
+                // 중첩 repeat 전용: 횟수 스테퍼
+                if child.type == .repeatBlock, let count = child.repeatCount {
+                    nestedRepeatStepper(count: count, childIndex: childIndex)
                 }
-            } label: {
-                Image(systemName: "xmark.circle.fill")
-                    .font(.system(size: 16))
-                    .foregroundStyle(Color.secondary.opacity(0.5))
+
+                // 중첩 if 전용: 조건 토글 버튼
+                if child.type == .ifBlock, let condition = child.ifCondition {
+                    Button {
+                        let next: IfCondition = condition == .pathClear ? .pathBlocked : .pathClear
+                        onSetChildIfCondition?(next, childIndex)
+                    } label: {
+                        HStack(spacing: 3) {
+                            Text(condition.displayName)
+                                .font(.system(size: 10, weight: .semibold))
+                                .foregroundStyle(child.type.blockColor)
+                            Image(systemName: "arrow.up.arrow.down")
+                                .font(.system(size: 8, weight: .bold))
+                                .foregroundStyle(child.type.blockColor.opacity(0.7))
+                        }
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 3)
+                        .background(child.type.lightColor)
+                        .clipShape(Capsule())
+                    }
+                    .buttonStyle(.borderless)
+                }
+
+                // 자식 삭제 버튼
+                Button {
+                    withAnimation(.easeInOut(duration: 0.2)) { onRemoveChild?(childIndex) }
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.system(size: 16))
+                        .foregroundStyle(Color.secondary.opacity(0.5))
+                }
+                .buttonStyle(.borderless)
             }
-            .buttonStyle(.borderless)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 7)
+            .background(child.type.lightColor)
+            .clipShape(RoundedRectangle(cornerRadius: 8))
+
+            // 자식이 컨테이너이면 손자 블럭 영역 표시
+            if child.hasChildren {
+                grandchildArea(child: child, childIndex: childIndex)
+            }
         }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 7)
-        .background(child.type.lightColor)  // 연한 배경으로 자식 블럭 구분
-        .clipShape(RoundedRectangle(cornerRadius: 8))
     }
 
-    /// 자식 블럭 선택용 미니 팔레트 — repeat 블럭 제외한 타입만 표시
+    /// 중첩 repeat 블럭의 횟수 스테퍼 (소형)
+    private func nestedRepeatStepper(count: Int, childIndex: Int) -> some View {
+        HStack(spacing: 0) {
+            Button { onSetChildRepeatCount?(max(1, count - 1), childIndex) } label: {
+                Image(systemName: "minus").font(.system(size: 10, weight: .bold)).frame(width: 22, height: 22)
+            }
+            Text("\(count)×").font(.system(size: 12, weight: .bold)).monospacedDigit().frame(minWidth: 18)
+            Button { onSetChildRepeatCount?(min(10, count + 1), childIndex) } label: {
+                Image(systemName: "plus").font(.system(size: 10, weight: .bold)).frame(width: 22, height: 22)
+            }
+        }
+        .foregroundStyle(BlockType.repeatBlock.blockColor)
+        .background(BlockType.repeatBlock.lightColor)
+        .clipShape(Capsule())
+        .buttonStyle(.borderless)
+    }
+
+    /// 손자 블럭 영역 — 자식 컨테이너(repeat/if)의 내부 블럭 목록 + 추가 버튼
+    private func grandchildArea(child: Block, childIndex: Int) -> some View {
+        let lineColor = child.type.blockColor.opacity(0.30)
+
+        return VStack(alignment: .leading, spacing: 3) {
+
+            // 손자 블럭 목록
+            if let grandchildren = child.children, !grandchildren.isEmpty {
+                ForEach(Array(grandchildren.enumerated()), id: \.element.id) { gcIdx, gc in
+                    HStack(spacing: 6) {
+                        Rectangle().fill(lineColor).frame(width: 2)
+                        HStack(spacing: 6) {
+                            Image(systemName: gc.type.iconName)
+                                .font(.system(size: 11, weight: .semibold))
+                                .foregroundStyle(gc.type.blockColor)
+                            Text(gc.type.displayName)
+                                .font(.system(size: 12, weight: .medium))
+                                .foregroundStyle(.primary)
+                            Spacer()
+                            Button {
+                                withAnimation { onRemoveGrandchild?(gcIdx, childIndex) }
+                            } label: {
+                                Image(systemName: "xmark.circle.fill")
+                                    .font(.system(size: 13))
+                                    .foregroundStyle(Color.secondary.opacity(0.45))
+                            }
+                            .buttonStyle(.borderless)
+                        }
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 5)
+                        .background(gc.type.lightColor)
+                        .clipShape(RoundedRectangle(cornerRadius: 6))
+                    }
+                }
+            } else {
+                HStack(spacing: 6) {
+                    Rectangle().fill(lineColor).frame(width: 2)
+                    Text("블럭을 추가하세요").font(.caption).foregroundStyle(.tertiary).padding(.vertical, 4)
+                }
+            }
+
+            // 손자 블럭 추가 버튼
+            HStack(spacing: 6) {
+                Rectangle().fill(lineColor).frame(width: 2)
+                Button {
+                    withAnimation(.spring(duration: 0.2)) {
+                        showGrandchildPalette[childIndex, default: false].toggle()
+                    }
+                } label: {
+                    Label("추가", systemImage: "plus.circle.fill")
+                        .font(.caption.bold())
+                        .foregroundStyle(child.type.blockColor)
+                }
+                .buttonStyle(.borderless)
+                .padding(.vertical, 2)
+            }
+
+            // 손자 팔레트
+            if showGrandchildPalette[childIndex, default: false] {
+                grandchildMiniPalette(childIndex: childIndex)
+                    .transition(.opacity.combined(with: .scale(scale: 0.95, anchor: .topLeading)))
+            }
+
+            // end 레이블
+            Text(child.type == .repeatBlock ? "end repeat" : "end if")
+                .font(.system(size: 10, weight: .medium, design: .monospaced))
+                .foregroundStyle(child.type.blockColor.opacity(0.45))
+                .padding(.top, 1)
+        }
+        .padding(.leading, 14)
+    }
+
+    /// 손자 블럭 선택 미니 팔레트 — 기본 블럭만 허용 (무한 중첩 방지)
+    private func grandchildMiniPalette(childIndex: Int) -> some View {
+        let types = BlockType.allCases.filter {
+            $0 != .repeatBlock && $0 != .ifBlock && $0 != .functionBlock
+        }
+        return ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 6) {
+                ForEach(types, id: \.self) { type in
+                    Button {
+                        onAddGrandchild?(type, childIndex)
+                        withAnimation { showGrandchildPalette[childIndex] = false }
+                    } label: {
+                        HStack(spacing: 4) {
+                            Image(systemName: type.iconName).font(.system(size: 11, weight: .semibold))
+                            Text(type.shortName).font(.system(size: 11, weight: .semibold))
+                        }
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 5)
+                        .background(type.blockColor)
+                        .clipShape(Capsule())
+                    }
+                    .buttonStyle(.borderless)
+                }
+            }
+        }
+        .padding(.leading, 20)
+    }
+
+    /// 자식 블럭 선택용 미니 팔레트
+    /// 허용 규칙: 동일 타입 중첩 불허, functionBlock 중첩 불허
+    /// → repeat 안에 if 가능, if 안에 repeat 가능
     private var childMiniPalette: some View {
-        let childTypes = BlockType.allCases.filter { $0 != .repeatBlock }  // repeat 중첩 불허
+        let childTypes = BlockType.allCases.filter { type in
+            if type == .functionBlock { return false }  // function 중첩 불허
+            if type == block.type    { return false }  // 동일 타입 중첩 불허
+            return true
+        }
         return ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 8) {
                 ForEach(childTypes, id: \.self) { type in
                     Button {
-                        onAddChild?(type)               // 자식 블럭 추가
-                        withAnimation { showChildPalette = false }  // 팔레트 닫기
+                        onAddChild?(type)
+                        withAnimation { showChildPalette = false }
                     } label: {
                         HStack(spacing: 5) {
-                            Image(systemName: type.iconName)
-                                .font(.system(size: 12, weight: .semibold))
-                            Text(type.shortName)
-                                .font(.system(size: 12, weight: .semibold))
+                            Image(systemName: type.iconName).font(.system(size: 12, weight: .semibold))
+                            Text(type.shortName).font(.system(size: 12, weight: .semibold))
                         }
                         .foregroundStyle(.white)
                         .padding(.horizontal, 10)
@@ -315,25 +518,50 @@ struct BlockRowView: View {
         BlockRowView(
             block: Block(type: .moveForward),
             index: 0, isActive: true, isFailed: false,
-            onDelete: nil, onAddChild: nil, onRemoveChild: nil, onRepeatCountChange: nil
+            onDelete: nil, onAddChild: nil, onRemoveChild: nil,
+            onRepeatCountChange: nil, onIfConditionChange: nil,
+            onAddGrandchild: nil, onRemoveGrandchild: nil,
+            onSetChildIfCondition: nil, onSetChildRepeatCount: nil
         )
         // 일반 상태 블럭
         BlockRowView(
             block: Block(type: .turnLeft),
             index: 1, isActive: false, isFailed: false,
-            onDelete: nil, onAddChild: nil, onRemoveChild: nil, onRepeatCountChange: nil
+            onDelete: nil, onAddChild: nil, onRemoveChild: nil,
+            onRepeatCountChange: nil, onIfConditionChange: nil,
+            onAddGrandchild: nil, onRemoveGrandchild: nil,
+            onSetChildIfCondition: nil, onSetChildRepeatCount: nil
         )
         // 실패 상태 블럭
         BlockRowView(
             block: Block(type: .moveForward),
             index: 2, isActive: false, isFailed: true,
-            onDelete: nil, onAddChild: nil, onRemoveChild: nil, onRepeatCountChange: nil
+            onDelete: nil, onAddChild: nil, onRemoveChild: nil,
+            onRepeatCountChange: nil, onIfConditionChange: nil,
+            onAddGrandchild: nil, onRemoveGrandchild: nil,
+            onSetChildIfCondition: nil, onSetChildRepeatCount: nil
         )
-        // repeat 블럭 (자식 포함)
+        // repeat 블럭 (if 자식 포함)
         BlockRowView(
-            block: Block(type: .repeatBlock, repeatCount: 3, children: [Block(type: .moveForward)]),
+            block: Block(type: .repeatBlock, repeatCount: 3,
+                         children: [Block(type: .moveForward),
+                                    Block(type: .ifBlock, children: [Block(type: .turnRight)])]),
             index: 3, isActive: false, isFailed: false,
-            onDelete: { }, onAddChild: { _ in }, onRemoveChild: { _ in }, onRepeatCountChange: { _ in }
+            onDelete: { }, onAddChild: { _ in }, onRemoveChild: { _ in },
+            onRepeatCountChange: { _ in }, onIfConditionChange: nil,
+            onAddGrandchild: nil, onRemoveGrandchild: nil,
+            onSetChildIfCondition: nil, onSetChildRepeatCount: nil
+        )
+        // if 블럭 (repeat 자식 포함)
+        BlockRowView(
+            block: Block(type: .ifBlock,
+                         children: [Block(type: .repeatBlock, repeatCount: 2,
+                                          children: [Block(type: .moveForward)])]),
+            index: 4, isActive: false, isFailed: false,
+            onDelete: { }, onAddChild: { _ in }, onRemoveChild: { _ in },
+            onRepeatCountChange: nil, onIfConditionChange: { _ in },
+            onAddGrandchild: nil, onRemoveGrandchild: nil,
+            onSetChildIfCondition: nil, onSetChildRepeatCount: nil
         )
     }
     .padding()

@@ -12,11 +12,12 @@
       [1, 1, 0, 1, 1]
     ],
     "start": { "x": 0, "y": 2 },
-    "startDirection": "up",
+    "startDirection": "right",
     "goal":  { "x": 4, "y": 0 }
   },
+  "availableBlocks": ["moveForward", "moveBackward", "turnLeft", "turnRight"],
   "starThresholds": {
-    "threeStar": 7,
-    "twoStar": 9
+    "threeStar": 8,
+    "twoStar": 12
   }
 }

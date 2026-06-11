@@ -1,0 +1,23 @@
+{
+  "id": "ch2_stage5",
+  "chapter": 2,
+  "stageNumber": 5,
+  "name": "역계단",
+  "mapData": {
+    "grid": [
+      [0, 0, 0, 0, 1],
+      [0, 0, 0, 1, 1],
+      [0, 0, 1, 1, 0],
+      [0, 1, 1, 0, 0],
+      [1, 1, 0, 0, 0]
+    ],
+    "start": { "x": 0, "y": 4 },
+    "startDirection": "right",
+    "goal":  { "x": 4, "y": 0 }
+  },
+  "availableBlocks": ["moveForward", "turnLeft", "turnRight", "repeat"],
+  "starThresholds": {
+    "threeStar": 4,
+    "twoStar": 12
+  }
+}

@@ -51,7 +51,17 @@ struct Stage: Codable, Identifiable {
     /// 별점 기준 (블럭 수 기준)
     var starThresholds: StarThresholds
 
+    /// 이 스테이지 팔레트에 표시할 블럭 타입 목록
+    /// nil이면 모든 블럭 표시 (하위 호환성 유지 — JSON에 필드 없을 때)
+    var availableBlocks: [BlockType]?
+
     // MARK: - 헬퍼
+
+    /// 팔레트에 실제로 표시할 블럭 목록
+    /// availableBlocks가 nil이면 전체 블럭 (BlockType.allCases) 반환
+    var paletteBlocks: [BlockType] {
+        availableBlocks ?? BlockType.allCases
+    }
 
     /// 챕터와 스테이지 번호로 표시할 문자열 (예: "STAGE 1-3")
     var displayTitle: String {

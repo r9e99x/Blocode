@@ -1,0 +1,23 @@
+{
+  "id": "ch1_stage4",
+  "chapter": 1,
+  "stageNumber": 4,
+  "name": "뒤로",
+  "mapData": {
+    "grid": [
+      [0, 0, 0, 0, 0],
+      [1, 1, 1, 1, 1],
+      [0, 0, 0, 0, 0],
+      [0, 0, 0, 0, 0],
+      [0, 0, 0, 0, 0]
+    ],
+    "start": { "x": 4, "y": 1 },
+    "startDirection": "right",
+    "goal":  { "x": 0, "y": 1 }
+  },
+  "availableBlocks": ["moveForward", "moveBackward", "turnLeft", "turnRight"],
+  "starThresholds": {
+    "threeStar": 4,
+    "twoStar": 6
+  }
+}

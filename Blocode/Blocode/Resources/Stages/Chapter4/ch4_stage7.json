@@ -1,0 +1,25 @@
+{
+  "id": "ch4_stage7",
+  "chapter": 4,
+  "stageNumber": 7,
+  "name": "함수 종합",
+  "mapData": {
+    "grid": [
+      [1, 1, 1, 1, 1, 1, 1],
+      [0, 0, 0, 0, 0, 1, 1],
+      [0, 0, 0, 0, 1, 1, 0],
+      [0, 0, 0, 1, 1, 0, 0],
+      [0, 0, 1, 1, 0, 0, 0],
+      [0, 1, 1, 0, 0, 0, 0],
+      [0, 1, 1, 1, 1, 1, 1]
+    ],
+    "start": { "x": 0, "y": 0 },
+    "startDirection": "right",
+    "goal":  { "x": 6, "y": 6 }
+  },
+  "availableBlocks": ["moveForward", "moveBackward", "turnLeft", "turnRight", "repeat", "if", "function"],
+  "starThresholds": {
+    "threeStar": 10,
+    "twoStar": 18
+  }
+}

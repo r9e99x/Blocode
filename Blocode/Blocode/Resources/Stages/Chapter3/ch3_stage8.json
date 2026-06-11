@@ -1,0 +1,25 @@
+{
+  "id": "ch3_stage8",
+  "chapter": 3,
+  "stageNumber": 8,
+  "name": "조건문 종합",
+  "mapData": {
+    "grid": [
+      [1, 1, 1, 1, 1],
+      [0, 0, 0, 0, 1],
+      [0, 0, 0, 0, 1],
+      [0, 0, 0, 0, 1],
+      [0, 0, 0, 0, 1],
+      [0, 0, 0, 0, 1],
+      [1, 1, 1, 1, 1]
+    ],
+    "start": { "x": 0, "y": 0 },
+    "startDirection": "right",
+    "goal":  { "x": 0, "y": 6 }
+  },
+  "availableBlocks": ["moveForward", "turnLeft", "turnRight", "repeat", "if"],
+  "starThresholds": {
+    "threeStar": 2,
+    "twoStar": 14
+  }
+}

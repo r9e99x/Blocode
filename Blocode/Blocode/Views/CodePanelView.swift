@@ -69,8 +69,9 @@ struct CodePanelView: View {
                 }
                 .padding(.horizontal, 20)
 
-                // 블럭 팔레트 — 탭 추가 / 드래그 삽입 지원
+                // 블럭 팔레트 — 스테이지별 허용 블럭만 표시 / 탭 추가 / 드래그 삽입 지원
                 PaletteView(
+                    availableBlocks: viewModel.availableBlocks,
                     onSelect: { type in
                         // 탭: 코드 리스트 맨 뒤에 추가
                         viewModel.addBlock(type)
@@ -213,6 +214,21 @@ struct CodePanelView: View {
                             },
                             onRepeatCountChange: { count in
                                 viewModel.setRepeatCount(count, at: offset)
+                            },
+                            onIfConditionChange: { condition in
+                                viewModel.setIfCondition(condition, at: offset)
+                            },
+                            onAddGrandchild: { type, childIndex in
+                                viewModel.addGrandchildBlock(type, parentIndex: offset, childIndex: childIndex)
+                            },
+                            onRemoveGrandchild: { gcIdx, childIndex in
+                                viewModel.removeGrandchildBlock(grandchildIndex: gcIdx, parentIndex: offset, childIndex: childIndex)
+                            },
+                            onSetChildIfCondition: { condition, childIndex in
+                                viewModel.setChildIfCondition(condition, parentIndex: offset, childIndex: childIndex)
+                            },
+                            onSetChildRepeatCount: { count, childIndex in
+                                viewModel.setChildRepeatCount(count, parentIndex: offset, childIndex: childIndex)
                             }
                         )
                         .listRowBackground(Color.clear)

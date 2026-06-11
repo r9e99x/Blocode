@@ -1,0 +1,23 @@
+{
+  "id": "ch2_stage4",
+  "chapter": 2,
+  "stageNumber": 4,
+  "name": "세 모퉁이",
+  "mapData": {
+    "grid": [
+      [1, 1, 1, 1, 0],
+      [0, 0, 0, 1, 0],
+      [0, 0, 0, 1, 0],
+      [1, 1, 1, 1, 0],
+      [0, 0, 0, 0, 0]
+    ],
+    "start": { "x": 0, "y": 0 },
+    "startDirection": "right",
+    "goal":  { "x": 0, "y": 3 }
+  },
+  "availableBlocks": ["moveForward", "turnRight", "repeat"],
+  "starThresholds": {
+    "threeStar": 4,
+    "twoStar": 9
+  }
+}

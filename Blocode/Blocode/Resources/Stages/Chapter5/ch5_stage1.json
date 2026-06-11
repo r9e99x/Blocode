@@ -1,0 +1,23 @@
+{
+  "id": "ch5_stage1",
+  "chapter": 5,
+  "stageNumber": 1,
+  "name": "후진 활용",
+  "mapData": {
+    "grid": [
+      [0, 0, 0, 0, 0],
+      [1, 1, 1, 1, 1],
+      [0, 0, 0, 0, 0],
+      [0, 0, 0, 0, 0],
+      [0, 0, 0, 0, 0]
+    ],
+    "start": { "x": 4, "y": 1 },
+    "startDirection": "right",
+    "goal":  { "x": 0, "y": 1 }
+  },
+  "availableBlocks": ["moveForward", "moveBackward", "turnLeft", "turnRight", "repeat", "if", "function"],
+  "starThresholds": {
+    "threeStar": 4,
+    "twoStar": 6
+  }
+}

@@ -138,9 +138,21 @@ final class ProgressService: ObservableObject {
         // 1스테이지는 항상 개방
         if stageNumber == 1 { return false }
 
-        // Stage 6 (챕터 1 마지막): 1~5스테이지 별점 합산 9개 이상 필요
-        if chapter == 1 && stageNumber == 6 {
-            return totalStars(chapter: 1, stageCount: 5) < 9
+        // 챕터별 마지막 스테이지(종합) 잠금 조건
+        // 이전 스테이지들의 별점 합산이 기준 이상이어야 개방
+        // 기준: 이전 스테이지 최대 별점의 약 60%
+        // (챕터 추가 시 여기에 항목 추가)
+        let finalStageRequirements: [Int: (finalStage: Int, prevCount: Int, required: Int)] = [
+            1: (finalStage: 6, prevCount: 5, required: 9),   // 1~5 최대 15개 중 9개 (60%)
+            2: (finalStage: 8, prevCount: 7, required: 13),  // 1~7 최대 21개 중 13개 (62%)
+            3: (finalStage: 8, prevCount: 7, required: 13),  // 1~7 최대 21개 중 13개 (62%)
+            4: (finalStage: 7, prevCount: 6, required: 11),  // 1~6 최대 18개 중 11개 (61%)
+            5: (finalStage: 6, prevCount: 5, required: 9),   // 1~5 최대 15개 중 9개 (60%)
+        ]
+
+        if let req = finalStageRequirements[chapter], stageNumber == req.finalStage {
+            // 마지막 스테이지: 이전 스테이지 별점 합산 조건
+            return totalStars(chapter: chapter, stageCount: req.prevCount) < req.required
         }
 
         // 그 외: 이전 스테이지 클리어 필요
