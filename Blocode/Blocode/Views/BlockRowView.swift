@@ -16,6 +16,11 @@ struct BlockRowView: View {
     let index: Int              // 코드 순서에서의 인덱스 (1부터 표시)
     let isActive: Bool          // 현재 실행 중인 블럭 여부 (흰 테두리 하이라이트)
     let isFailed: Bool          // 실패한 블럭 여부 (빨간 막대 표시)
+    // 실행 중인 자식의 상대 경로 — [자식 인덱스] 또는 [자식, 손자], 이 행 내부가 아니면 빈 배열
+    // (기본값 빈 배열 → 하이라이트가 필요 없는 호출부/프리뷰는 생략 가능)
+    var activeChildPath: [Int] = []
+    // 실패한 자식의 상대 경로 — 형식은 activeChildPath와 동일
+    var failedChildPath: [Int] = []
     let onDelete: (() -> Void)?                                      // 블럭 삭제 콜백
     let onAddChild: ((BlockType) -> Void)?                           // 자식 블럭 추가 콜백
     let onRemoveChild: ((Int) -> Void)?                              // 자식 블럭 삭제 콜백
@@ -295,7 +300,11 @@ struct BlockRowView: View {
     /// 자식 블럭 하나를 표시하는 미니 행 뷰
     /// 자식이 컨테이너(repeat/if)이면 손자 블럭 영역과 조건/횟수 컨트롤도 함께 표시
     private func childBlockMiniRow(_ child: Block, index childIndex: Int) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
+        // 이 자식(또는 그 손자)이 현재 실행/실패 중인지 — 경로 첫 요소로 판별
+        let isChildActive = activeChildPath.first == childIndex
+        let isChildFailed = failedChildPath.first == childIndex
+
+        return VStack(alignment: .leading, spacing: 4) {
 
             // ── 자식 블럭 헤더 행 ──
             HStack(spacing: 8) {
@@ -349,6 +358,19 @@ struct BlockRowView: View {
             .padding(.vertical, 7)
             .background(child.type.lightColor)
             .clipShape(RoundedRectangle(cornerRadius: 8))
+            // 실행/실패 중 테두리 하이라이트 — 밝은 lightColor 배경 위라
+            // (최상위 행의 흰 테두리 대신) 블럭 색/실패 색 테두리로 표시
+            .overlay {
+                if isChildActive {
+                    RoundedRectangle(cornerRadius: 8)
+                        .strokeBorder(child.type.blockColor.opacity(0.9), lineWidth: 2)
+                } else if isChildFailed {
+                    RoundedRectangle(cornerRadius: 8)
+                        .strokeBorder(Color(red: 0.95, green: 0.25, blue: 0.20), lineWidth: 2)
+                }
+            }
+            .animation(.easeInOut(duration: 0.15), value: isChildActive)
+            .animation(.easeInOut(duration: 0.15), value: isChildFailed)
 
             // 자식이 컨테이너이면 손자 블럭 영역 표시
             if child.hasChildren {
@@ -383,6 +405,10 @@ struct BlockRowView: View {
             // 손자 블럭 목록
             if let grandchildren = child.children, !grandchildren.isEmpty {
                 ForEach(Array(grandchildren.enumerated()), id: \.element.id) { gcIdx, gc in
+                    // 이 손자가 현재 실행/실패 중인지 — 상대 경로 [자식, 손자] 전체 일치로 판별
+                    let isGcActive = activeChildPath == [childIndex, gcIdx]
+                    let isGcFailed = failedChildPath == [childIndex, gcIdx]
+
                     HStack(spacing: 6) {
                         Rectangle().fill(lineColor).frame(width: 2)
                         HStack(spacing: 6) {
@@ -406,6 +432,18 @@ struct BlockRowView: View {
                         .padding(.vertical, 5)
                         .background(gc.type.lightColor)
                         .clipShape(RoundedRectangle(cornerRadius: 6))
+                        // 실행/실패 중 테두리 하이라이트 — 자식 미니 행과 동일한 방식
+                        .overlay {
+                            if isGcActive {
+                                RoundedRectangle(cornerRadius: 6)
+                                    .strokeBorder(gc.type.blockColor.opacity(0.9), lineWidth: 2)
+                            } else if isGcFailed {
+                                RoundedRectangle(cornerRadius: 6)
+                                    .strokeBorder(Color(red: 0.95, green: 0.25, blue: 0.20), lineWidth: 2)
+                            }
+                        }
+                        .animation(.easeInOut(duration: 0.15), value: isGcActive)
+                        .animation(.easeInOut(duration: 0.15), value: isGcFailed)
                     }
                 }
             } else {

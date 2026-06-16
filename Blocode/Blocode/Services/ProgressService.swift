@@ -180,11 +180,20 @@ final class ProgressService: ObservableObject {
     }
 
     /// 이어서 할 다음 스테이지 (첫 번째 미클리어 스테이지)
+    /// 잠긴 스테이지는 반환하지 않음 — 홈 "이어서 하기"가 잠금을 우회하지 못하도록
+    /// 잠겨 있으면 해당 챕터의 마지막 플레이 가능한 스테이지로 대체 (재도전으로 별 모으기 유도)
     func nextStage(chapters: [(id: Int, stageCount: Int)]) -> (chapter: Int, stage: Int)? {
         for ch in chapters {
             for stageNum in 1...max(ch.stageCount, 1) {
                 if !isCleared("ch\(ch.id)_stage\(stageNum)") {
-                    return (ch.id, stageNum)
+                    // 잠겨 있지 않으면 그대로 반환 (플레이 가능)
+                    if !isLocked(chapter: ch.id, stageNumber: stageNum) {
+                        return (ch.id, stageNum)
+                    }
+                    // 첫 미클리어 스테이지가 잠긴 경우는 종합 스테이지(별점 부족)뿐 —
+                    // 직전 스테이지까지는 전부 클리어된 상태라 항상 열려 있으므로
+                    // 직전 스테이지로 대체 (1스테이지는 항상 개방이라 최솟값 1 보장)
+                    return (ch.id, max(stageNum - 1, 1))
                 }
             }
         }

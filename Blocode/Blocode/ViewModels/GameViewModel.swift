@@ -31,11 +31,13 @@ class GameViewModel: ObservableObject {
     /// 사용자가 추가한 코드 블럭 목록 (순서대로 실행)
     @Published var codeBlocks: [Block] = []
 
-    /// 현재 실행 중인 블럭 인덱스 (하이라이트용) — nil이면 하이라이트 없음
-    @Published var currentBlockIndex: Int? = nil
+    /// 현재 실행 중인 블럭 경로 (하이라이트용) — nil이면 하이라이트 없음
+    /// 경로 형식: [최상위 인덱스], [최상위, 자식], [최상위, 자식, 손자]
+    /// (단일 Int는 중첩 블럭 실행 시 최상위 인덱스 공간과 충돌하므로 경로로 추적)
+    @Published var currentBlockPath: [Int]? = nil
 
-    /// 실패한 블럭 인덱스 (빨간 하이라이트용) — nil이면 표시 안 함
-    @Published var failedBlockIndex: Int? = nil
+    /// 실패한 블럭 경로 (빨간 하이라이트용) — nil이면 표시 안 함 (형식은 currentBlockPath와 동일)
+    @Published var failedBlockPath: [Int]? = nil
 
     /// 실패 이유 메시지 — 토스트 배너에 표시
     @Published var failureMessage: String = ""
@@ -220,7 +222,7 @@ class GameViewModel: ObservableObject {
         guard gameState == .idle, !codeBlocks.isEmpty else { return }
 
         gameState = .running
-        failedBlockIndex = nil
+        failedBlockPath = nil
         failureMessage = ""
         characterMoved = true   // 실행 시작 = 캐릭터 이동 시작
         attemptCount += 1       // 도전 횟수 증가
@@ -228,12 +230,12 @@ class GameViewModel: ObservableObject {
 
         // 블럭 순서대로 비동기 실행 → 완료 시 idle 복귀
         Task {
-            await executeBlocks(codeBlocks, startIndex: 0)
+            await executeBlocks(codeBlocks, parentPath: [])
             // 성공/실패 처리가 안 됐으면 (목표 미도달로 자연 종료) idle로 복귀
             await MainActor.run {
                 if gameState == .running {
                     gameState = .idle
-                    currentBlockIndex = nil
+                    currentBlockPath = nil
                     stopTimer()
                 }
             }
@@ -246,15 +248,15 @@ class GameViewModel: ObservableObject {
         gameState = .idle
         stopTimer()
         scene?.resetCharacter()  // 캐릭터를 시작 위치로 되돌림
-        currentBlockIndex = nil
+        currentBlockPath = nil
     }
 
     /// 캐릭터만 리셋 — 블럭 목록은 유지
     func reset() {
         gameState = .idle
         stopTimer()
-        currentBlockIndex = nil
-        failedBlockIndex = nil
+        currentBlockPath = nil
+        failedBlockPath = nil
         failureMessage = ""
         characterMoved = false
         scene?.resetCharacter()  // 캐릭터를 시작 위치로 되돌림
@@ -269,21 +271,22 @@ class GameViewModel: ObservableObject {
 
     // MARK: - 블럭 실행 로직
 
-    /// 블럭 배열을 순서대로 실행 (재귀 지원 — repeat 블럭 처리)
+    /// 블럭 배열을 순서대로 실행 (재귀 지원 — 컨테이너 블럭 처리)
     /// - Parameters:
     ///   - blocks: 실행할 블럭 배열
-    ///   - startIndex: 글로벌 인덱스 오프셋 (하이라이트 계산용)
-    private func executeBlocks(_ blocks: [Block], startIndex: Int) async {
+    ///   - parentPath: 부모 컨테이너까지의 경로 (최상위 호출은 빈 배열) — 하이라이트 경로 계산용
+    private func executeBlocks(_ blocks: [Block], parentPath: [Int]) async {
         for (offset, block) in blocks.enumerated() {
 
             // 실행 중단됐으면 멈춤 (stop() 호출 등)
             guard await isRunning() else { return }
 
-            // 전체 블럭 목록에서의 절대 인덱스 (하이라이트용)
-            let globalIndex = startIndex + offset
+            // 현재 블럭의 경로 — 부모 경로에 자신의 인덱스를 추가
+            // (최상위 인덱스 공간과 충돌하지 않는 경로 기반 식별)
+            let path = parentPath + [offset]
 
-            // 현재 실행 중인 블럭 하이라이트 갱신
-            await updateCurrentIndex(globalIndex)
+            // 현재 실행 중인 블럭 하이라이트 갱신 (경로 기반)
+            await updateCurrentPath(path)
 
             // 블럭 종류에 따라 실행
             switch block.type {
@@ -291,7 +294,8 @@ class GameViewModel: ObservableObject {
                 // 앞으로 이동 — 실패 시 실패 처리 후 종료
                 let success = await moveCharacter(direction: .forward)
                 if !success {
-                    await handleFailure(at: globalIndex, message: "벽에 부딪혔어요 · 라인 \(globalIndex + 1)")
+                    // 라인 번호는 사용자에게 보이는 최상위 행 번호(1-based) 기준
+                    await handleFailure(at: path, message: "벽에 부딪혔어요 · 라인 \(path[0] + 1)")
                     return
                 }
 
@@ -299,7 +303,8 @@ class GameViewModel: ObservableObject {
                 // 뒤로 이동 — 실패 시 실패 처리 후 종료
                 let success = await moveCharacter(direction: .backward)
                 if !success {
-                    await handleFailure(at: globalIndex, message: "벽에 부딪혔어요 · 라인 \(globalIndex + 1)")
+                    // 라인 번호는 사용자에게 보이는 최상위 행 번호(1-based) 기준
+                    await handleFailure(at: path, message: "벽에 부딪혔어요 · 라인 \(path[0] + 1)")
                     return
                 }
 
@@ -317,8 +322,8 @@ class GameViewModel: ObservableObject {
                 let children = block.children ?? []
                 for _ in 0..<count {
                     guard await isRunning() else { return }
-                    // 자식 블럭을 재귀적으로 실행 (startIndex는 부모 인덱스 + 1)
-                    await executeBlocks(children, startIndex: globalIndex + 1)
+                    // 자식 블럭을 재귀적으로 실행 (자신의 경로를 부모 경로로 전달)
+                    await executeBlocks(children, parentPath: path)
                 }
 
             case .ifBlock:
@@ -327,14 +332,14 @@ class GameViewModel: ObservableObject {
                 let shouldExecute = await checkIfCondition(condition)
                 if shouldExecute {
                     let children = block.children ?? []
-                    await executeBlocks(children, startIndex: globalIndex + 1)
+                    await executeBlocks(children, parentPath: path)
                 }
 
             case .functionBlock:
                 // function 블럭: 자식 블럭들을 서브루틴으로 실행
                 // 추후 챕터4 UI에서 함수 정의-호출 분리 구조로 확장 예정
                 let children = block.children ?? []
-                await executeBlocks(children, startIndex: globalIndex + 1)
+                await executeBlocks(children, parentPath: path)
             }
 
             // 각 블럭 실행 후 목표 도달 여부 확인
@@ -462,7 +467,7 @@ class GameViewModel: ObservableObject {
             // 사용한 블럭 수 기준으로 별점 계산
             let stars = stage.starThresholds.stars(for: totalBlockCount)
             clearedStars = stars
-            currentBlockIndex = nil
+            currentBlockPath = nil
             gameState = .success
 
             // ProgressService에 클리어 기록 저장 (더 좋은 기록이면 갱신)
@@ -474,11 +479,11 @@ class GameViewModel: ObservableObject {
         }
     }
 
-    /// 실패 처리 (벽 충돌 등) — 실패 블럭 인덱스와 메시지 설정
-    private func handleFailure(at index: Int, message: String) async {
+    /// 실패 처리 (벽 충돌 등) — 실패 블럭 경로와 메시지 설정
+    private func handleFailure(at path: [Int], message: String) async {
         await MainActor.run {
             stopTimer()
-            failedBlockIndex = index  // 실패한 블럭 빨간 하이라이트
+            failedBlockPath = path    // 실패한 블럭 빨간 하이라이트 (경로 기반)
             failureMessage = message  // 토스트 배너 메시지
             gameState = .failure
         }
@@ -491,9 +496,9 @@ class GameViewModel: ObservableObject {
         await MainActor.run { gameState == .running }
     }
 
-    /// 현재 실행 중인 블럭 인덱스 갱신 (MainActor에서 실행)
-    private func updateCurrentIndex(_ index: Int) async {
-        await MainActor.run { currentBlockIndex = index }
+    /// 현재 실행 중인 블럭 경로 갱신 (MainActor에서 실행)
+    private func updateCurrentPath(_ path: [Int]) async {
+        await MainActor.run { currentBlockPath = path }
     }
 
     // MARK: - 타이머

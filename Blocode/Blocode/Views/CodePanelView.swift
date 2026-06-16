@@ -202,9 +202,17 @@ struct CodePanelView: View {
                         BlockRowView(
                             block: block,
                             index: offset,
-                            // 실행 중이고 현재 인덱스와 일치하면 활성 표시
-                            isActive: viewModel.currentBlockIndex == offset && viewModel.gameState == .running,
-                            isFailed: viewModel.failedBlockIndex == offset,
+                            // 실행 중이고 현재 경로의 최상위 인덱스와 일치하면 활성 표시
+                            // (자식/손자 실행 중에도 부모 행 하이라이트 유지)
+                            isActive: viewModel.currentBlockPath?.first == offset && viewModel.gameState == .running,
+                            isFailed: viewModel.failedBlockPath?.first == offset,
+                            // 이 행 내부에서 실행 중인 자식의 상대 경로 — [자식] 또는 [자식, 손자]
+                            // (다른 행이 실행 중이면 빈 배열 → 자식 하이라이트 없음)
+                            activeChildPath: (viewModel.gameState == .running && viewModel.currentBlockPath?.first == offset)
+                                ? Array((viewModel.currentBlockPath ?? []).dropFirst()) : [],
+                            // 이 행 내부에서 실패한 자식의 상대 경로 (형식 동일)
+                            failedChildPath: viewModel.failedBlockPath?.first == offset
+                                ? Array((viewModel.failedBlockPath ?? []).dropFirst()) : [],
                             onDelete: { viewModel.removeBlock(at: offset) },
                             onAddChild: { childType in
                                 viewModel.addChildBlock(childType, to: offset)
