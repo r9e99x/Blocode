@@ -25,17 +25,10 @@ struct ChapterView: View {
     }
 
     // MARK: - 챕터 색상 (챕터 번호 → 색상)
-    /// 챕터 번호에 따른 고유 색상 반환 — 헤더 배경과 스테이지 아이콘에 사용
-    /// (색상은 순수 UI 매핑이라 View에 유지 — VM은 UI 타입 비의존)
+    /// 챕터 색상 — ChapterCatalog(단일 원본)에서 조회, 헤더 배경과 스테이지 아이콘에 사용
+    /// (색상 값 자체는 카탈로그가 보유 — 화면별 색상 이중 정의 제거)
     var chapterColor: Color {
-        switch vm.chapter {
-        case 1:  return Color(red: 0.576, green: 0.788, blue: 0.671) // #93c9ab — 민트
-        case 2:  return Color(red: 0.580, green: 0.760, blue: 0.880)
-        case 3:  return Color(red: 0.930, green: 0.620, blue: 0.420)
-        case 4:  return Color(red: 0.450, green: 0.780, blue: 0.620)
-        case 5:  return Color(red: 0.880, green: 0.500, blue: 0.680)
-        default: return Color.accentColor
-        }
+        ChapterCatalog.chapter(vm.chapter)?.color ?? Color.accentColor
     }
 
     // status bar 높이 (safe area top) — 헤더 레이아웃 계산에 사용

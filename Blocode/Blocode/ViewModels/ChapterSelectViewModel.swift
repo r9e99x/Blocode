@@ -25,26 +25,9 @@ final class ChapterSelectViewModel: ObservableObject {
     let chapters: [ChapterInfo]
 
     init() {
-        // 챕터 메타데이터 정의
-        // requiredStarsFromPrev: 이전 챕터 최대 별점의 약 2/3 수준으로 설정
-        // 스테이지 추가 시 stageCount만 수정 (ChapterViewModel.stageCount(for:)와 일치시킬 것)
-        self.chapters = [
-            ChapterInfo(id: 1, title: "기본기",  stageCount: 6,
-                        color: Color(red: 0.576, green: 0.788, blue: 0.671), // #93c9ab
-                        requiredStarsFromPrev: 0),  // 챕터 1은 항상 개방
-            ChapterInfo(id: 2, title: "반복",   stageCount: 8,
-                        color: Color(red: 0.58, green: 0.76, blue: 0.88),
-                        requiredStarsFromPrev: 12), // 챕터 1 최대 18개 중 12개 (67%)
-            ChapterInfo(id: 3, title: "조건문", stageCount: 8,
-                        color: Color(red: 0.93, green: 0.62, blue: 0.42),
-                        requiredStarsFromPrev: 16), // 챕터 2 최대 24개 중 16개 (67%)
-            ChapterInfo(id: 4, title: "함수",   stageCount: 7,
-                        color: Color(red: 0.45, green: 0.78, blue: 0.62),
-                        requiredStarsFromPrev: 16), // 챕터 3 최대 24개 중 16개 (67%)
-            ChapterInfo(id: 5, title: "심화",   stageCount: 6,
-                        color: Color(red: 0.88, green: 0.50, blue: 0.68),
-                        requiredStarsFromPrev: 14), // 챕터 4 최대 21개 중 14개 (67%)
-        ]
+        // 챕터 메타데이터는 ChapterCatalog(단일 원본)에서 가져옴
+        // (제목·스테이지 수·색상·해금 기준을 한 곳에서 관리 → 화면 간 불일치 방지)
+        self.chapters = ChapterCatalog.all
 
         // ProgressService 변경을 그대로 전파 → 뷰 자동 갱신 유지
         progress.objectWillChange

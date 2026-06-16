@@ -38,28 +38,14 @@ final class ChapterViewModel: ObservableObject {
             .store(in: &cancellables)
     }
 
-    /// 챕터 번호에 따른 한국어 제목 반환
+    /// 챕터 번호에 따른 한국어 제목 반환 (ChapterCatalog 단일 원본에서 조회)
     var chapterTitle: String {
-        switch chapter {
-        case 1: return "기본기"
-        case 2: return "반복"
-        case 3: return "조건문"
-        case 4: return "함수"
-        case 5: return "심화"
-        default: return "챕터 \(chapter)"
-        }
+        ChapterCatalog.chapter(chapter)?.title ?? "챕터 \(chapter)"
     }
 
-    /// 챕터별 스테이지 수 (스테이지 추가 시 여기만 수정)
+    /// 챕터별 스테이지 수 (ChapterCatalog 단일 원본에서 조회)
     static func stageCount(for chapter: Int) -> Int {
-        switch chapter {
-        case 1: return 6
-        case 2: return 8
-        case 3: return 8
-        case 4: return 7
-        case 5: return 6
-        default: return 0
-        }
+        ChapterCatalog.chapter(chapter)?.stageCount ?? 0
     }
 
     /// 아직 클리어하지 않은 첫 번째 스테이지 번호 (현재 진행 위치)

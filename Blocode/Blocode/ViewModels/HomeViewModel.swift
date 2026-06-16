@@ -23,14 +23,10 @@ final class HomeViewModel: ObservableObject {
     private var cancellables = Set<AnyCancellable>()
 
     /// 홈 화면에서 사용할 챕터 목록 (id, stageCount)
-    /// 스테이지 추가 시 ChapterViewModel.stageCount(for:)와 함께 수정
-    let chapters: [(id: Int, stageCount: Int)] = [
-        (id: 1, stageCount: 6),
-        (id: 2, stageCount: 8),
-        (id: 3, stageCount: 8),
-        (id: 4, stageCount: 7),
-        (id: 5, stageCount: 6),
-    ]
+    /// ChapterCatalog(단일 원본)에서 파생 — 진행도 계산 헬퍼가 요구하는 튜플 형태로 변환
+    let chapters: [(id: Int, stageCount: Int)] = ChapterCatalog.all.map {
+        (id: $0.number, stageCount: $0.stageCount)
+    }
 
     init() {
         // ProgressService가 바뀌면 이 VM도 변경 알림을 그대로 전파 → 뷰 자동 갱신 유지
