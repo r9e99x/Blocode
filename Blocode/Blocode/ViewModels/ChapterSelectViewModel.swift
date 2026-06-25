@@ -50,19 +50,24 @@ final class ChapterSelectViewModel: ObservableObject {
         let prevStageCount = prevChapter?.stageCount ?? 0
         guard prevStageCount > 0 else { return false }
 
-        // 조건 1: 이전 챕터 총 별점 임계치 이상
+        // 다음 챕터 해금 = 아래 둘을 모두 만족해야 함 (AND)
+        //   조건 1: 이전 챕터 총 별점이 기준(requiredStarsFromPrev) 이상
+        //   조건 2: 이전 챕터 마지막 스테이지(종합)를 클리어 (별 수 무관)
         let prevStars = progress.totalStars(chapter: chapter.number - 1, stageCount: prevStageCount)
-        if prevStars >= chapter.requiredStarsFromPrev { return true }
-
-        // 조건 2: 이전 챕터 마지막 스테이지(종합)를 별 3개로 클리어
         let lastStageId = "ch\(chapter.number - 1)_stage\(prevStageCount)"
-        return progress.stars(for: lastStageId) == 3
+        let finalCleared = progress.isCleared(lastStageId)
+        return prevStars >= chapter.requiredStarsFromPrev && finalCleared
     }
 
     /// 챕터에서 획득한 총 별점 반환
     func chapterStars(_ chapter: ChapterInfo) -> Int {
         guard chapter.stageCount > 0 else { return 0 }
         return progress.totalStars(chapter: chapter.number, stageCount: chapter.stageCount)
+    }
+
+    /// 잠긴 챕터의 해금 조건 안내 문구 (B안: 별 합 AND 종합 클리어)
+    func lockMessage(for chapter: ChapterInfo) -> String {
+        "이전 챕터에서 별 \(chapter.requiredStarsFromPrev)개를 모으고\n종합 스테이지를 클리어하면 열려요"
     }
 
     /// 챕터에서 클리어한 스테이지 수 반환

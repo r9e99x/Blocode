@@ -295,7 +295,9 @@ struct StageView: View {
 
     /// 드래그 중 손가락 위치에 표시되는 반투명 고스트 블럭
     private func ghostBlock(type: BlockType, at position: CGPoint) -> some View {
-        VStack(spacing: 5) {
+        // 드래그 위치가 코드 리스트 영역 안인지 — 밖이면 흐리게 표시(놓으면 취소됨을 알림)
+        let insideCodeArea = codeListFrame.contains(position)
+        return VStack(spacing: 5) {
             Image(systemName: type.iconName)
                 .font(.system(size: 20, weight: .bold))
                 .foregroundStyle(.white)
@@ -308,10 +310,12 @@ struct StageView: View {
         .clipShape(RoundedRectangle(cornerRadius: 16))
         .shadow(color: type.blockColor.opacity(0.5), radius: 14, y: 6)
         .scaleEffect(1.1)  // 손가락 위에 살짝 크게
+        .opacity(insideCodeArea ? 1.0 : 0.45)  // 영역 밖이면 흐리게 — 여기서 놓으면 취소
         .position(x: position.x, y: position.y - 50)  // 손가락 위쪽에 표시
         .allowsHitTesting(false)  // 고스트 블럭은 터치 통과
         .transition(.scale(scale: 0.7).combined(with: .opacity))
         .animation(.spring(duration: 0.2), value: dragType != nil)
+        .animation(.easeInOut(duration: 0.15), value: insideCodeArea)
     }
 
     // MARK: - 실패 토스트 배너

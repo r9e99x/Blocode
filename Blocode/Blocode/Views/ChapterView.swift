@@ -17,6 +17,7 @@ struct ChapterView: View {
     @StateObject private var vm: ChapterViewModel
     @State private var retryAlertStage:    Stage? = nil  // 재도전 확인 알럿 대상 스테이지
     @State private var pressedStageNumber: Int?   = nil  // 눌린 스테이지 아이콘 번호 추적
+    @State private var lockInfo: LockInfo?         = nil  // 잠금 안내 팝업 (nil이면 숨김)
 
     init(navPath: Binding<NavigationPath>, chapter: Int) {
         self._navPath = navPath
@@ -54,6 +55,15 @@ struct ChapterView: View {
         .ignoresSafeArea(edges: .top)    // 헤더가 status bar 영역까지 확장
         .navigationBarHidden(true)
         .background(Color.appBackground.ignoresSafeArea())
+        // 잠긴 스테이지 탭 시 해금 조건 팝업
+        .overlay {
+            if let lockInfo {
+                LockInfoOverlay(info: lockInfo) {
+                    withAnimation(.easeInOut(duration: 0.2)) { self.lockInfo = nil }
+                }
+                .transition(.opacity)
+            }
+        }
         // 이미 클리어한 스테이지 탭 시 재도전 확인 알럿
         .alert("이미 클리어한 스테이지예요", isPresented: Binding(
             get: { retryAlertStage != nil },
@@ -182,9 +192,20 @@ struct ChapterView: View {
         let isCurrent = vm.isCurrent(stage)  // 현재 진행 위치 여부
 
         return Button {
-            guard !locked else { return }  // 잠긴 스테이지는 탭 무효
-            if cleared { retryAlertStage = stage }  // 클리어했으면 재도전 확인
-            else { navPath.append(AppRoute.stage(chapter: stage.chapter, number: stage.stageNumber)) }
+            if locked {
+                // 잠긴 스테이지: 해금 조건 팝업 표시
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    lockInfo = LockInfo(
+                        title: "아직 잠겨 있어요",
+                        message: vm.lockMessage(for: stage),
+                        accentColor: chapterColor
+                    )
+                }
+            } else if cleared {
+                retryAlertStage = stage  // 클리어했으면 재도전 확인
+            } else {
+                navPath.append(AppRoute.stage(chapter: stage.chapter, number: stage.stageNumber))
+            }
         } label: {
             HStack(spacing: 16) {
 

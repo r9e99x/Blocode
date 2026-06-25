@@ -81,4 +81,14 @@ final class ChapterViewModel: ObservableObject {
     func isCurrent(_ stage: Stage) -> Bool {
         stage.stageNumber == currentStageNumber
     }
+
+    /// 잠긴 스테이지의 해금 조건 안내 문구
+    /// (종합=마지막 스테이지는 "앞 스테이지 전부 클리어", 그 외는 "직전 스테이지 클리어")
+    func lockMessage(for stage: Stage) -> String {
+        if stage.stageNumber == stages.count {
+            return "앞 스테이지를 모두 클리어하면\n도전할 수 있어요"
+        } else {
+            return "이전 스테이지를 먼저\n클리어하면 열려요"
+        }
+    }
 }

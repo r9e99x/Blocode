@@ -1,0 +1,113 @@
+//
+//  LockInfoOverlay.swift
+//  Blocode
+//
+//  Created by 조준희 on 6/26/26.
+//
+
+import SwiftUI
+
+// MARK: - LockInfo
+/// 잠금 안내 팝업에 표시할 내용 (제목 / 조건 문구 / 강조 색)
+struct LockInfo: Identifiable {
+    let id = UUID()
+    let title: String        // 팝업 제목
+    let message: String      // 해금 조건 안내 문구
+    let accentColor: Color   // 강조 색 (챕터 색)
+}
+
+// MARK: - LockInfoOverlay
+/// 잠긴 챕터/스테이지를 탭했을 때 해금 조건을 안내하는 커스텀 팝업
+/// 배경을 어둡게 덮고 가운데 카드로 조건을 보여줌 (배경 탭 또는 확인 버튼으로 닫음)
+struct LockInfoOverlay: View {
+
+    let info: LockInfo       // 표시할 잠금 안내 내용
+    let onClose: () -> Void  // 닫기 콜백
+
+    @State private var isConfirmPressed = false  // 확인 버튼 눌림 상태 (3D 효과)
+    private let confirmTopDepth: CGFloat = 0.8   // 확인 버튼 위 뒷면 두께
+    private let confirmBotDepth: CGFloat = 2.5   // 확인 버튼 아래 뒷면 두께 (그림자)
+
+    var body: some View {
+        ZStack {
+            // 배경 딤 — 탭하면 닫힘
+            Color.black.opacity(0.45)
+                .ignoresSafeArea()
+                .onTapGesture { onClose() }
+
+            // 안내 카드
+            VStack(spacing: 18) {
+                // 자물쇠 아이콘 (원형 배경 + 강조 색)
+                ZStack {
+                    Circle()
+                        .fill(info.accentColor.opacity(0.18))
+                        .frame(width: 64, height: 64)
+                    Image(systemName: "lock.fill")
+                        .font(.system(size: 26, weight: .semibold))
+                        .foregroundStyle(info.accentColor)
+                }
+                .padding(.top, 4)
+
+                // 제목
+                Text(info.title)
+                    .font(.system(size: 19, weight: .bold))
+                    .foregroundStyle(.primary)
+
+                // 해금 조건 문구
+                Text(info.message)
+                    .font(.system(size: 15))
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                    .lineSpacing(3)
+
+                // 확인 버튼 (3D + 눌림 효과)
+                Button(action: onClose) {
+                    ThreeDSurface(topDepth: confirmTopDepth, bottomDepth: confirmBotDepth, isPressed: isConfirmPressed) {
+                        // ① 위 뒷면
+                        RoundedRectangle(cornerRadius: 25).fill(Color.bevelTopBack)
+                            .frame(maxWidth: .infinity).frame(height: 50)
+                    } bottomBack: {
+                        // ② 아래 뒷면 (그림자)
+                        RoundedRectangle(cornerRadius: 25).fill(Color.bevelBottomBack)
+                            .frame(maxWidth: .infinity).frame(height: 50)
+                    } front: {
+                        // ③ 앞면 — darkInk + (눌림 시 그림자) + 텍스트
+                        ZStack {
+                            RoundedRectangle(cornerRadius: 25).fill(Color.darkInk)
+                            if isConfirmPressed {
+                                RoundedRectangle(cornerRadius: 25).fill(Color.black.opacity(0.10))
+                            }
+                            Text("확인")
+                                .font(.system(size: 16, weight: .bold))
+                                .foregroundStyle(.white)
+                        }
+                        .frame(maxWidth: .infinity).frame(height: 50)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 50 + confirmTopDepth + confirmBotDepth)
+                }
+                .buttonStyle(.plain)
+                .onPressState(isPressed: $isConfirmPressed)
+                .padding(.top, 2)
+            }
+            .padding(24)
+            .frame(maxWidth: 300)
+            .background(Color.cardBackground)
+            .clipShape(RoundedRectangle(cornerRadius: 24))
+            .shadow(color: Color.black.opacity(0.15), radius: 20, x: 0, y: 8)
+            .padding(.horizontal, 40)
+        }
+    }
+}
+
+// MARK: - Preview
+#Preview {
+    LockInfoOverlay(
+        info: LockInfo(
+            title: "아직 잠겨 있어요",
+            message: "이전 챕터에서 별 12개를 모으고\n종합 스테이지를 클리어하면 열려요",
+            accentColor: Color(red: 0.58, green: 0.76, blue: 0.88)
+        ),
+        onClose: {}
+    )
+}

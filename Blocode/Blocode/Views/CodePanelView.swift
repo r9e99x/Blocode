@@ -90,15 +90,15 @@ struct CodePanelView: View {
                         dragPosition = pt
                         dragInsertIndex = calculateInsertIndex(for: pt.y)
                     },
-                    onDragEnd: { type, _ in
-                        // 드래그 종료: 계산된 인덱스에 블럭 삽입
-                        if dragType != nil {
+                    onDragEnd: { type, location in
+                        // 코드 리스트 영역 안에서 손을 뗐을 때만 삽입 (영역 밖이면 취소)
+                        if codeListFrame.contains(location) {
                             withAnimation(.spring(duration: 0.2)) {
                                 viewModel.insertBlock(type, at: dragInsertIndex)
                             }
                         }
                         withAnimation(.spring(duration: 0.2)) {
-                            dragType = nil  // 고스트 블럭 제거
+                            dragType = nil  // 고스트 블럭 제거 (삽입했든 취소했든)
                         }
                     }
                 )
@@ -176,14 +176,37 @@ struct CodePanelView: View {
     private var codeBlockList: some View {
         Group {
             if viewModel.codeBlocks.isEmpty {
-                // 블럭이 없을 때 안내 메시지
-                VStack(spacing: 6) {
-                    Image(systemName: "plus.square.dashed")
-                        .font(.system(size: 26))
-                        .foregroundStyle(Color.tertiaryLabelColor)
-                    Text("아래 팔레트에서 블럭을 추가하세요")
-                        .font(.system(size: 13))
-                        .foregroundStyle(.tertiary)
+                Group {
+                    // 드래그 중 코드 영역 안이면 "여기에 놓기" 드롭존, 평소엔 안내 메시지
+                    if let dragType, codeListFrame.contains(dragPosition) {
+                        // 드롭존 — 점선 박스 + 블럭 색 (블럭이 없으니 삽입선 대신 영역 강조)
+                        RoundedRectangle(cornerRadius: 14)
+                            .fill(dragType.blockColor.opacity(0.10))
+                            .overlay {
+                                RoundedRectangle(cornerRadius: 14)
+                                    .strokeBorder(dragType.blockColor,
+                                                  style: StrokeStyle(lineWidth: 2, dash: [7, 5]))
+                            }
+                            .overlay {
+                                HStack(spacing: 8) {
+                                    Image(systemName: "plus.circle.fill")
+                                        .font(.system(size: 20))
+                                    Text("여기에 놓기")
+                                        .font(.system(size: 14, weight: .semibold))
+                                }
+                                .foregroundStyle(dragType.blockColor)
+                            }
+                            .padding(.horizontal, 16)
+                    } else {
+                        VStack(spacing: 6) {
+                            Image(systemName: "plus.square.dashed")
+                                .font(.system(size: 26))
+                                .foregroundStyle(Color.tertiaryLabelColor)
+                            Text("아래 팔레트에서 블럭을 추가하세요")
+                                .font(.system(size: 13))
+                                .foregroundStyle(.tertiary)
+                        }
+                    }
                 }
                 .frame(maxWidth: .infinity)
                 .frame(height: 80)
@@ -191,7 +214,7 @@ struct CodePanelView: View {
                 List {
                     ForEach(Array(viewModel.codeBlocks.enumerated()), id: \.element.id) { offset, block in
                         // 드래그 삽입 인디케이터 — 첫 번째 위치
-                        if let dragType, dragInsertIndex == 0 && offset == 0 {
+                        if let dragType, codeListFrame.contains(dragPosition), dragInsertIndex == 0 && offset == 0 {
                             insertionIndicator(color: dragType.blockColor)
                                 .listRowBackground(Color.clear)
                                 .listRowSeparator(.hidden)
@@ -251,7 +274,7 @@ struct CodePanelView: View {
                         })
 
                         // 드래그 삽입 인디케이터 — 현재 블럭 다음 위치
-                        if let dragType, dragInsertIndex == offset + 1 {
+                        if let dragType, codeListFrame.contains(dragPosition), dragInsertIndex == offset + 1 {
                             insertionIndicator(color: dragType.blockColor)
                                 .listRowBackground(Color.clear)
                                 .listRowSeparator(.hidden)
@@ -265,10 +288,12 @@ struct CodePanelView: View {
         }
         .frame(height: 160)  // 패널 확장 시 고정 높이
         // 코드 리스트 글로벌 프레임 추적 (드래그 감지용)
+        // size가 아닌 frame(위치+크기) 변화를 추적 — 빈 상태에선 size가 안 바뀌어
+        // 좌표 갱신이 누락돼 영역 판정이 어긋났음(빈 영역 드래그 추가 불가)
         .background(GeometryReader { geo in
             Color.clear
                 .onAppear { codeListFrame = geo.frame(in: .global) }
-                .onChange(of: geo.size) { codeListFrame = geo.frame(in: .global) }
+                .onChange(of: geo.frame(in: .global)) { codeListFrame = geo.frame(in: .global) }
         })
     }
 

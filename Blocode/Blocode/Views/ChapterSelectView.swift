@@ -36,6 +36,7 @@ struct ChapterSelectView: View {
     /// 스크롤 시 헤더 축소 여부
     @State private var isCompact        = false
     @State private var pressedChapterId: Int? = nil  // 눌린 챕터 카드 ID 추적
+    @State private var lockInfo: LockInfo? = nil     // 잠금 안내 팝업 (nil이면 숨김)
 
     var body: some View {
         VStack(spacing: 0) {
@@ -57,6 +58,15 @@ struct ChapterSelectView: View {
         }
         .navigationBarHidden(true)
         .background(Color.appBackground.ignoresSafeArea())
+        // 잠긴 챕터 탭 시 해금 조건 팝업
+        .overlay {
+            if let lockInfo {
+                LockInfoOverlay(info: lockInfo) {
+                    withAnimation(.easeInOut(duration: 0.2)) { self.lockInfo = nil }
+                }
+                .transition(.opacity)
+            }
+        }
     }
 
     // MARK: - 헤더 (고정 + 스크롤 시 축소)
@@ -240,8 +250,18 @@ struct ChapterSelectView: View {
             .frame(width: cardSize + 10, height: cardSize + 10)
             .contentShape(Rectangle())
             .onTapGesture {
-                guard unlocked && chapter.stageCount > 0 else { return }
-                navPath.append(AppRoute.chapter(chapter.number))
+                if unlocked && chapter.stageCount > 0 {
+                    navPath.append(AppRoute.chapter(chapter.number))
+                } else if !unlocked {
+                    // 잠긴 챕터: 해금 조건 팝업 표시
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        lockInfo = LockInfo(
+                            title: "아직 잠겨 있어요",
+                            message: vm.lockMessage(for: chapter),
+                            accentColor: chapter.color
+                        )
+                    }
+                }
             }
             // 눌림 상태 추적 — 탭과 동시 실행
             .onPressState(isPressed: Binding(

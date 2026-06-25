@@ -16,6 +16,5 @@ struct ChapterInfo: Identifiable {
     let title: String               // 챕터 이름 (예: "기본기")
     let stageCount: Int             // 챕터 내 스테이지 수
     let color: Color                // 챕터 카드 색상
-    let requiredStarsFromPrev: Int  // 이전 챕터에서 필요한 최소 별점 (챕터 잠금 해제 조건)
-    let finalStageRequiredStars: Int // 종합(마지막) 스테이지 잠금 해제에 필요한 이전 스테이지 별점 합
+    let requiredStarsFromPrev: Int  // 다음 챕터 해금에 필요한 이전 챕터 총 별점 (종합 클리어와 함께 AND 조건)
 }

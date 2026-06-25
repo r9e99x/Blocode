@@ -138,16 +138,8 @@ final class ProgressService: ObservableObject {
         // 1스테이지는 항상 개방
         if stageNumber == 1 { return false }
 
-        // 챕터별 마지막 스테이지(종합) 잠금 조건 — ChapterCatalog 단일 원본에서 조회
-        // 마지막 스테이지 번호 = stageCount, 이전 스테이지 수 = stageCount - 1
-        // 이전 스테이지 별점 합산이 finalStageRequiredStars 이상이어야 개방
-        // (기준은 이전 스테이지 최대 별점의 약 60% 수준 — 값은 ChapterCatalog에서 관리)
-        if let meta = ChapterCatalog.chapter(chapter), stageNumber == meta.stageCount {
-            // 마지막 스테이지: 이전 스테이지 별점 합산 조건
-            return totalStars(chapter: chapter, stageCount: meta.stageCount - 1) < meta.finalStageRequiredStars
-        }
-
-        // 그 외: 이전 스테이지 클리어 필요
+        // 모든 스테이지(종합 포함)는 직전 스테이지를 클리어하면 개방
+        // 스테이지가 순차 진행이므로 "직전 클리어" = "이전 스테이지 전부 클리어"와 동일
         let prevId = "ch\(chapter)_stage\(stageNumber - 1)"
         return !isCleared(prevId)
     }
