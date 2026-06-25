@@ -17,7 +17,7 @@ class GameScene: SKScene {
     // 길(경로): 연한 색 / 벽: 짙은 색
     private var floorColor  = SKColor(red: 232/255, green: 221/255, blue: 194/255, alpha: 1.0) // 라이트: #e8ddc2 — 걸을 수 있는 길
     private var wallColor   = SKColor(red: 187/255, green: 167/255, blue: 126/255, alpha: 1.0) // 라이트: #bba77e — 벽
-    private var characterColor = SKColor(red: 42/255, green: 37/255, blue: 32/255, alpha: 1.0) // #2a2520
+    private var characterColor = SKColor.darkInk // #2a2520
     private let goalColor   = SKColor(red: 0.93, green: 0.67, blue: 0.24, alpha: 1.0) // 골드 (공통)
 
     // MARK: - 맵 데이터
@@ -61,7 +61,7 @@ class GameScene: SKScene {
             : SKColor(red: 187/255, green: 167/255, blue: 126/255, alpha: 1.0) // 라이트: #bba77e — 벽
         characterColor = isDark
             ? SKColor(red: 0.88, green: 0.88, blue: 0.90, alpha: 1.0)
-            : SKColor(red: 42/255, green: 37/255, blue: 32/255, alpha: 1.0) // #2a2520
+            : SKColor.darkInk // #2a2520
         // 색상 변경 후 맵 전체 다시 그리기
         setupMap()
     }
@@ -79,14 +79,20 @@ class GameScene: SKScene {
         setupMap()
     }
 
-    // MARK: - 맵 설정
+    // MARK: - 레이아웃 계산
 
-    /// 모든 자식 노드를 제거하고 맵, 목표 지점, 캐릭터를 새로 렌더링
-    func setupMap() {
-        // 기존 노드 전체 제거
-        removeAllChildren()
-        guard size.width > 0, size.height > 0 else { return }
+    /// 맵 렌더링과 캐릭터 배치에 공통으로 쓰는 타일 레이아웃 수치
+    private struct MapLayout {
+        let tileSize: CGFloat   // 타일 한 변 크기
+        let cellSize: CGFloat   // 타일 + 간격 (한 칸 크기)
+        let originX: CGFloat    // 맵 좌측 시작 x (씬 중앙 정렬)
+        let originY: CGFloat    // 맵 하단 시작 y (씬 중앙 정렬)
+    }
 
+    /// 현재 씬 크기와 맵 크기로 타일 레이아웃 수치를 계산
+    /// setupMap()과 updateCharacterTransform()이 같은 값을 쓰도록 단일화한 계산부
+    /// (호출 전 size.width/height > 0 가드 필요)
+    private func layoutMetrics() -> MapLayout {
         let cols = mapData.width
         let rows = mapData.height
 
@@ -101,7 +107,6 @@ class GameScene: SKScene {
         let maxByWidth  = (availableWidth  + gap) / CGFloat(refCols) - gap
         let maxByHeight = (availableHeight + gap) / CGFloat(refRows) - gap
         let tileSize    = min(maxByWidth, maxByHeight, 76)  // 최대 76pt 제한
-        let cornerRadius = tileSize * 0.22  // 타일 모서리 반지름 (타일 크기의 22%)
 
         let cellSize  = tileSize + gap  // 하나의 셀 크기 (타일 + 간격)
         let mapWidth  = CGFloat(cols) * cellSize - gap
@@ -110,6 +115,28 @@ class GameScene: SKScene {
         // 맵을 씬 중앙에 배치하기 위한 오프셋 계산
         let originX = (size.width  - mapWidth)  / 2
         let originY = (size.height - mapHeight) / 2
+
+        return MapLayout(tileSize: tileSize, cellSize: cellSize, originX: originX, originY: originY)
+    }
+
+    // MARK: - 맵 설정
+
+    /// 모든 자식 노드를 제거하고 맵, 목표 지점, 캐릭터를 새로 렌더링
+    func setupMap() {
+        // 기존 노드 전체 제거
+        removeAllChildren()
+        guard size.width > 0, size.height > 0 else { return }
+
+        let cols = mapData.width
+        let rows = mapData.height
+
+        // 타일 레이아웃 수치 (캐릭터 배치와 동일한 값을 쓰도록 단일화)
+        let layout = layoutMetrics()
+        let tileSize = layout.tileSize
+        let cellSize = layout.cellSize
+        let originX  = layout.originX
+        let originY  = layout.originY
+        let cornerRadius = tileSize * 0.22  // 타일 모서리 반지름 (타일 크기의 22%)
 
         // MARK: 타일 렌더링 — 경로 + 빈 칸 모두 그리기
         for row in 0..<rows {
@@ -278,8 +305,8 @@ class GameScene: SKScene {
             topDepth: 0.5,
             botDepth: 2.0,
             baseZ: 0,
-            topColor: SKColor(red: 128/255, green: 120/255, blue: 105/255, alpha: 1.0), // #807869
-            botColor: SKColor(red: 190/255, green: 181/255, blue: 159/255, alpha: 1.0)  // #beb59f
+            topColor: SKColor.bevelTopBack,
+            botColor: SKColor.bevelBottomBack
         )
         container.addChild(body3D)
 
@@ -313,7 +340,7 @@ class GameScene: SKScene {
         path.closeSubpath()
 
         let node = SKShapeNode(path: path)
-        node.fillColor   = SKColor(red: 244/255, green: 236/255, blue: 215/255, alpha: 1.0) // #f4ecd7
+        node.fillColor   = SKColor.arrowCream // #f4ecd7
         node.strokeColor = .clear
         return node
     }
@@ -325,27 +352,13 @@ class GameScene: SKScene {
     func updateCharacterTransform(animated: Bool) {
         guard size.width > 0, size.height > 0 else { return }
 
-        // setupMap과 동일한 타일 크기 계산
-        let cols = mapData.width
+        // setupMap과 동일한 타일 레이아웃 수치 사용 (layoutMetrics로 단일화)
         let rows = mapData.height
-        let gap: CGFloat = 8
-        let padding: CGFloat = 20
-        let availableWidth  = size.width  - padding * 2
-        let availableHeight = size.height - padding * 2
-        let refCols = max(cols, 5)
-        let refRows = max(rows, 5)
-        let maxByWidth  = (availableWidth  + gap) / CGFloat(refCols) - gap
-        let maxByHeight = (availableHeight + gap) / CGFloat(refRows) - gap
-        let tileSize = min(maxByWidth, maxByHeight, 76)
-        let cellSize = tileSize + gap
-        let mapWidth  = CGFloat(cols) * cellSize - gap
-        let mapHeight = CGFloat(rows) * cellSize - gap
-        let originX = (size.width  - mapWidth)  / 2
-        let originY = (size.height - mapHeight) / 2
+        let layout = layoutMetrics()
 
-        placeCharacter(originX: originX, originY: originY,
-                       rows: rows, cellSize: cellSize,
-                       tileSize: tileSize, animated: animated)
+        placeCharacter(originX: layout.originX, originY: layout.originY,
+                       rows: rows, cellSize: layout.cellSize,
+                       tileSize: layout.tileSize, animated: animated)
     }
 
     /// 캐릭터 노드를 현재 position과 direction에 맞게 배치

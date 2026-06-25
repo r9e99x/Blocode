@@ -191,8 +191,8 @@ struct CodePanelView: View {
                 List {
                     ForEach(Array(viewModel.codeBlocks.enumerated()), id: \.element.id) { offset, block in
                         // 드래그 삽입 인디케이터 — 첫 번째 위치
-                        if dragType != nil && dragInsertIndex == 0 && offset == 0 {
-                            insertionIndicator(color: dragType!.blockColor)
+                        if let dragType, dragInsertIndex == 0 && offset == 0 {
+                            insertionIndicator(color: dragType.blockColor)
                                 .listRowBackground(Color.clear)
                                 .listRowSeparator(.hidden)
                                 .listRowInsets(EdgeInsets(top: 0, leading: 12, bottom: 0, trailing: 12))
@@ -251,8 +251,8 @@ struct CodePanelView: View {
                         })
 
                         // 드래그 삽입 인디케이터 — 현재 블럭 다음 위치
-                        if dragType != nil && dragInsertIndex == offset + 1 {
-                            insertionIndicator(color: dragType!.blockColor)
+                        if let dragType, dragInsertIndex == offset + 1 {
+                            insertionIndicator(color: dragType.blockColor)
                                 .listRowBackground(Color.clear)
                                 .listRowSeparator(.hidden)
                                 .listRowInsets(EdgeInsets(top: 0, leading: 12, bottom: 0, trailing: 12))

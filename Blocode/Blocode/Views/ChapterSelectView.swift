@@ -19,6 +19,11 @@ struct ChapterSelectView: View {
     /// 각 챕터 카드 중심의 X 비율 (지그재그 배치) — 화면 너비 기준 0.0~1.0
     private let xCenterFracs: [CGFloat] = [0.26, 0.70, 0.22, 0.68, 0.30]
 
+    /// 챕터 인덱스의 X 비율 — 챕터 수가 배열 길이를 넘어도 순환 접근해 인덱스 크래시 방지
+    private func xCenterFrac(_ index: Int) -> CGFloat {
+        xCenterFracs[index % xCenterFracs.count]
+    }
+
     private let cardSize: CGFloat   = 90    // 챕터 카드 크기
     private let rowSpacing: CGFloat = 158   // 카드 상단 간격 (세로 간격)
     private let topPad: CGFloat     = 8     // 맵 상단 패딩
@@ -81,7 +86,7 @@ struct ChapterSelectView: View {
             Spacer()
 
             // 홈 버튼 — NavigationStack에서 한 단계 뒤로
-            Button { navPath.removeLast() } label: {
+            Button { if !navPath.isEmpty { navPath.removeLast() } } label: {
                 Image(systemName: "house")
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundStyle(Color(UIColor.secondaryLabel))
@@ -117,11 +122,11 @@ struct ChapterSelectView: View {
                 ForEach(0..<vm.chapters.count - 1, id: \.self) { i in
                     connectorPath(
                         from: CGPoint(
-                            x: xCenterFracs[i]     * w,
+                            x: xCenterFrac(i)     * w,
                             y: topPad + CGFloat(i)     * rowSpacing + cardSize  // 현재 챕터 카드 하단
                         ),
                         to: CGPoint(
-                            x: xCenterFracs[i + 1] * w,
+                            x: xCenterFrac(i + 1) * w,
                             y: topPad + CGFloat(i + 1) * rowSpacing             // 다음 챕터 카드 상단
                         )
                     )
@@ -132,7 +137,7 @@ struct ChapterSelectView: View {
                     chapterNode(ch)
                         // 카드 중심을 xCenterFracs 위치에 맞춤
                         .offset(
-                            x: xCenterFracs[i] * w - (cardSize + 20) / 2,
+                            x: xCenterFrac(i) * w - (cardSize + 20) / 2,
                             y: topPad + CGFloat(i) * rowSpacing
                         )
                 }
@@ -182,26 +187,22 @@ struct ChapterSelectView: View {
 
             // 카드
             ZStack(alignment: .topTrailing) {
-                ZStack(alignment: .top) {
-
-                    // ① 위 뒷면 — 눌리면 사라짐
+                ThreeDSurface(topDepth: topD, bottomDepth: botD, isPressed: isPressed) {
+                    // ① 위 뒷면
                     ZStack {
                         RoundedRectangle(cornerRadius: 26).fill(unlocked ? chapter.color : Color.lockedBackground)
                         RoundedRectangle(cornerRadius: 26).fill(Color.white.opacity(unlocked ? 0.32 : 0.18))
                     }
                     .frame(width: cardSize, height: cardSize)
-                    .opacity(isPressed ? 0 : 1)
-
-                    // ② 아래 뒷면 — 눌리면 사라짐
+                } bottomBack: {
+                    // ② 아래 뒷면
                     ZStack {
                         RoundedRectangle(cornerRadius: 26).fill(unlocked ? chapter.color : Color.lockedBackground)
                         RoundedRectangle(cornerRadius: 26).fill(Color.black.opacity(unlocked ? 0.28 : 0.10))
                     }
                     .frame(width: cardSize, height: cardSize)
-                    .offset(y: topD + botD)
-                    .opacity(isPressed ? 0 : 1)
-
-                    // ③ 앞면 — 눌리면 아래 뒷면 자리까지 완전히 내려감
+                } front: {
+                    // ③ 앞면 — 색 + (눌림 시 그림자) + 번호/잠금
                     ZStack {
                         RoundedRectangle(cornerRadius: 26)
                             .fill(unlocked ? chapter.color : Color.lockedBackground)
@@ -220,7 +221,6 @@ struct ChapterSelectView: View {
                         }
                     }
                     .frame(width: cardSize, height: cardSize)
-                    .offset(y: isPressed ? topD + botD : topD)
                 }
                 .frame(width: cardSize, height: cardSize + topD + botD)
 

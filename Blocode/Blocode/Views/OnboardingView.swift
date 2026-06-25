@@ -171,9 +171,9 @@ struct OnboardingView: View {
         let label    = isLast ? "시작하기" : "다음  ›"
 
         // 어두운 다크 버튼 색상
-        let frontColor   = Color(red: 42/255,  green: 37/255,  blue: 32/255)
-        let topBackColor = Color(red: 128/255, green: 120/255, blue: 105/255)
-        let botBackColor = Color(red: 190/255, green: 181/255, blue: 159/255)
+        let frontColor   = Color.darkInk
+        let topBackColor = Color.bevelTopBack
+        let botBackColor = Color.bevelBottomBack
 
         return Button {
             withAnimation(.easeInOut(duration: 0.3)) {
@@ -181,22 +181,19 @@ struct OnboardingView: View {
                 else { currentPage += 1 }
             }
         } label: {
-            ZStack(alignment: .top) {
+            ThreeDSurface(topDepth: topD, bottomDepth: botD, isPressed: isNextPressed) {
                 // ① 위 뒷면
                 RoundedRectangle(cornerRadius: cr)
                     .fill(topBackColor)
                     .frame(maxWidth: .infinity)
                     .frame(height: frontH)
-                    .opacity(isNextPressed ? 0 : 1)
-
+            } bottomBack: {
                 // ② 아래 뒷면
                 RoundedRectangle(cornerRadius: cr)
                     .fill(botBackColor)
                     .frame(maxWidth: .infinity)
                     .frame(height: frontH)
-                    .offset(y: topD + botD)
-                    .opacity(isNextPressed ? 0 : 1)
-
+            } front: {
                 // ③ 앞면 + 텍스트
                 ZStack {
                     RoundedRectangle(cornerRadius: cr).fill(frontColor)
@@ -209,7 +206,6 @@ struct OnboardingView: View {
                 }
                 .frame(maxWidth: .infinity)
                 .frame(height: frontH)
-                .offset(y: isNextPressed ? topD + botD : topD)
             }
             .frame(maxWidth: .infinity)
             .frame(height: frontH + topD + botD)
@@ -255,15 +251,15 @@ struct OnboardingView: View {
             // 장식 별
             Text("✦")
                 .font(.system(size: 14))
-                .foregroundStyle(Color(red: 190/255, green: 181/255, blue: 159/255))
+                .foregroundStyle(Color.bevelBottomBack)
                 .offset(x: -90, y: -60)
             Text("✦")
                 .font(.system(size: 9))
-                .foregroundStyle(Color(red: 190/255, green: 181/255, blue: 159/255))
+                .foregroundStyle(Color.bevelBottomBack)
                 .offset(x: 85, y: -80)
             Text("✦")
                 .font(.system(size: 11))
-                .foregroundStyle(Color(red: 190/255, green: 181/255, blue: 159/255))
+                .foregroundStyle(Color.bevelBottomBack)
                 .offset(x: 100, y: 20)
         }
         .frame(maxWidth: .infinity)
@@ -396,17 +392,18 @@ struct OnboardingView: View {
 
     /// 홈 화면과 동일한 3D 블럭 아이콘
     private func miniBlockIcon(size: CGFloat, topD: CGFloat, botD: CGFloat, cr: CGFloat) -> some View {
-        let frontColor   = Color(red: 42/255,  green: 37/255,  blue: 32/255)
-        let topBackColor = Color(red: 128/255, green: 120/255, blue: 105/255)
-        let botBackColor = Color(red: 190/255, green: 181/255, blue: 159/255)
-        let arrowColor   = Color(red: 244/255, green: 236/255, blue: 215/255)
+        let frontColor   = Color.darkInk
+        let topBackColor = Color.bevelTopBack
+        let botBackColor = Color.bevelBottomBack
+        let arrowColor   = Color.arrowCream
 
-        return ZStack(alignment: .top) {
+        return ThreeDSurface(topDepth: topD, bottomDepth: botD) {
             RoundedRectangle(cornerRadius: cr).fill(topBackColor)
                 .frame(width: size, height: size)
+        } bottomBack: {
             RoundedRectangle(cornerRadius: cr).fill(botBackColor)
                 .frame(width: size, height: size)
-                .offset(y: topD + botD)
+        } front: {
             ZStack {
                 RoundedRectangle(cornerRadius: cr).fill(frontColor)
                 Image(systemName: "arrow.up")
@@ -414,7 +411,6 @@ struct OnboardingView: View {
                     .foregroundStyle(arrowColor)
             }
             .frame(width: size, height: size)
-            .offset(y: topD)
         }
         .frame(width: size, height: size + topD + botD)
     }

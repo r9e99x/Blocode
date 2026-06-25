@@ -74,14 +74,14 @@ struct StageView: View {
                 .multilineTextAlignment(.center)
 
             Button {
-                navPath.removeLast()  // 이전 화면으로 복귀
+                if !navPath.isEmpty { navPath.removeLast() }  // 이전 화면으로 복귀
             } label: {
                 Text("돌아가기")
                     .font(.system(size: 16, weight: .semibold))
                     .foregroundStyle(.white)
                     .padding(.horizontal, 28)
                     .padding(.vertical, 12)
-                    .background(Color(red: 42/255, green: 37/255, blue: 32/255))
+                    .background(Color.darkInk)
                     .clipShape(RoundedRectangle(cornerRadius: 24))
             }
             .buttonStyle(.plain)
@@ -215,7 +215,7 @@ struct StageView: View {
 
             // 뒤로가기 버튼 (그림자 있는 카드 버튼)
             Button {
-                navPath.removeLast()
+                if !navPath.isEmpty { navPath.removeLast() }
             } label: {
                 Image(systemName: "chevron.left")
                     .font(.system(size: 15, weight: .semibold))
@@ -356,6 +356,9 @@ struct StageView: View {
 
     /// GameScene을 생성하고 ViewModel과 연결
     private func setupScene() {
+        // 이미 씬이 있으면 재생성하지 않음 — 설정 fullScreenCover가 닫히며
+        // onAppear가 다시 호출돼도 맵/캐릭터 상태가 초기화되지 않도록 가드
+        guard scene == nil else { return }
         let gameScene = GameScene(mapData: stage.mapData)
         // 현재 색상 모드에 맞춰 씬 색상 설정
         gameScene.updateColorScheme(isDark: colorScheme == .dark)

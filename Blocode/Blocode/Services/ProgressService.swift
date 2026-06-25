@@ -176,7 +176,8 @@ final class ProgressService: ObservableObject {
     /// 잠겨 있으면 해당 챕터의 마지막 플레이 가능한 스테이지로 대체 (재도전으로 별 모으기 유도)
     func nextStage(chapters: [(id: Int, stageCount: Int)]) -> (chapter: Int, stage: Int)? {
         for ch in chapters {
-            for stageNum in 1...max(ch.stageCount, 1) {
+            guard ch.stageCount > 0 else { continue }  // 빈 챕터는 건너뜀 (존재하지 않는 스테이지 반환 방지)
+            for stageNum in 1...ch.stageCount {
                 if !isCleared("ch\(ch.id)_stage\(stageNum)") {
                     // 잠겨 있지 않으면 그대로 반환 (플레이 가능)
                     if !isLocked(chapter: ch.id, stageNumber: stageNum) {
@@ -215,8 +216,12 @@ final class ProgressService: ObservableObject {
         // 더 좋은 기록(별 최댓값 / 블럭 최솟값)으로만 갱신 — 기존 로직과 동일
         progress.update(stars: stars, blockCount: blockCount)
 
-        // 변경 사항 영속화
-        try? context.save()
+        // 변경 사항 영속화 (실패 시 로그 — 진행도 유실 원인 추적용)
+        do {
+            try context.save()
+        } catch {
+            print("⚠️ 진행도 저장 실패(recordClear): \(error)")
+        }
         // 메모리 미러 재구성 → @Published 변경으로 뷰 자동 갱신
         reloadMirror()
         // 연속 일수 갱신
@@ -249,9 +254,13 @@ final class ProgressService: ObservableObject {
     /// 모든 스테이지 클리어 기록 초기화 — SwiftData에서도 전부 삭제
     /// (streak는 기존 동작과 동일하게 건드리지 않음)
     func resetAll() {
-        // SwiftData의 StageProgress 전체 삭제
-        try? context.delete(model: StageProgress.self)
-        try? context.save()
+        // SwiftData의 StageProgress 전체 삭제 (실패 시 로그)
+        do {
+            try context.delete(model: StageProgress.self)
+            try context.save()
+        } catch {
+            print("⚠️ 진행도 초기화 실패(resetAll): \(error)")
+        }
         // 메모리 미러 비우기 → @Published 변경으로 뷰 자동 갱신
         results = [:]
     }

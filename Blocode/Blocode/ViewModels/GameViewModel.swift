@@ -6,7 +6,7 @@
 //
 
 import Foundation
-import SwiftUI
+import SwiftUI   // codeBlocks.move(fromOffsets:toOffset:)가 SwiftUI 확장이라 필요
 import Combine
 
 // MARK: - GameState
@@ -21,7 +21,10 @@ enum GameState {
 // MARK: - GameViewModel
 /// 게임 상태, 코드 블럭 목록, 실행 로직을 관리하는 ViewModel
 /// View ↔ GameScene 사이의 중간 역할
-class GameViewModel: ObservableObject {
+/// @MainActor: 모든 상태·실행 로직이 항상 메인 스레드에서만 처리됨을 보장
+/// (수동 MainActor.run/DispatchQueue 디스패치 없이 @Published 접근이 안전해짐)
+@MainActor
+final class GameViewModel: ObservableObject {
 
     // MARK: - Published 프로퍼티 (View에서 감지)
 
@@ -159,8 +162,8 @@ class GameViewModel: ObservableObject {
               codeBlocks.indices.contains(parentIndex),
               let children = codeBlocks[parentIndex].children,
               children.indices.contains(childIndex),
-              codeBlocks[parentIndex].children![childIndex].hasChildren else { return }
-        codeBlocks[parentIndex].children![childIndex].children?.append(Block(type: type))
+              children[childIndex].hasChildren else { return }
+        codeBlocks[parentIndex].children?[childIndex].children?.append(Block(type: type))
     }
 
     /// 자식 컨테이너(repeat/if)에서 손자 블럭 삭제
@@ -169,9 +172,9 @@ class GameViewModel: ObservableObject {
               codeBlocks.indices.contains(parentIndex),
               let children = codeBlocks[parentIndex].children,
               children.indices.contains(childIndex),
-              let grandchildren = codeBlocks[parentIndex].children![childIndex].children,
+              let grandchildren = children[childIndex].children,
               grandchildren.indices.contains(grandchildIndex) else { return }
-        codeBlocks[parentIndex].children![childIndex].children?.remove(at: grandchildIndex)
+        codeBlocks[parentIndex].children?[childIndex].children?.remove(at: grandchildIndex)
     }
 
     /// 자식 if 블럭의 조건 변경
@@ -180,8 +183,8 @@ class GameViewModel: ObservableObject {
               codeBlocks.indices.contains(parentIndex),
               let children = codeBlocks[parentIndex].children,
               children.indices.contains(childIndex),
-              codeBlocks[parentIndex].children![childIndex].type == .ifBlock else { return }
-        codeBlocks[parentIndex].children![childIndex].ifCondition = condition
+              children[childIndex].type == .ifBlock else { return }
+        codeBlocks[parentIndex].children?[childIndex].ifCondition = condition
     }
 
     /// 자식 repeat 블럭의 반복 횟수 변경
@@ -190,8 +193,8 @@ class GameViewModel: ObservableObject {
               codeBlocks.indices.contains(parentIndex),
               let children = codeBlocks[parentIndex].children,
               children.indices.contains(childIndex),
-              codeBlocks[parentIndex].children![childIndex].type == .repeatBlock else { return }
-        codeBlocks[parentIndex].children![childIndex].repeatCount = max(1, min(10, count))
+              children[childIndex].type == .repeatBlock else { return }
+        codeBlocks[parentIndex].children?[childIndex].repeatCount = max(1, min(10, count))
     }
 
     /// 특정 위치에 블럭 삽입 (팔레트 드래그-앤-드롭 위치 지정 삽입)
@@ -229,15 +232,14 @@ class GameViewModel: ObservableObject {
         startTimer()            // 클리어 시간 측정 시작
 
         // 블럭 순서대로 비동기 실행 → 완료 시 idle 복귀
+        // (@MainActor 클래스라 Task도 메인에서 실행됨)
         Task {
             await executeBlocks(codeBlocks, parentPath: [])
             // 성공/실패 처리가 안 됐으면 (목표 미도달로 자연 종료) idle로 복귀
-            await MainActor.run {
-                if gameState == .running {
-                    gameState = .idle
-                    currentBlockPath = nil
-                    stopTimer()
-                }
+            if gameState == .running {
+                gameState = .idle
+                currentBlockPath = nil
+                stopTimer()
             }
         }
     }
@@ -279,14 +281,14 @@ class GameViewModel: ObservableObject {
         for (offset, block) in blocks.enumerated() {
 
             // 실행 중단됐으면 멈춤 (stop() 호출 등)
-            guard await isRunning() else { return }
+            guard gameState == .running else { return }
 
             // 현재 블럭의 경로 — 부모 경로에 자신의 인덱스를 추가
             // (최상위 인덱스 공간과 충돌하지 않는 경로 기반 식별)
             let path = parentPath + [offset]
 
             // 현재 실행 중인 블럭 하이라이트 갱신 (경로 기반)
-            await updateCurrentPath(path)
+            currentBlockPath = path
 
             // 블럭 종류에 따라 실행
             switch block.type {
@@ -295,7 +297,7 @@ class GameViewModel: ObservableObject {
                 let success = await moveCharacter(direction: .forward)
                 if !success {
                     // 라인 번호는 사용자에게 보이는 최상위 행 번호(1-based) 기준
-                    await handleFailure(at: path, message: "벽에 부딪혔어요 · 라인 \(path[0] + 1)")
+                    handleFailure(at: path, message: "벽에 부딪혔어요 · 라인 \(path[0] + 1)")
                     return
                 }
 
@@ -304,7 +306,7 @@ class GameViewModel: ObservableObject {
                 let success = await moveCharacter(direction: .backward)
                 if !success {
                     // 라인 번호는 사용자에게 보이는 최상위 행 번호(1-based) 기준
-                    await handleFailure(at: path, message: "벽에 부딪혔어요 · 라인 \(path[0] + 1)")
+                    handleFailure(at: path, message: "벽에 부딪혔어요 · 라인 \(path[0] + 1)")
                     return
                 }
 
@@ -321,7 +323,7 @@ class GameViewModel: ObservableObject {
                 let count = block.repeatCount ?? 1
                 let children = block.children ?? []
                 for _ in 0..<count {
-                    guard await isRunning() else { return }
+                    guard gameState == .running else { return }
                     // 자식 블럭을 재귀적으로 실행 (자신의 경로를 부모 경로로 전달)
                     await executeBlocks(children, parentPath: path)
                 }
@@ -329,7 +331,7 @@ class GameViewModel: ObservableObject {
             case .ifBlock:
                 // if 블럭: 앞 칸 상태를 확인하고 조건이 참이면 자식 블럭 실행
                 let condition = block.ifCondition ?? .pathClear
-                let shouldExecute = await checkIfCondition(condition)
+                let shouldExecute = checkIfCondition(condition)
                 if shouldExecute {
                     let children = block.children ?? []
                     await executeBlocks(children, parentPath: path)
@@ -343,8 +345,8 @@ class GameViewModel: ObservableObject {
             }
 
             // 각 블럭 실행 후 목표 도달 여부 확인
-            if await checkGoal() {
-                await handleSuccess()
+            if checkGoal() {
+                handleSuccess()
                 return
             }
         }
@@ -363,25 +365,19 @@ class GameViewModel: ObservableObject {
     /// ifBlock 조건 평가: 앞 칸 이동 가능 여부를 확인 (GameScene 메인스레드 접근)
     /// - Parameter condition: 확인할 조건 타입 (pathClear / pathBlocked)
     /// - Returns: 조건이 참이면 true (자식 블럭 실행), 거짓이면 false (자식 블럭 스킵)
-    private func checkIfCondition(_ condition: IfCondition) async -> Bool {
-        return await withCheckedContinuation { continuation in
-            DispatchQueue.main.async { [weak self] in
-                guard let self = self, let scene = self.scene else {
-                    // scene이 없으면 조건 판단 불가 → false 반환 (실행 안 함)
-                    continuation.resume(returning: false)
-                    return
-                }
-                // 현재 방향 기준 한 칸 앞 위치 계산
-                let nextPos = scene.characterPosition.next(direction: scene.characterDirection)
-                // 맵 데이터로 이동 가능 여부 확인 (범위 밖 = 벽으로 처리)
-                let isWalkable = scene.mapData.isFloor(nextPos)
-                switch condition {
-                case .pathClear:
-                    continuation.resume(returning: isWalkable)   // 뚫려있으면 실행
-                case .pathBlocked:
-                    continuation.resume(returning: !isWalkable)  // 막혀있으면 실행
-                }
-            }
+    private func checkIfCondition(_ condition: IfCondition) -> Bool {
+        // @MainActor라 scene(메인 전용)에 직접 접근 가능 (별도 디스패치 불필요)
+        guard let scene = scene else {
+            // scene이 없으면 조건 판단 불가 → false 반환 (실행 안 함)
+            return false
+        }
+        // 현재 방향 기준 한 칸 앞 위치 계산
+        let nextPos = scene.characterPosition.next(direction: scene.characterDirection)
+        // 맵 데이터로 이동 가능 여부 확인 (범위 밖 = 벽으로 처리)
+        let isWalkable = scene.mapData.isFloor(nextPos)
+        switch condition {
+        case .pathClear:   return isWalkable   // 뚫려있으면 실행
+        case .pathBlocked: return !isWalkable  // 막혀있으면 실행
         }
     }
 
@@ -390,38 +386,38 @@ class GameViewModel: ObservableObject {
     /// 앞으로/뒤로 이동 — 성공 여부 반환 (벽이면 false)
     private func moveCharacter(direction: MoveDirection) async -> Bool {
         return await withCheckedContinuation { continuation in
-            DispatchQueue.main.async { [weak self] in
-                guard let self = self, let scene = self.scene else {
-                    continuation.resume(returning: false)
-                    return
-                }
+            // @MainActor라 scene(메인 전용)에 직접 접근 가능 (별도 디스패치 불필요)
+            guard let scene = scene else {
+                continuation.resume(returning: false)
+                return
+            }
 
-                // 이동 방향에 따라 다음 위치 계산
-                let nextPos: Position
-                switch direction {
-                case .forward:
-                    // 캐릭터가 바라보는 방향으로 한 칸 이동
-                    nextPos = scene.characterPosition.next(direction: scene.characterDirection)
-                case .backward:
-                    // 캐릭터가 바라보는 방향의 반대 방향으로 한 칸 이동
-                    nextPos = scene.characterPosition.previous(direction: scene.characterDirection)
-                }
+            // 이동 방향에 따라 다음 위치 계산
+            let nextPos: Position
+            switch direction {
+            case .forward:
+                // 캐릭터가 바라보는 방향으로 한 칸 이동
+                nextPos = scene.characterPosition.next(direction: scene.characterDirection)
+            case .backward:
+                // 캐릭터가 바라보는 방향의 반대 방향으로 한 칸 이동
+                nextPos = scene.characterPosition.previous(direction: scene.characterDirection)
+            }
 
-                // 이동 가능 여부 확인 (맵 범위 & 바닥 타일)
-                guard scene.mapData.isFloor(nextPos) else {
-                    continuation.resume(returning: false)  // 벽: 이동 실패
-                    return
-                }
+            // 이동 가능 여부 확인 (맵 범위 & 바닥 타일)
+            guard scene.mapData.isFloor(nextPos) else {
+                continuation.resume(returning: false)  // 벽: 이동 실패
+                return
+            }
 
-                // 캐릭터 위치 업데이트 및 애니메이션 적용
-                scene.characterPosition = nextPos
-                scene.updateCharacterTransform(animated: true)
+            // 캐릭터 위치 업데이트 및 애니메이션 적용
+            scene.characterPosition = nextPos
+            scene.updateCharacterTransform(animated: true)
 
-                // 이동 애니메이션 완료 후 다음 블럭 실행 (속도 배율 적용)
-                let delay = 0.3 / self.executionSpeed
-                DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
-                    continuation.resume(returning: true)  // 이동 성공
-                }
+            // 이동 애니메이션 완료 후 다음 블럭 실행 (속도 배율 적용)
+            // asyncAfter는 스레드 점프가 아닌 "애니메이션 대기 시간"이라 그대로 유지
+            let delay = 0.3 / executionSpeed
+            DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
+                continuation.resume(returning: true)  // 이동 성공
             }
         }
     }
@@ -429,76 +425,58 @@ class GameViewModel: ObservableObject {
     /// 캐릭터 좌우 회전 — 애니메이션 완료 후 continuation 재개
     private func turnCharacter(left: Bool) async {
         await withCheckedContinuation { continuation in
-            DispatchQueue.main.async { [weak self] in
-                guard let scene = self?.scene else {
-                    continuation.resume()
-                    return
-                }
-                // 방향 값 갱신 (왼쪽/오른쪽 90도 회전)
-                scene.characterDirection = left
-                    ? scene.characterDirection.turnedLeft
-                    : scene.characterDirection.turnedRight
-                // 회전 애니메이션 적용
-                scene.updateCharacterTransform(animated: true)
+            // @MainActor라 scene(메인 전용)에 직접 접근 가능 (별도 디스패치 불필요)
+            guard let scene = scene else {
+                continuation.resume()
+                return
+            }
+            // 방향 값 갱신 (왼쪽/오른쪽 90도 회전)
+            scene.characterDirection = left
+                ? scene.characterDirection.turnedLeft
+                : scene.characterDirection.turnedRight
+            // 회전 애니메이션 적용
+            scene.updateCharacterTransform(animated: true)
 
-                // 회전 애니메이션 완료 후 다음 블럭 실행 (속도 배율 적용)
-                let delay = 0.2 / (self?.executionSpeed ?? 1.0)
-                DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
-                    continuation.resume()
-                }
+            // 회전 애니메이션 완료 후 다음 블럭 실행 (속도 배율 적용)
+            // asyncAfter는 스레드 점프가 아닌 "애니메이션 대기 시간"이라 그대로 유지
+            let delay = 0.2 / executionSpeed
+            DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
+                continuation.resume()
             }
         }
     }
 
     // MARK: - 결과 처리
 
-    /// 현재 캐릭터 위치가 목표 지점인지 확인
-    private func checkGoal() async -> Bool {
-        return await MainActor.run {
-            // scene이 없으면 false (클리어 불가)
-            scene?.mapData.isGoal(scene?.characterPosition ?? Position(x: -1, y: -1)) ?? false
-        }
+    /// 현재 캐릭터 위치가 목표 지점인지 확인 (@MainActor라 동기 접근)
+    private func checkGoal() -> Bool {
+        // scene이 없으면 false (클리어 불가)
+        scene?.mapData.isGoal(scene?.characterPosition ?? Position(x: -1, y: -1)) ?? false
     }
 
-    /// 클리어 성공 처리 — 별점 계산 후 ProgressService에 기록 저장
-    private func handleSuccess() async {
-        await MainActor.run {
-            stopTimer()
-            // 사용한 블럭 수 기준으로 별점 계산
-            let stars = stage.starThresholds.stars(for: totalBlockCount)
-            clearedStars = stars
-            currentBlockPath = nil
-            gameState = .success
+    /// 클리어 성공 처리 — 별점 계산 후 ProgressService에 기록 저장 (@MainActor라 동기 처리)
+    private func handleSuccess() {
+        stopTimer()
+        // 사용한 블럭 수 기준으로 별점 계산
+        let stars = stage.starThresholds.stars(for: totalBlockCount)
+        clearedStars = stars
+        currentBlockPath = nil
+        gameState = .success
 
-            // ProgressService에 클리어 기록 저장 (더 좋은 기록이면 갱신)
-            ProgressService.shared.recordClear(
-                stageId: stage.id,
-                stars: stars,
-                blockCount: totalBlockCount
-            )
-        }
+        // ProgressService에 클리어 기록 저장 (더 좋은 기록이면 갱신)
+        ProgressService.shared.recordClear(
+            stageId: stage.id,
+            stars: stars,
+            blockCount: totalBlockCount
+        )
     }
 
-    /// 실패 처리 (벽 충돌 등) — 실패 블럭 경로와 메시지 설정
-    private func handleFailure(at path: [Int], message: String) async {
-        await MainActor.run {
-            stopTimer()
-            failedBlockPath = path    // 실패한 블럭 빨간 하이라이트 (경로 기반)
-            failureMessage = message  // 토스트 배너 메시지
-            gameState = .failure
-        }
-    }
-
-    // MARK: - 헬퍼
-
-    /// 게임이 현재 running 상태인지 확인 (MainActor에서 실행)
-    private func isRunning() async -> Bool {
-        await MainActor.run { gameState == .running }
-    }
-
-    /// 현재 실행 중인 블럭 경로 갱신 (MainActor에서 실행)
-    private func updateCurrentPath(_ path: [Int]) async {
-        await MainActor.run { currentBlockPath = path }
+    /// 실패 처리 (벽 충돌 등) — 실패 블럭 경로와 메시지 설정 (@MainActor라 동기 처리)
+    private func handleFailure(at path: [Int], message: String) {
+        stopTimer()
+        failedBlockPath = path    // 실패한 블럭 빨간 하이라이트 (경로 기반)
+        failureMessage = message  // 토스트 배너 메시지
+        gameState = .failure
     }
 
     // MARK: - 타이머
@@ -508,8 +486,12 @@ class GameViewModel: ObservableObject {
         startTime = Date()
         elapsedTime = 0
         timer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] _ in
-            guard let self = self, let start = self.startTime else { return }
-            self.elapsedTime = Date().timeIntervalSince(start)
+            // Timer 콜백은 등록된 런루프(메인)에서 호출되므로 MainActor로 안전하게 단언
+            // (동작 동일 — 기존에도 메인 스레드에서 elapsedTime을 갱신했음)
+            MainActor.assumeIsolated {
+                guard let self = self, let start = self.startTime else { return }
+                self.elapsedTime = Date().timeIntervalSince(start)
+            }
         }
     }
 

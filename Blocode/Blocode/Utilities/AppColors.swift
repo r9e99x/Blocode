@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import SpriteKit   // 3D 베벨 색상을 SwiftUI(Color)·SpriteKit(SKColor) 양쪽에서 공유하기 위함
 
 // MARK: - 크로스 플랫폼 시맨틱 컬러
 /// iOS의 UIColor.* 시스템 색상을 iOS / macOS 모두에서 동작하는 SwiftUI Color로 래핑
@@ -113,4 +114,33 @@ extension Color {
                 : UIColor(red: 239/255, green: 229/255, blue: 205/255, alpha: 1.0)
         })
     }
+
+    // MARK: - 3D 베벨/캐릭터 공용 색상
+    // 3D 버튼·아이콘·캐릭터에 반복되던 하드코딩 색을 한 곳에서 관리
+    // (라이트/다크 무관 고정값 — 각 화면이 동일 RGB를 직접 박아 쓰던 값 그대로)
+
+    /// 다크 잉크 #2a2520 — 캐릭터 본체 / 다크 버튼 앞면
+    static let darkInk = Color(red: 42/255, green: 37/255, blue: 32/255)
+    /// 3D 위 뒷면 #807869
+    static let bevelTopBack = Color(red: 128/255, green: 120/255, blue: 105/255)
+    /// 3D 아래 뒷면 #beb59f (그림자 효과)
+    static let bevelBottomBack = Color(red: 190/255, green: 181/255, blue: 159/255)
+    /// 방향 화살표 크림 #f4ecd7
+    static let arrowCream = Color(red: 244/255, green: 236/255, blue: 215/255)
+    /// 강조 민트그린 #27b894 — 실행 버튼 / 클리어 강조
+    static let accentMint = Color(red: 0.27, green: 0.72, blue: 0.58)
+}
+
+// MARK: - SpriteKit 색상 (GameScene 전용 — 위 Color와 동일 RGB 공유)
+/// SwiftUI Color와 같은 값을 SpriteKit에서도 쓰도록 SKColor로 제공
+/// (민트는 GameScene에서 쓰지 않아 제외)
+extension SKColor {
+    /// 다크 잉크 #2a2520 — 캐릭터 본체 (라이트 모드)
+    static let darkInk = SKColor(red: 42/255, green: 37/255, blue: 32/255, alpha: 1.0)
+    /// 3D 위 뒷면 #807869
+    static let bevelTopBack = SKColor(red: 128/255, green: 120/255, blue: 105/255, alpha: 1.0)
+    /// 3D 아래 뒷면 #beb59f (그림자 효과)
+    static let bevelBottomBack = SKColor(red: 190/255, green: 181/255, blue: 159/255, alpha: 1.0)
+    /// 방향 화살표 크림 #f4ecd7
+    static let arrowCream = SKColor(red: 244/255, green: 236/255, blue: 215/255, alpha: 1.0)
 }

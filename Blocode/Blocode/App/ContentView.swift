@@ -134,23 +134,22 @@ struct ContentView: View {
         let cr:       CGFloat = 10
 
         // 미니 아이콘 색상
-        let frontColor   = Color(red: 42/255,  green: 37/255,  blue: 32/255)   // #2a2520 앞면
-        let topBackColor = Color(red: 128/255, green: 120/255, blue: 105/255)  // #807869 위 뒷면
-        let botBackColor = Color(red: 190/255, green: 181/255, blue: 159/255)  // #beb59f 아래 뒷면
-        let arrowColor   = Color(red: 244/255, green: 236/255, blue: 215/255)  // #f4ecd7 화살표
+        let frontColor   = Color.darkInk   // #2a2520 앞면
+        let topBackColor = Color.bevelTopBack  // #807869 위 뒷면
+        let botBackColor = Color.bevelBottomBack  // #beb59f 아래 뒷면
+        let arrowColor   = Color.arrowCream  // #f4ecd7 화살표
 
-        return ZStack(alignment: .top) {
-            // ① 위 뒷면 — #beb59f, y=0
+        return ThreeDSurface(topDepth: topD, bottomDepth: botD) {
+            // ① 위 뒷면
             RoundedRectangle(cornerRadius: cr)
                 .fill(topBackColor)
                 .frame(width: iconSize, height: iconSize)
-
-            // ② 아래 뒷면 — #807869, y=topD+botD
+        } bottomBack: {
+            // ② 아래 뒷면
             RoundedRectangle(cornerRadius: cr)
                 .fill(botBackColor)
                 .frame(width: iconSize, height: iconSize)
-                .offset(y: topD + botD)
-
+        } front: {
             // ③ 앞면 + 화살표 — #2a2520 앞면, #f4ecd7 화살표
             ZStack {
                 RoundedRectangle(cornerRadius: cr)
@@ -160,7 +159,6 @@ struct ContentView: View {
                     .foregroundStyle(arrowColor)
             }
             .frame(width: iconSize, height: iconSize)
-            .offset(y: topD)
         }
         .frame(width: iconSize, height: iconSize + topD + botD)
     }
@@ -282,9 +280,9 @@ struct ContentView: View {
         // 다크 버튼 색상
         let frontColor    = Color(red: 0.165, green: 0.145, blue: 0.125)
         // 위 뒷면 색상 — #807869 (어두운 올리브브라운)
-        let topBackColor  = Color(red: 128/255, green: 120/255, blue: 105/255)
+        let topBackColor  = Color.bevelTopBack
         // 아래 뒷면 색상 — #beb59f (연한 탄베이지, 그림자 효과)
-        let botBackColor  = Color(red: 190/255, green: 181/255, blue: 159/255)
+        let botBackColor  = Color.bevelBottomBack
 
         // 다음 스테이지 정보 (없으면 모든 완료 상태)
         let next = vm.nextStage
@@ -300,23 +298,20 @@ struct ContentView: View {
                 navPath.append(AppRoute.chapterSelect)
             }
         } label: {
-            ZStack(alignment: .top) {
-                // ① 위 뒷면 — 눌리면 사라짐
+            ThreeDSurface(topDepth: topD, bottomDepth: botD, isPressed: isContinuePressed) {
+                // ① 위 뒷면
                 RoundedRectangle(cornerRadius: cr)
                     .fill(topBackColor)
                     .frame(maxWidth: .infinity)
                     .frame(height: frontH)
-                    .opacity(isContinuePressed ? 0 : 1)
-
-                // ② 아래 뒷면 — 눌리면 사라짐
+            } bottomBack: {
+                // ② 아래 뒷면
                 RoundedRectangle(cornerRadius: cr)
                     .fill(botBackColor)
                     .frame(maxWidth: .infinity)
                     .frame(height: frontH)
-                    .offset(y: topD + botD)
-                    .opacity(isContinuePressed ? 0 : 1)
-
-                // ③ 앞면 + 내용 — 눌리면 아래 뒷면 자리까지 완전히 내려감
+            } front: {
+                // ③ 앞면 + 내용
                 ZStack {
                     // 눌리면 앞면 색상 #565048로 변경
                     RoundedRectangle(cornerRadius: cr)
@@ -359,7 +354,6 @@ struct ContentView: View {
                 }
                 .frame(maxWidth: .infinity)
                 .frame(height: frontH)
-                .offset(y: isContinuePressed ? topD + botD : topD)
             }
             .frame(maxWidth: .infinity)
             .frame(height: frontH + topD + botD)
@@ -399,23 +393,20 @@ struct ContentView: View {
         return Button {
             navPath.append(AppRoute.chapterSelect)
         } label: {
-            ZStack(alignment: .top) {
-                // ① 위 뒷면 — 눌리면 사라짐
+            ThreeDSurface(topDepth: topD, bottomDepth: botD, isPressed: isBrowsePressed) {
+                // ① 위 뒷면
                 RoundedRectangle(cornerRadius: cr)
                     .fill(topBackColor)
                     .frame(maxWidth: .infinity)
                     .frame(height: frontH)
-                    .opacity(isBrowsePressed ? 0 : 1)
-
-                // ② 아래 뒷면 — 눌리면 사라짐
+            } bottomBack: {
+                // ② 아래 뒷면
                 RoundedRectangle(cornerRadius: cr)
                     .fill(botBackColor)
                     .frame(maxWidth: .infinity)
                     .frame(height: frontH)
-                    .offset(y: topD + botD)
-                    .opacity(isBrowsePressed ? 0 : 1)
-
-                // ③ 앞면 + 텍스트 — 눌리면 아래 뒷면 자리까지 완전히 내려감
+            } front: {
+                // ③ 앞면 + 텍스트
                 ZStack {
                     RoundedRectangle(cornerRadius: cr)
                         .fill(frontColor)
@@ -428,7 +419,6 @@ struct ContentView: View {
                 }
                 .frame(maxWidth: .infinity)
                 .frame(height: frontH)
-                .offset(y: isBrowsePressed ? topD + botD : topD)
             }
             .frame(maxWidth: .infinity)
             .frame(height: frontH + topD + botD)
@@ -457,5 +447,4 @@ private struct HomeThreeDButtonStyle: ButtonStyle {
 // MARK: - Preview
 #Preview {
     ContentView()
-        .environmentObject(ProgressService.shared)
 }

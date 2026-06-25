@@ -30,7 +30,7 @@ struct ControlBarView: View {
     private var runButtonColor: Color {
         viewModel.codeBlocks.isEmpty || viewModel.gameState == .running
             ? Color(red: 0.72, green: 0.70, blue: 0.67) // 솔리드 따뜻한 회색
-            : Color(red: 0.27, green: 0.72, blue: 0.58)  // 민트 그린 (활성)
+            : Color.accentMint  // 민트 그린 (활성)
     }
 
     // MARK: - Body
@@ -117,27 +117,25 @@ struct ControlBarView: View {
         topDepth: CGFloat = 2,
         botDepth: CGFloat = 2.5,
         isPressed: Bool = false,
-        @ViewBuilder label: () -> Content
+        @ViewBuilder label: @escaping () -> Content
     ) -> some View {
-        ZStack(alignment: .top) {
-            // ① 위 뒷면 — 눌리면 사라짐
+        // 3D 뼈대(쌓기 + 눌림 효과)는 ThreeDSurface가 담당, 각 면 내용만 전달
+        ThreeDSurface(topDepth: topDepth, bottomDepth: botDepth, isPressed: isPressed) {
+            // ① 위 뒷면 — color + white 0.28
             ZStack {
                 RoundedRectangle(cornerRadius: cornerRadius).fill(color)
                 RoundedRectangle(cornerRadius: cornerRadius).fill(Color.white.opacity(0.28))
             }
             .frame(width: width, height: height)
-            .opacity(isPressed ? 0 : 1)
-
-            // ② 아래 뒷면 — 눌리면 사라짐
+        } bottomBack: {
+            // ② 아래 뒷면 — color + black 0.22
             ZStack {
                 RoundedRectangle(cornerRadius: cornerRadius).fill(color)
                 RoundedRectangle(cornerRadius: cornerRadius).fill(Color.black.opacity(0.22))
             }
             .frame(width: width, height: height)
-            .offset(y: topDepth + botDepth)
-            .opacity(isPressed ? 0 : 1)
-
-            // ③ 앞면 — 눌리면 아래 뒷면 자리까지 완전히 내려감
+        } front: {
+            // ③ 앞면 — color + (눌림 시 black 0.10) + label
             ZStack {
                 RoundedRectangle(cornerRadius: cornerRadius).fill(color)
                 if isPressed {
@@ -146,7 +144,6 @@ struct ControlBarView: View {
                 label()
             }
             .frame(width: width, height: height)
-            .offset(y: isPressed ? topDepth + botDepth : topDepth)
         }
         .frame(width: width, height: height + topDepth + botDepth)
     }

@@ -84,23 +84,21 @@ struct PaletteCardView: View {
     private let botDepth:  CGFloat = 3.5  // 아래 뒷면 두께
 
     var body: some View {
-        ZStack(alignment: .top) {
-
+        ThreeDSurface(topDepth: topDepth, bottomDepth: botDepth) {
             // ① 위 뒷면 — blockColor + white 0.28 (앞면보다 위에 살짝 보임)
             ZStack {
                 RoundedRectangle(cornerRadius: radius).fill(type.blockColor)
                 RoundedRectangle(cornerRadius: radius).fill(Color.white.opacity(0.28))
             }
             .frame(width: btnSize, height: btnSize)
-
+        } bottomBack: {
             // ② 아래 뒷면 — blockColor + black 0.25 (그림자 효과)
             ZStack {
                 RoundedRectangle(cornerRadius: radius).fill(type.blockColor)
                 RoundedRectangle(cornerRadius: radius).fill(Color.black.opacity(0.25))
             }
             .frame(width: btnSize, height: btnSize)
-            .offset(y: topDepth + botDepth)  // 앞면 아래로 이동
-
+        } front: {
             // ③ 앞면 — blockColor + 아이콘
             ZStack {
                 RoundedRectangle(cornerRadius: radius).fill(type.blockColor)
@@ -109,7 +107,6 @@ struct PaletteCardView: View {
                     .foregroundStyle(.white)
             }
             .frame(width: btnSize, height: btnSize)
-            .offset(y: topDepth)  // 위 뒷면이 보이도록 아래로 오프셋
         }
         .frame(width: btnSize, height: btnSize + topDepth + botDepth)
         // 드래그 중: 0.88배 축소 + 반투명 / 눌린 상태: 0.93배 축소

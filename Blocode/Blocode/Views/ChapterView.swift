@@ -31,10 +31,13 @@ struct ChapterView: View {
         ChapterCatalog.chapter(vm.chapter)?.color ?? Color.accentColor
     }
 
+    // safe area 조회 실패 시 사용할 폴백 높이 (노치 기기 status bar 기준 기본값)
+    private let safeAreaTopFallback: CGFloat = 47
+
     // status bar 높이 (safe area top) — 헤더 레이아웃 계산에 사용
     private var safeAreaTop: CGFloat {
         (UIApplication.shared.connectedScenes.first as? UIWindowScene)?
-            .windows.first?.safeAreaInsets.top ?? 47
+            .windows.first?.safeAreaInsets.top ?? safeAreaTopFallback
     }
 
     var body: some View {
@@ -85,7 +88,7 @@ struct ChapterView: View {
             Spacer().frame(height: safeAreaTop)
 
             // 뒤로가기 버튼
-            Button { navPath.removeLast() } label: {
+            Button { if !navPath.isEmpty { navPath.removeLast() } } label: {
                 HStack(spacing: 4) {
                     Image(systemName: "chevron.left")
                         .font(.system(size: 12, weight: .bold))
@@ -231,7 +234,7 @@ struct ChapterView: View {
 
     /// 스테이지 번호/상태를 표시하는 3D 아이콘
     private func stageIcon(number: Int, locked: Bool, cleared: Bool, isCurrent: Bool, isPressed: Bool = false) -> some View {
-        let darkFace = Color(red: 42/255, green: 37/255, blue: 32/255)
+        let darkFace = Color.darkInk
 
         let faceColor: Color = {
             if locked    { return Color.lockedBackground }
@@ -244,17 +247,15 @@ struct ChapterView: View {
         let topDepth: CGFloat = 1
         let botDepth: CGFloat = 2
 
-        return ZStack(alignment: .top) {
-
-            // ① 위 뒷면 — 눌리면 사라짐
+        return ThreeDSurface(topDepth: topDepth, bottomDepth: botDepth, isPressed: isPressed) {
+            // ① 위 뒷면
             ZStack {
                 RoundedRectangle(cornerRadius: radius).fill(faceColor)
                 RoundedRectangle(cornerRadius: radius).fill(Color.white.opacity(isCurrent ? 0.18 : 0.32))
             }
             .frame(width: iconSize, height: iconSize)
-            .opacity(isPressed ? 0 : 1)
-
-            // ② 아래 뒷면 — 눌리면 사라짐
+        } bottomBack: {
+            // ② 아래 뒷면 — 진행 중(isCurrent)이면 단색, 아니면 faceColor + 그림자
             Group {
                 if isCurrent {
                     RoundedRectangle(cornerRadius: radius)
@@ -267,10 +268,8 @@ struct ChapterView: View {
                 }
             }
             .frame(width: iconSize, height: iconSize)
-            .offset(y: topDepth + botDepth)
-            .opacity(isPressed ? 0 : 1)
-
-            // ③ 앞면 — 눌리면 아래 뒷면 자리까지 완전히 내려감
+        } front: {
+            // ③ 앞면 — faceColor + (눌림 시 그림자) + 상태 아이콘
             ZStack {
                 RoundedRectangle(cornerRadius: radius).fill(faceColor)
                 if isPressed {
@@ -292,7 +291,6 @@ struct ChapterView: View {
                 }
             }
             .frame(width: iconSize, height: iconSize)
-            .offset(y: isPressed ? topDepth + botDepth : topDepth)
         }
         .frame(width: iconSize, height: iconSize + topDepth + botDepth)
     }

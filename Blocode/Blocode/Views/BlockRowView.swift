@@ -35,7 +35,7 @@ struct BlockRowView: View {
     // 자식 블럭 추가 팔레트 펼침 여부
     @State private var showChildPalette = false
     // 손자 블럭 추가 팔레트 펼침 여부 (자식 인덱스별 관리)
-    @State private var showGrandchildPalette: [Int: Bool] = [:]
+    @State private var showGrandchildPalette: [UUID: Bool] = [:]
 
     // 3D 카드 파라미터
     private let frontH:  CGFloat = 48  // 앞면 높이
@@ -49,7 +49,7 @@ struct BlockRowView: View {
             blockRow
             // 컨테이너 블럭(repeat/if/function)이면 자식 블럭 영역 추가 표시
             if block.hasChildren {
-                repeatChildArea
+                containerChildArea
             }
         }
     }
@@ -229,10 +229,10 @@ struct BlockRowView: View {
         }
     }
 
-    // MARK: - repeat 블럭 자식 영역
+    // MARK: - 컨테이너 블럭 자식 영역
 
-    /// repeat 블럭 아래에 표시되는 자식 블럭 목록 및 추가 UI
-    private var repeatChildArea: some View {
+    /// 컨테이너 블럭(repeat/if/function) 아래에 표시되는 자식 블럭 목록 및 추가 UI
+    private var containerChildArea: some View {
         VStack(alignment: .leading, spacing: 4) {
 
             if let children = block.children, !children.isEmpty {
@@ -458,7 +458,7 @@ struct BlockRowView: View {
                 Rectangle().fill(lineColor).frame(width: 2)
                 Button {
                     withAnimation(.spring(duration: 0.2)) {
-                        showGrandchildPalette[childIndex, default: false].toggle()
+                        showGrandchildPalette[child.id, default: false].toggle()
                     }
                 } label: {
                     Label("추가", systemImage: "plus.circle.fill")
@@ -470,8 +470,8 @@ struct BlockRowView: View {
             }
 
             // 손자 팔레트
-            if showGrandchildPalette[childIndex, default: false] {
-                grandchildMiniPalette(childIndex: childIndex)
+            if showGrandchildPalette[child.id, default: false] {
+                grandchildMiniPalette(childId: child.id, childIndex: childIndex)
                     .transition(.opacity.combined(with: .scale(scale: 0.95, anchor: .topLeading)))
             }
 
@@ -485,7 +485,8 @@ struct BlockRowView: View {
     }
 
     /// 손자 블럭 선택 미니 팔레트 — 기본 블럭만 허용 (무한 중첩 방지)
-    private func grandchildMiniPalette(childIndex: Int) -> some View {
+    /// childId: 팔레트 열림 상태 키(Block.id) / childIndex: 추가 콜백에 넘길 위치
+    private func grandchildMiniPalette(childId: UUID, childIndex: Int) -> some View {
         let types = BlockType.allCases.filter {
             $0 != .repeatBlock && $0 != .ifBlock && $0 != .functionBlock
         }
@@ -494,7 +495,7 @@ struct BlockRowView: View {
                 ForEach(types, id: \.self) { type in
                     Button {
                         onAddGrandchild?(type, childIndex)
-                        withAnimation { showGrandchildPalette[childIndex] = false }
+                        withAnimation { showGrandchildPalette[childId] = false }
                     } label: {
                         HStack(spacing: 4) {
                             Image(systemName: type.iconName).font(.system(size: 11, weight: .semibold))

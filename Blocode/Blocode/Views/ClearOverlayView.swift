@@ -72,7 +72,7 @@ struct ClearOverlayView: View {
                     .foregroundStyle(Color.primary)
                 Text("solution.")
                     .font(.custom("Georgia-Italic", size: 50))
-                    .foregroundStyle(Color(red: 0.27, green: 0.72, blue: 0.58))  // 민트 그린
+                    .foregroundStyle(Color.accentMint)  // 민트 그린
             }
             .multilineTextAlignment(.center)
             .padding(.top, 6)
@@ -115,7 +115,7 @@ struct ClearOverlayView: View {
                         .foregroundStyle(.white)
                         .frame(maxWidth: .infinity)
                         .frame(height: 56)
-                        .background(Color(red: 42/255, green: 37/255, blue: 32/255))  // 다크 브라운
+                        .background(Color.darkInk)  // 다크 브라운
                         .clipShape(RoundedRectangle(cornerRadius: 28))
                 }
                 .buttonStyle(.plain)
@@ -210,7 +210,7 @@ struct ClearOverlayView: View {
                     .foregroundStyle(.white)
                     .frame(maxWidth: .infinity)
                     .frame(height: 54)
-                    .background(Color(red: 42/255, green: 37/255, blue: 32/255))
+                    .background(Color.darkInk)
                     .clipShape(RoundedRectangle(cornerRadius: 27))
                 }
                 .buttonStyle(.plain)
@@ -265,7 +265,7 @@ struct ClearOverlayView: View {
             cardRow(
                 label: "★ 3 컷",
                 value: "\(threeStarCut) blocks",
-                valueColor: Color(red: 0.27, green: 0.72, blue: 0.58)  // 민트 그린으로 강조
+                valueColor: Color.accentMint  // 민트 그린으로 강조
             )
 
             Divider().padding(.horizontal, 16)
@@ -289,28 +289,18 @@ struct ClearOverlayView: View {
     }
 
     /// 카드 내 한 행 — 레이블(왼쪽) + 값(오른쪽)
-    private func cardRow(label: String, value: String, valueColor: Color, valueItalic: Bool = false) -> some View {
+    private func cardRow(label: String, value: String, valueColor: Color) -> some View {
         HStack {
             Text(label)
                 .font(.system(size: 14))
                 .foregroundStyle(.secondary)
             Spacer()
             Text(value)
-                .font(valueItalic
-                      ? .system(size: 14, weight: .medium).italic()
-                      : .system(size: 14, weight: .semibold, design: .monospaced))
+                .font(.system(size: 14, weight: .semibold, design: .monospaced))
                 .foregroundStyle(valueColor)
         }
         .padding(.horizontal, 20)
         .padding(.vertical, 14)
-    }
-
-    /// 힌트 텍스트 — 블럭 수 차이에 따라 자동 생성 (현재 미사용)
-    private var hintText: String {
-        let diff = blockCount - threeStarCut
-        if diff >= 3 { return "repeat 블럭으로 줄여보세요" }
-        if diff == 2 { return "비슷한 동작을 묶어보세요" }
-        return "딱 \(diff)블럭만 더 줄이면 돼요"
     }
 
     // MARK: - 공통 서브뷰
@@ -345,32 +335,30 @@ struct ClearOverlayView: View {
         let topD: CGFloat = 1.5  // 위 뒷면 두께
         let botD: CGFloat = 4    // 아래 뒷면 두께
 
-        return ZStack(alignment: .top) {
+        return ThreeDSurface(topDepth: topD, bottomDepth: botD) {
             // ① 위 뒷면 — 밝은 베이지
             ZStack {
                 RoundedRectangle(cornerRadius: cr)
-                    .fill(Color(red: 128/255, green: 120/255, blue: 105/255))
+                    .fill(Color.bevelTopBack)
             }
             .frame(width: size, height: size)
-
+        } bottomBack: {
             // ② 아래 뒷면 — 더 밝은 베이지 (그림자 효과)
             ZStack {
                 RoundedRectangle(cornerRadius: cr)
-                    .fill(Color(red: 190/255, green: 181/255, blue: 159/255))
+                    .fill(Color.bevelBottomBack)
             }
             .frame(width: size, height: size)
-            .offset(y: topD + botD)
-
+        } front: {
             // ③ 앞면 — 다크 브라운 + 화살표
             ZStack {
                 RoundedRectangle(cornerRadius: cr)
-                    .fill(Color(red: 42/255, green: 37/255, blue: 32/255))
+                    .fill(Color.darkInk)
                 // 화살표 모양으로 방향 표시
                 arrowShape(frameSize: size, scale: 0.38)
-                    .fill(Color(red: 244/255, green: 236/255, blue: 215/255))
+                    .fill(Color.arrowCream)
             }
             .frame(width: size, height: size)
-            .offset(y: topD)
         }
         .frame(width: size, height: size + topD + botD)
     }

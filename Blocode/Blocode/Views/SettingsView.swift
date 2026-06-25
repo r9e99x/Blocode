@@ -38,7 +38,7 @@ struct SettingsView: View {
     ]
 
     // 토글 및 슬라이더 강조 색상 — 민트 그린
-    private let toggleTint = Color(red: 0.27, green: 0.72, blue: 0.58)
+    private let toggleTint = Color.accentMint
 
     var body: some View {
         NavigationStack {
@@ -284,7 +284,7 @@ struct SettingsView: View {
                     // 실행 속도 — 슬라이더 (3단계: 0.5× / 1× / 2×)
                     VStack(alignment: .leading, spacing: 12) {
                         HStack(spacing: 12) {
-                            iconBadge("play.fill", color: Color(red: 0.27, green: 0.72, blue: 0.58))
+                            iconBadge("play.fill", color: Color.accentMint)
                             Text("실행 속도")
                                 .font(.system(size: 16))
                             Spacer()
