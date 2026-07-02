@@ -115,7 +115,7 @@ struct ClearOverlayView: View {
                         .foregroundStyle(.white)
                         .frame(maxWidth: .infinity)
                         .frame(height: 56)
-                        .background(Color.darkInk)  // 다크 브라운
+                        .background(Color.slateButtonFace)  // 라이트: 기존 다크 브라운 / 다크: 슬레이트
                         .clipShape(RoundedRectangle(cornerRadius: 28))
                 }
                 .buttonStyle(.plain)
@@ -199,7 +199,7 @@ struct ClearOverlayView: View {
 
             // 하단 버튼 2개
             HStack(spacing: 12) {
-                // 왼쪽 — 다시 (다크 버튼)
+                // 왼쪽 — 다시 (라이트: 기존 다크 브라운 / 다크: 슬레이트)
                 Button(action: onRetry) {
                     HStack(spacing: 6) {
                         Image(systemName: "arrow.counterclockwise")
@@ -210,7 +210,7 @@ struct ClearOverlayView: View {
                     .foregroundStyle(.white)
                     .frame(maxWidth: .infinity)
                     .frame(height: 54)
-                    .background(Color.darkInk)
+                    .background(Color.slateButtonFace)
                     .clipShape(RoundedRectangle(cornerRadius: 27))
                 }
                 .buttonStyle(.plain)
@@ -335,28 +335,30 @@ struct ClearOverlayView: View {
         let topD: CGFloat = 1.5  // 위 뒷면 두께
         let botD: CGFloat = 4    // 아래 뒷면 두께
 
+        // 홈 화면 미니 아이콘/게임 캐릭터와 동일한 다이나믹 컬러 세트 사용
+        // (라이트: 기존 darkInk+탄색 베벨+크림 화살표 / 다크: 밝은 몸체+쿨 그레이 베벨+다크 화살표)
         return ThreeDSurface(topDepth: topD, bottomDepth: botD) {
-            // ① 위 뒷면 — 밝은 베이지
+            // ① 위 뒷면 — 라이트 #807869 / 다크 쿨 그레이
             ZStack {
                 RoundedRectangle(cornerRadius: cr)
-                    .fill(Color.bevelTopBack)
+                    .fill(Color.characterTopBack)
             }
             .frame(width: size, height: size)
         } bottomBack: {
-            // ② 아래 뒷면 — 더 밝은 베이지 (그림자 효과)
+            // ② 아래 뒷면 — 라이트 #beb59f / 다크 쿨 그레이 (그림자 효과)
             ZStack {
                 RoundedRectangle(cornerRadius: cr)
-                    .fill(Color.bevelBottomBack)
+                    .fill(Color.characterBottomBack)
             }
             .frame(width: size, height: size)
         } front: {
-            // ③ 앞면 — 다크 브라운 + 화살표
+            // ③ 앞면 — (라이트 다크 브라운 / 다크 회백색) + 화살표
             ZStack {
                 RoundedRectangle(cornerRadius: cr)
-                    .fill(Color.darkInk)
-                // 화살표 모양으로 방향 표시
+                    .fill(Color.characterBody)
+                // 화살표 모양으로 방향 표시 (라이트 크림 / 다크 다크잉크)
                 arrowShape(frameSize: size, scale: 0.38)
-                    .fill(Color.arrowCream)
+                    .fill(Color.characterArrow)
             }
             .frame(width: size, height: size)
         }

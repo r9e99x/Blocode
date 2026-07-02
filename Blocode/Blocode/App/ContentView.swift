@@ -133,11 +133,12 @@ struct ContentView: View {
         let botD:     CGFloat = 2.0
         let cr:       CGFloat = 10
 
-        // 미니 아이콘 색상
-        let frontColor   = Color.darkInk   // #2a2520 앞면
-        let topBackColor = Color.bevelTopBack  // #807869 위 뒷면
-        let botBackColor = Color.bevelBottomBack  // #beb59f 아래 뒷면
-        let arrowColor   = Color.arrowCream  // #f4ecd7 화살표
+        // 미니 아이콘 색상 — 게임 캐릭터와 동일한 다이나믹 컬러 세트
+        // (라이트: 기존 darkInk/베벨/크림 그대로, 다크: 밝은 몸체 + 쿨 그레이 베벨 + 다크 화살표)
+        let frontColor   = Color.characterBody        // 라이트 #2a2520 / 다크 회백색 앞면
+        let topBackColor = Color.characterTopBack     // 라이트 #807869 / 다크 쿨 그레이 위 뒷면
+        let botBackColor = Color.characterBottomBack  // 라이트 #beb59f / 다크 쿨 그레이 아래 뒷면
+        let arrowColor   = Color.characterArrow       // 라이트 #f4ecd7 / 다크 다크잉크 화살표
 
         return ThreeDSurface(topDepth: topD, bottomDepth: botD) {
             // ① 위 뒷면
@@ -277,12 +278,23 @@ struct ContentView: View {
         let topD:     CGFloat = 0.8
         let botD:     CGFloat = 2.5
         let cr:       CGFloat = 18
-        // 다크 버튼 색상
-        let frontColor    = Color(red: 0.165, green: 0.145, blue: 0.125)
-        // 위 뒷면 색상 — #807869 (어두운 올리브브라운)
-        let topBackColor  = Color.bevelTopBack
-        // 아래 뒷면 색상 — #beb59f (연한 탄베이지, 그림자 효과)
-        let botBackColor  = Color.bevelBottomBack
+        // 다크 버튼 색상 — 라이트: 기존 값 그대로 / 다크: 슬레이트 톤으로 전환
+        // (다크 배경에서 따뜻한 브라운+탄색 베벨이 충돌하던 문제 수정)
+        let frontColor = Color(UIColor { traits in
+            traits.userInterfaceStyle == .dark
+                ? UIColor(red: 72/255, green: 78/255, blue: 96/255, alpha: 1.0)     // 다크: 슬레이트 앞면
+                : UIColor(red: 0.165, green: 0.145, blue: 0.125, alpha: 1.0)        // 라이트: 기존 값 유지
+        })
+        // 위 뒷면 색상 — 라이트 #807869 / 다크 밝은 슬레이트
+        let topBackColor  = Color.slateButtonTopBack
+        // 아래 뒷면 색상 — 라이트 #beb59f / 다크 더 밝은 슬레이트 (그림자 효과)
+        let botBackColor  = Color.slateButtonBottomBack
+        // 눌림 시 앞면 색상 — 라이트: 기존 #565048 / 다크: 슬레이트를 살짝 밝게
+        let pressedFrontColor = Color(UIColor { traits in
+            traits.userInterfaceStyle == .dark
+                ? UIColor(red: 88/255, green: 95/255, blue: 116/255, alpha: 1.0)    // 다크: 눌림 슬레이트
+                : UIColor(red: 86/255, green: 80/255, blue: 72/255, alpha: 1.0)     // 라이트: 기존 값 유지
+        })
 
         // 다음 스테이지 정보 (없으면 모든 완료 상태)
         let next = vm.nextStage
@@ -313,11 +325,9 @@ struct ContentView: View {
             } front: {
                 // ③ 앞면 + 내용
                 ZStack {
-                    // 눌리면 앞면 색상 #565048로 변경
+                    // 눌리면 앞면 색상 변경 (라이트 #565048 / 다크 밝은 슬레이트)
                     RoundedRectangle(cornerRadius: cr)
-                        .fill(isContinuePressed
-                              ? Color(red: 86/255, green: 80/255, blue: 72/255)
-                              : frontColor)
+                        .fill(isContinuePressed ? pressedFrontColor : frontColor)
                     HStack {
                         HStack(spacing: 8) {
                             Image(systemName: isFirstTime ? "sparkles" : "play.fill")

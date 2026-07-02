@@ -61,19 +61,20 @@ struct LockInfoOverlay: View {
                     .lineSpacing(3)
 
                 // 확인 버튼 (3D + 눌림 효과)
+                // 색상: 라이트는 기존 darkInk+탄색 베벨 그대로 / 다크는 슬레이트 톤 (slateButton* 다이나믹 컬러)
                 Button(action: onClose) {
                     ThreeDSurface(topDepth: confirmTopDepth, bottomDepth: confirmBotDepth, isPressed: isConfirmPressed) {
-                        // ① 위 뒷면
-                        RoundedRectangle(cornerRadius: 25).fill(Color.bevelTopBack)
+                        // ① 위 뒷면 — 라이트 #807869 / 다크 밝은 슬레이트
+                        RoundedRectangle(cornerRadius: 25).fill(Color.slateButtonTopBack)
                             .frame(maxWidth: .infinity).frame(height: 50)
                     } bottomBack: {
-                        // ② 아래 뒷면 (그림자)
-                        RoundedRectangle(cornerRadius: 25).fill(Color.bevelBottomBack)
+                        // ② 아래 뒷면 (그림자) — 라이트 #beb59f / 다크 더 밝은 슬레이트
+                        RoundedRectangle(cornerRadius: 25).fill(Color.slateButtonBottomBack)
                             .frame(maxWidth: .infinity).frame(height: 50)
                     } front: {
-                        // ③ 앞면 — darkInk + (눌림 시 그림자) + 텍스트
+                        // ③ 앞면 — (라이트 darkInk / 다크 슬레이트) + (눌림 시 그림자) + 텍스트
                         ZStack {
-                            RoundedRectangle(cornerRadius: 25).fill(Color.darkInk)
+                            RoundedRectangle(cornerRadius: 25).fill(Color.slateButtonFace)
                             if isConfirmPressed {
                                 RoundedRectangle(cornerRadius: 25).fill(Color.black.opacity(0.10))
                             }

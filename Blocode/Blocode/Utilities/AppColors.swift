@@ -129,6 +129,96 @@ extension Color {
     static let arrowCream = Color(red: 244/255, green: 236/255, blue: 215/255)
     /// 강조 민트그린 #27b894 — 실행 버튼 / 클리어 강조
     static let accentMint = Color(red: 0.27, green: 0.72, blue: 0.58)
+
+    // MARK: - 다크모드 전용 파생 색상
+    // 다크 배경(네이비)과 따뜻한 탄색 트림이 충돌하는 화면에서만 쓰는 다이나믹 컬러 모음.
+    // ⚠️ 라이트 분기는 기존 고정색 리터럴과 완전히 동일한 값 — 라이트 모드 외형은 절대 바뀌지 않음.
+
+    /// 캐릭터/미니 블럭 아이콘 몸체
+    /// 라이트: #2a2520 (darkInk와 동일) / 다크: 밝은 회백색 (게임 캐릭터 다크 몸체와 동일 값)
+    static var characterBody: Color {
+        Color(UIColor { traits in
+            traits.userInterfaceStyle == .dark
+                ? UIColor(red: 0.88, green: 0.88, blue: 0.90, alpha: 1.0)
+                : UIColor(red: 42/255, green: 37/255, blue: 32/255, alpha: 1.0)
+        })
+    }
+
+    /// 캐릭터/미니 블럭 아이콘 위 뒷면 — 라이트: #807869 / 다크: 쿨 그레이 림
+    static var characterTopBack: Color {
+        Color(UIColor { traits in
+            traits.userInterfaceStyle == .dark
+                ? UIColor(red: 0.70, green: 0.71, blue: 0.75, alpha: 1.0)
+                : UIColor(red: 128/255, green: 120/255, blue: 105/255, alpha: 1.0)
+        })
+    }
+
+    /// 캐릭터/미니 블럭 아이콘 아래 뒷면 — 라이트: #beb59f / 다크: 중간 쿨 그레이 (그림자)
+    static var characterBottomBack: Color {
+        Color(UIColor { traits in
+            traits.userInterfaceStyle == .dark
+                ? UIColor(red: 0.52, green: 0.53, blue: 0.60, alpha: 1.0)
+                : UIColor(red: 190/255, green: 181/255, blue: 159/255, alpha: 1.0)
+        })
+    }
+
+    /// 캐릭터/미니 블럭 아이콘 화살표
+    /// 라이트: 크림 #f4ecd7 / 다크: 다크 잉크 (다크에선 몸체가 밝아지므로 화살표를 어둡게 반전)
+    static var characterArrow: Color {
+        Color(UIColor { traits in
+            traits.userInterfaceStyle == .dark
+                ? UIColor(red: 42/255, green: 37/255, blue: 32/255, alpha: 1.0)
+                : UIColor(red: 244/255, green: 236/255, blue: 215/255, alpha: 1.0)
+        })
+    }
+
+    /// 슬레이트 3D 버튼 앞면 — 잠금 팝업 확인 / 클리어 화면 버튼 / "지금 여기" 스테이지 아이콘
+    /// 라이트: #2a2520 (darkInk와 동일) / 다크: 슬레이트 블루그레이
+    static var slateButtonFace: Color {
+        Color(UIColor { traits in
+            traits.userInterfaceStyle == .dark
+                ? UIColor(red: 72/255, green: 78/255, blue: 96/255, alpha: 1.0)
+                : UIColor(red: 42/255, green: 37/255, blue: 32/255, alpha: 1.0)
+        })
+    }
+
+    /// 슬레이트 3D 버튼 위 뒷면 — 라이트: #807869 / 다크: 밝은 슬레이트
+    static var slateButtonTopBack: Color {
+        Color(UIColor { traits in
+            traits.userInterfaceStyle == .dark
+                ? UIColor(red: 104/255, green: 112/255, blue: 134/255, alpha: 1.0)
+                : UIColor(red: 128/255, green: 120/255, blue: 105/255, alpha: 1.0)
+        })
+    }
+
+    /// 슬레이트 3D 버튼 아래 뒷면 — 라이트: #beb59f / 다크: 앞면보다 약간 어두운 슬레이트 (그림자 방향)
+    static var slateButtonBottomBack: Color {
+        Color(UIColor { traits in
+            traits.userInterfaceStyle == .dark
+                ? UIColor(red: 56/255, green: 61/255, blue: 76/255, alpha: 1.0)
+                : UIColor(red: 190/255, green: 181/255, blue: 159/255, alpha: 1.0)
+        })
+    }
+
+    /// 실행 버튼 활성(민트) — 라이트: 기존 accentMint와 동일 / 다크: 톤 다운한 딥 민트
+    /// (비활성·실행 중 회색은 기존 값을 그대로 사용하므로 여기 포함하지 않음)
+    static var runButtonActiveMint: Color {
+        Color(UIColor { traits in
+            traits.userInterfaceStyle == .dark
+                ? UIColor(red: 0.20, green: 0.56, blue: 0.45, alpha: 1.0)
+                : UIColor(red: 0.27, green: 0.72, blue: 0.58, alpha: 1.0)
+        })
+    }
+
+    /// 게임 화면 되돌리기/설정 버튼 앞면
+    /// 라이트: panelBackground 라이트와 동일한 크림 / 다크: 배경보다 살짝 밝은 슬레이트 (버튼 면이 배경에 묻히지 않도록)
+    static var controlIconButtonFace: Color {
+        Color(UIColor { traits in
+            traits.userInterfaceStyle == .dark
+                ? UIColor(red: 0.16, green: 0.17, blue: 0.22, alpha: 1.0)
+                : UIColor(red: 0.984, green: 0.965, blue: 0.910, alpha: 1.0)
+        })
+    }
 }
 
 // MARK: - SpriteKit 색상 (GameScene 전용 — 위 Color와 동일 RGB 공유)

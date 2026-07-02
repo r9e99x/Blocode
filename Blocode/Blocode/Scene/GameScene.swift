@@ -20,6 +20,17 @@ class GameScene: SKScene {
     private var characterColor = SKColor.darkInk // #2a2520
     private let goalColor   = SKColor(red: 0.93, green: 0.67, blue: 0.24, alpha: 1.0) // 골드 (공통)
 
+    // 바닥 타일 테두리 — 라이트: #d2c6ac (기존 고정값) / 다크: 바닥 채우기보다 살짝 밝은 쿨톤
+    private var floorStrokeColor = SKColor(red: 210/255, green: 198/255, blue: 172/255, alpha: 1.0)
+    // 벽 3D 베벨 — 라이트: #c7b694 / #9f8b65 (기존 고정값) / 다크: 벽 채우기와 어울리는 쿨톤
+    private var wallTopColor = SKColor(red: 199/255, green: 182/255, blue: 148/255, alpha: 1.0)
+    private var wallBotColor = SKColor(red: 159/255, green: 139/255, blue: 101/255, alpha: 1.0)
+    // 캐릭터 3D 베벨/화살표 — 라이트: 기존 탄색 베벨 + 크림 화살표 / 다크: 쿨 그레이 베벨 + 다크 화살표
+    // (다크에선 캐릭터 몸체가 밝은 회백색이라 탄색 베벨·크림 화살표가 뭉개지는 문제 수정)
+    private var charTopBackColor    = SKColor.bevelTopBack
+    private var charBottomBackColor = SKColor.bevelBottomBack
+    private var charArrowColor      = SKColor.arrowCream
+
     // MARK: - 맵 데이터
     // 외부 읽기 가능, 내부에서만 쓰기 가능
     private(set) var mapData: MapData
@@ -62,6 +73,32 @@ class GameScene: SKScene {
         characterColor = isDark
             ? SKColor(red: 0.88, green: 0.88, blue: 0.90, alpha: 1.0)
             : SKColor.darkInk // #2a2520
+
+        // 바닥 타일 테두리 — 다크에선 바닥 채우기(블루그레이)보다 살짝 밝은 쿨톤으로
+        floorStrokeColor = isDark
+            ? SKColor(red: 0.33, green: 0.37, blue: 0.47, alpha: 1.0)
+            : SKColor(red: 210/255, green: 198/255, blue: 172/255, alpha: 1.0) // 라이트: 기존 탄색 유지
+
+        // 벽 3D 베벨 — 다크에선 벽 채우기(짙은 네이비) 기준으로 위는 살짝 밝게, 아래는 살짝 어둡게
+        wallTopColor = isDark
+            ? SKColor(red: 0.165, green: 0.18, blue: 0.235, alpha: 1.0)
+            : SKColor(red: 199/255, green: 182/255, blue: 148/255, alpha: 1.0)  // 라이트: #c7b694 유지
+        wallBotColor = isDark
+            ? SKColor(red: 0.065, green: 0.07, blue: 0.095, alpha: 1.0)
+            : SKColor(red: 159/255, green: 139/255, blue: 101/255, alpha: 1.0)  // 라이트: #9f8b65 유지
+
+        // 캐릭터 베벨/화살표 — 다크에선 밝은 몸체에 맞춰 쿨 그레이 베벨 + 다크 잉크 화살표
+        // (홈 화면 미니 아이콘의 characterTopBack/BottomBack/Arrow 다크 값과 동일)
+        charTopBackColor = isDark
+            ? SKColor(red: 0.70, green: 0.71, blue: 0.75, alpha: 1.0)
+            : SKColor.bevelTopBack      // 라이트: #807869 유지
+        charBottomBackColor = isDark
+            ? SKColor(red: 0.52, green: 0.53, blue: 0.60, alpha: 1.0)
+            : SKColor.bevelBottomBack   // 라이트: #beb59f 유지
+        charArrowColor = isDark
+            ? SKColor(red: 42/255, green: 37/255, blue: 32/255, alpha: 1.0)     // 다크: 다크 잉크 화살표
+            : SKColor.arrowCream        // 라이트: #f4ecd7 유지
+
         // 색상 변경 후 맵 전체 다시 그리기
         setupMap()
     }
@@ -185,13 +222,14 @@ class GameScene: SKScene {
             let node = SKShapeNode(rectOf: CGSize(width: size, height: size), cornerRadius: radius)
             node.position    = position
             node.fillColor   = floorColor
-            // 연한 테두리로 바닥 타일 구분
-            node.strokeColor = SKColor(red: 210/255, green: 198/255, blue: 172/255, alpha: 1.0)
+            // 연한 테두리로 바닥 타일 구분 (라이트: 탄색 / 다크: 쿨톤 — updateColorScheme에서 결정)
+            node.strokeColor = floorStrokeColor
             node.lineWidth   = 1.5
             node.zPosition   = 0  // 맨 아래 레이어
             return node
         } else {
             // 벽 타일 — 3D 레이어 구조로 입체감 표현
+            // (베벨 색은 라이트/다크에 따라 updateColorScheme에서 결정)
             let node = make3DBlockNode(
                 at: position,
                 size: size,
@@ -200,8 +238,8 @@ class GameScene: SKScene {
                 topDepth: 0.8,  // 위 뒷면 두께
                 botDepth: 3.0,  // 아래 뒷면 두께 (그림자 효과)
                 baseZ: 0,
-                topColor: SKColor(red: 199/255, green: 182/255, blue: 148/255, alpha: 1.0), // #c7b694
-                botColor: SKColor(red: 159/255, green: 139/255, blue: 101/255, alpha: 1.0)  // #9f8b65
+                topColor: wallTopColor,
+                botColor: wallBotColor
             )
             return node
         }
@@ -297,6 +335,7 @@ class GameScene: SKScene {
         let bodyRadius = cornerRadius * 0.85
 
         // 3D 블럭 본체 (topDepth=1, botDepth=2 — 스테이지 아이콘과 동일)
+        // 베벨 색은 라이트(탄색)/다크(쿨 그레이)에 따라 updateColorScheme에서 결정
         let body3D = make3DBlockNode(
             at: .zero,
             size: bodySize,
@@ -305,8 +344,8 @@ class GameScene: SKScene {
             topDepth: 0.5,
             botDepth: 2.0,
             baseZ: 0,
-            topColor: SKColor.bevelTopBack,
-            botColor: SKColor.bevelBottomBack
+            topColor: charTopBackColor,
+            botColor: charBottomBackColor
         )
         container.addChild(body3D)
 
@@ -340,7 +379,7 @@ class GameScene: SKScene {
         path.closeSubpath()
 
         let node = SKShapeNode(path: path)
-        node.fillColor   = SKColor.arrowCream // #f4ecd7
+        node.fillColor   = charArrowColor // 라이트: 크림 #f4ecd7 / 다크: 다크 잉크 (몸체 밝음에 맞춘 반전)
         node.strokeColor = .clear
         return node
     }

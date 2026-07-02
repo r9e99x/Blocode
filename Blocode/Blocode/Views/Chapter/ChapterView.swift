@@ -15,6 +15,9 @@ struct ChapterView: View {
 
     /// 챕터 화면 상태/로직 — 스테이지 로딩·진행 계산은 ViewModel이 담당 (MVVM)
     @StateObject private var vm: ChapterViewModel
+
+    /// 다크/라이트 모드 감지 — 잠긴 스테이지 아이콘의 베벨 강도를 다크에서만 조정하는 데 사용
+    @Environment(\.colorScheme) private var colorScheme
     @State private var retryAlertStage:    Stage? = nil  // 재도전 확인 알럿 대상 스테이지
     @State private var pressedStageNumber: Int?   = nil  // 눌린 스테이지 아이콘 번호 추적
     @State private var lockInfo: LockInfo?         = nil  // 잠금 안내 팝업 (nil이면 숨김)
@@ -255,13 +258,17 @@ struct ChapterView: View {
 
     /// 스테이지 번호/상태를 표시하는 3D 아이콘
     private func stageIcon(number: Int, locked: Bool, cleared: Bool, isCurrent: Bool, isPressed: Bool = false) -> some View {
-        let darkFace = Color.darkInk
+        // "지금 여기" 아이콘 앞면 — 라이트: darkInk와 동일 / 다크: 슬레이트 (다크 배경에 묻히지 않도록)
+        let darkFace = Color.slateButtonFace
 
         let faceColor: Color = {
             if locked    { return Color.lockedBackground }
             if isCurrent { return darkFace }
             return chapterColor
         }()
+
+        // 다크모드 여부 — 잠긴 아이콘 베벨 강도를 챕터 선택 화면의 잠긴 챕터 카드와 맞추는 데 사용
+        let isDark = colorScheme == .dark
 
         let iconSize: CGFloat = 52
         let radius:   CGFloat = 18
@@ -270,21 +277,31 @@ struct ChapterView: View {
 
         return ThreeDSurface(topDepth: topDepth, bottomDepth: botDepth, isPressed: isPressed) {
             // ① 위 뒷면
+            // 잠긴 아이콘은 다크모드에서만 챕터 선택 화면 잠긴 카드와 동일한 0.18로 낮춤 (라이트는 기존 0.32 유지)
             ZStack {
                 RoundedRectangle(cornerRadius: radius).fill(faceColor)
-                RoundedRectangle(cornerRadius: radius).fill(Color.white.opacity(isCurrent ? 0.18 : 0.32))
+                RoundedRectangle(cornerRadius: radius)
+                    .fill(Color.white.opacity((isCurrent || (locked && isDark)) ? 0.18 : 0.32))
             }
             .frame(width: iconSize, height: iconSize)
         } bottomBack: {
             // ② 아래 뒷면 — 진행 중(isCurrent)이면 단색, 아니면 faceColor + 그림자
             Group {
                 if isCurrent {
+                    // 라이트: 기존 탄색 유지 / 다크: 앞면(슬레이트)보다 약간 어두운 그림자 톤
+                    // (slateButtonBottomBack 다크 값과 동일)
                     RoundedRectangle(cornerRadius: radius)
-                        .fill(Color(red: 195/255, green: 189/255, blue: 172/255))
+                        .fill(Color(UIColor { traits in
+                            traits.userInterfaceStyle == .dark
+                                ? UIColor(red: 56/255, green: 61/255, blue: 76/255, alpha: 1.0)
+                                : UIColor(red: 195/255, green: 189/255, blue: 172/255, alpha: 1.0)
+                        }))
                 } else {
+                    // 잠긴 아이콘은 다크모드에서만 챕터 선택 화면 잠긴 카드와 동일한 0.10으로 낮춤 (라이트는 기존 0.28 유지)
                     ZStack {
                         RoundedRectangle(cornerRadius: radius).fill(faceColor)
-                        RoundedRectangle(cornerRadius: radius).fill(Color.black.opacity(0.28))
+                        RoundedRectangle(cornerRadius: radius)
+                            .fill(Color.black.opacity((locked && isDark) ? 0.10 : 0.28))
                     }
                 }
             }

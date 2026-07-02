@@ -38,6 +38,9 @@ struct ChapterSelectView: View {
     @State private var pressedChapterId: Int? = nil  // 눌린 챕터 카드 ID 추적
     @State private var lockInfo: LockInfo? = nil     // 잠금 안내 팝업 (nil이면 숨김)
 
+    /// 다크/라이트 모드 감지 — 잠긴 카드 자물쇠 밝기를 다크에서만 스테이지 아이콘과 맞추는 데 사용
+    @Environment(\.colorScheme) private var colorScheme
+
     var body: some View {
         VStack(spacing: 0) {
             // 고정 헤더 — 스크롤 내려가면 축소
@@ -225,9 +228,10 @@ struct ChapterSelectView: View {
                                 .italic()
                                 .foregroundStyle(.white.opacity(0.95))
                         } else {
+                            // 자물쇠 밝기 — 라이트: 기존 0.30 유지 / 다크: 스테이지 잠금 아이콘과 동일한 0.55
                             Image(systemName: "lock.fill")
                                 .font(.system(size: 28))
-                                .foregroundStyle(Color.primary.opacity(0.30))
+                                .foregroundStyle(Color.primary.opacity(colorScheme == .dark ? 0.55 : 0.30))
                         }
                     }
                     .frame(width: cardSize, height: cardSize)

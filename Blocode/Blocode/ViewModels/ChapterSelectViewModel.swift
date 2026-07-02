@@ -38,9 +38,9 @@ final class ChapterSelectViewModel: ObservableObject {
     // MARK: - 잠금/진행 계산
 
     /// 챕터 잠금 해제 여부 확인
-    /// 아래 두 조건 중 하나를 만족하면 해금:
+    /// 아래 두 조건을 모두 만족해야 해금 (AND):
     ///   1. 이전 챕터 총 별점이 requiredStarsFromPrev 이상
-    ///   2. 이전 챕터 마지막 스테이지(종합)를 별 3개로 클리어
+    ///   2. 이전 챕터 마지막 스테이지(종합)를 클리어 (별 수 무관)
     func isUnlocked(_ chapter: ChapterInfo) -> Bool {
         if chapter.number == 1 { return true }  // 챕터 1은 항상 열림
         guard chapter.stageCount > 0 else { return false }  // 스테이지 없으면 항상 잠김

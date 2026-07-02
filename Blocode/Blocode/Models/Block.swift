@@ -74,16 +74,28 @@ enum BlockType: String, Codable, CaseIterable {
         }
     }
 
-    /// 블럭 고유 색상 — 기존 블럭과 동일한 파스텔 톤 규칙 유지
+    /// 블럭 파스텔 색상 헬퍼
+    /// 라이트: 전달받은 RGB 그대로 (기존 고정 파스텔 — 절대 변경 금지)
+    /// 다크: 같은 색조를 22% 어둡게(×0.78) — 다크 패널 위에서 튀지 않도록 톤 다운 (챕터 카드와 동일 강도)
+    private static func pastel(_ red: Double, _ green: Double, _ blue: Double) -> Color {
+        Color(UIColor { traits in
+            traits.userInterfaceStyle == .dark
+                ? UIColor(red: red * 0.78, green: green * 0.78, blue: blue * 0.78, alpha: 1.0)
+                : UIColor(red: red, green: green, blue: blue, alpha: 1.0)
+        })
+    }
+
+    /// 블럭 고유 색상 — 라이트: 기존 파스텔 톤 그대로 / 다크: ×0.78 톤 다운
+    /// (팔레트 카드·코드 행·최소화 칩·자식 행·드래그 고스트가 전부 이 색에서 파생되므로 한 곳만 관리)
     var blockColor: Color {
         switch self {
-        case .moveForward:   return Color(red: 124/255, green: 196/255, blue: 158/255) // 민트 그린
-        case .moveBackward:  return Color(red: 207/255, green: 127/255, blue: 122/255) // 살먼 로즈
-        case .turnLeft:      return Color(red: 142/255, green: 176/255, blue: 200/255) // 뮤트 블루
-        case .turnRight:     return Color(red: 142/255, green: 176/255, blue: 200/255) // 뮤트 블루
-        case .repeatBlock:   return Color(red: 168/255, green: 141/255, blue: 192/255) // 라벤더
-        case .ifBlock:       return Color(red: 240/255, green: 196/255, blue: 100/255) // 골든 옐로우
-        case .functionBlock: return Color(red: 94/255,  green: 198/255, blue: 208/255) // 틸
+        case .moveForward:   return Self.pastel(124/255, 196/255, 158/255) // 민트 그린
+        case .moveBackward:  return Self.pastel(207/255, 127/255, 122/255) // 살먼 로즈
+        case .turnLeft:      return Self.pastel(142/255, 176/255, 200/255) // 뮤트 블루
+        case .turnRight:     return Self.pastel(142/255, 176/255, 200/255) // 뮤트 블루
+        case .repeatBlock:   return Self.pastel(168/255, 141/255, 192/255) // 라벤더
+        case .ifBlock:       return Self.pastel(240/255, 196/255, 100/255) // 골든 옐로우
+        case .functionBlock: return Self.pastel(94/255,  198/255, 208/255) // 틸
         }
     }
 

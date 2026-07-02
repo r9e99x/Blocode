@@ -16,22 +16,33 @@ import SwiftUI
 /// 챕터/스테이지를 추가·변경할 때는 아래 `all` 배열만 수정하면 된다.
 enum ChapterCatalog {
 
+    /// 챕터 카드/헤더 색상 생성 헬퍼
+    /// 라이트: 전달받은 RGB 그대로 (기존 고정값과 동일 — 절대 변경 금지)
+    /// 다크: 같은 색조를 22% 어둡게(×0.78) — 다크 배경에서 카드가 너무 튀지 않도록 톤 다운
+    private static func chapterColor(red: Double, green: Double, blue: Double) -> Color {
+        Color(UIColor { traits in
+            traits.userInterfaceStyle == .dark
+                ? UIColor(red: red * 0.78, green: green * 0.78, blue: blue * 0.78, alpha: 1.0)
+                : UIColor(red: red, green: green, blue: blue, alpha: 1.0)
+        })
+    }
+
     /// 전체 챕터 메타데이터 (챕터 번호 오름차순)
     static let all: [ChapterInfo] = [
         ChapterInfo(id: 1, title: "기본기",  stageCount: 6,
-                    color: Color(red: 0.576, green: 0.788, blue: 0.671), // #93c9ab
+                    color: chapterColor(red: 0.576, green: 0.788, blue: 0.671), // #93c9ab
                     requiredStarsFromPrev: 0),       // 챕터 1은 항상 개방
         ChapterInfo(id: 2, title: "반복",   stageCount: 8,
-                    color: Color(red: 0.58, green: 0.76, blue: 0.88),
+                    color: chapterColor(red: 0.58, green: 0.76, blue: 0.88),
                     requiredStarsFromPrev: 12),      // 챕터 1 최대 18개 중 12개 (67%)
         ChapterInfo(id: 3, title: "조건문", stageCount: 8,
-                    color: Color(red: 0.93, green: 0.62, blue: 0.42),
+                    color: chapterColor(red: 0.93, green: 0.62, blue: 0.42),
                     requiredStarsFromPrev: 16),      // 챕터 2 최대 24개 중 16개 (67%)
         ChapterInfo(id: 4, title: "함수",   stageCount: 7,
-                    color: Color(red: 0.45, green: 0.78, blue: 0.62),
+                    color: chapterColor(red: 0.45, green: 0.78, blue: 0.62),
                     requiredStarsFromPrev: 16),      // 챕터 3 최대 24개 중 16개 (67%)
         ChapterInfo(id: 5, title: "심화",   stageCount: 6,
-                    color: Color(red: 0.88, green: 0.50, blue: 0.68),
+                    color: chapterColor(red: 0.88, green: 0.50, blue: 0.68),
                     requiredStarsFromPrev: 14),      // 챕터 4 최대 21개 중 14개 (67%)
     ]
 
