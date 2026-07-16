@@ -33,17 +33,31 @@ struct BlocodeApp: App {
     // MARK: - 앱 진입점
     var body: some Scene {
         WindowGroup {
-            if hasSeenOnboarding {
-                // 온보딩 완료 → 홈 화면
-                ContentView()
-            } else {
-                // 첫 실행 → 온보딩 화면
-                OnboardingView {
-                    hasSeenOnboarding = true
+            Group {
+                if hasSeenOnboarding {
+                    #if os(macOS)
+                    // macOS 전용 최상위 화면 — 좌측 고정 사이드바 + 우측 콘텐츠 전환
+                    // (iOS/iPadOS는 이 분기를 전혀 컴파일하지 않음 — ContentView는 완전히 그대로 유지)
+                    MacContentShell()
+                    #else
+                    // 온보딩 완료 → 홈 화면
+                    ContentView()
+                    #endif
+                } else {
+                    // 첫 실행 → 온보딩 화면
+                    OnboardingView {
+                        hasSeenOnboarding = true
+                    }
                 }
             }
+            #if os(macOS)
+            // macOS: 와이드(분할) 레이아웃이 항상 성립하도록 최소 윈도우 크기 지정
+            .frame(minWidth: 1080, minHeight: 720)
+            #endif
         }
         // ProgressService가 소유한 단일 컨테이너를 주입 (스토어 일원화)
         .modelContainer(ProgressService.shared.modelContainer)
+        // 맥 기본 윈도우 크기 — 큰 화면 활용 (아이폰/아이패드에선 무시됨)
+        .defaultSize(width: 1280, height: 860)
     }
 }

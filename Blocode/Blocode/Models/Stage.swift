@@ -63,11 +63,6 @@ struct Stage: Codable, Identifiable {
         availableBlocks ?? BlockType.allCases
     }
 
-    /// 챕터와 스테이지 번호로 표시할 문자열 (예: "STAGE 1-3")
-    var displayTitle: String {
-        return "STAGE \(chapter)-\(stageNumber)"
-    }
-
     /// 로딩 실패 시 타입 불변식(비옵셔널 Stage)을 유지하기 위한 안전 플레이스홀더
     /// (실제 화면에는 표시되지 않음 — View가 loadFailed로 폴백 UI를 띄움)
     static func placeholder(chapter: Int, stageNumber: Int) -> Stage {

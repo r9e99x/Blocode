@@ -49,11 +49,6 @@ final class SettingsService: ObservableObject {
         didSet { UserDefaults.standard.set(theme.rawValue, forKey: "theme") }
     }
 
-    /// 햅틱 피드백 활성화 여부 — 변경 시 UserDefaults에 자동 저장
-    @Published var hapticEnabled: Bool {
-        didSet { UserDefaults.standard.set(hapticEnabled, forKey: "hapticEnabled") }
-    }
-
     /// 효과음 활성화 여부 — 변경 시 UserDefaults에 자동 저장
     @Published var soundEnabled: Bool {
         didSet { UserDefaults.standard.set(soundEnabled, forKey: "soundEnabled") }
@@ -77,8 +72,6 @@ final class SettingsService: ObservableObject {
         // 저장된 테마 값 로드 (없으면 시스템 기본값)
         let themeRaw = ud.string(forKey: "theme") ?? ThemePreference.system.rawValue
         self.theme          = ThemePreference(rawValue: themeRaw) ?? .system
-        // 저장된 햅틱 설정 로드 (없으면 기본값 true)
-        self.hapticEnabled  = ud.object(forKey: "hapticEnabled") as? Bool   ?? true
         // 저장된 효과음 설정 로드 (없으면 기본값 true)
         self.soundEnabled   = ud.object(forKey: "soundEnabled")  as? Bool   ?? true
         // 저장된 실행 속도 로드 (없으면 기본값 1.0배속)
@@ -86,26 +79,6 @@ final class SettingsService: ObservableObject {
         // 저장된 힌트 횟수 로드 (없으면 기본값 3회)
         self.hintsRemaining = ud.object(forKey: "hintsRemaining") as? Int   ?? 3
     }
-
-    // MARK: - 햅틱
-
-    /// 스타일에 맞는 햅틱 피드백 실행 — hapticEnabled가 false이면 무시
-    func triggerHaptic(_ style: HapticStyle = .light) {
-        guard hapticEnabled else { return }
-        #if os(iOS)
-        // iOS에서만 UIImpactFeedbackGenerator 사용
-        let generator: UIImpactFeedbackGenerator
-        switch style {
-        case .light:  generator = UIImpactFeedbackGenerator(style: .light)
-        case .medium: generator = UIImpactFeedbackGenerator(style: .medium)
-        case .heavy:  generator = UIImpactFeedbackGenerator(style: .heavy)
-        }
-        generator.impactOccurred()
-        #endif
-    }
-
-    /// 햅틱 피드백 강도 종류
-    enum HapticStyle { case light, medium, heavy }
 
     // MARK: - 진행도 초기화
 

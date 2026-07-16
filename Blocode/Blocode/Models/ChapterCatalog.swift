@@ -19,12 +19,10 @@ enum ChapterCatalog {
     /// 챕터 카드/헤더 색상 생성 헬퍼
     /// 라이트: 전달받은 RGB 그대로 (기존 고정값과 동일 — 절대 변경 금지)
     /// 다크: 같은 색조를 22% 어둡게(×0.78) — 다크 배경에서 카드가 너무 튀지 않도록 톤 다운
+    /// (Color.dynamic — iOS/macOS 공용 크로스플랫폼 헬퍼 사용)
     private static func chapterColor(red: Double, green: Double, blue: Double) -> Color {
-        Color(UIColor { traits in
-            traits.userInterfaceStyle == .dark
-                ? UIColor(red: red * 0.78, green: green * 0.78, blue: blue * 0.78, alpha: 1.0)
-                : UIColor(red: red, green: green, blue: blue, alpha: 1.0)
-        })
+        Color.dynamic(light: (red, green, blue),
+                      dark: (red * 0.78, green * 0.78, blue * 0.78))
     }
 
     /// 전체 챕터 메타데이터 (챕터 번호 오름차순)

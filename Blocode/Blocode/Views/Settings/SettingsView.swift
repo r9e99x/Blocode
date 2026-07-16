@@ -14,6 +14,10 @@ struct SettingsView: View {
     /// 진행도 초기화 완료 후 홈으로 이동할 때 호출 (옵셔널)
     var onResetProgress: (() -> Void)? = nil
 
+    /// 임베드 모드 — true면 커스텀 헤더(제목+닫기 버튼)를 숨김
+    /// 기본값 false로 기존 iOS 호출부는 전부 동작 변화 없음. 맥 사이드바 셸에 내용만 삽입할 때만 true로 사용
+    var isEmbedded: Bool = false
+
     @ObservedObject private var settings = SettingsService.shared  // 설정값 감지
     @Environment(\.dismiss) private var dismiss                    // fullScreenCover 닫기
     @Environment(\.colorScheme) private var colorScheme            // 현재 색상 모드
@@ -27,8 +31,6 @@ struct SettingsView: View {
 
     /// 실행 속도 선택값 목록
     private static let speedValues: [Double] = [0.5, 1.0, 2.0]
-    /// 실행 속도 레이블 목록 (슬라이더 눈금 표시용)
-    private static let speedLabels: [String]  = ["0.5×", "1×", "2×"]
 
     // 팔레트 블럭 색상 프리뷰 (테마 카드 상단 색상 도트)
     private let paletteColors: [Color] = [
@@ -45,36 +47,39 @@ struct SettingsView: View {
             VStack(spacing: 0) {
 
                 // MARK: 커스텀 헤더 (툴바 완전 제거 → 이중 원 없음)
-                ZStack {
-                    // 가운데 타이틀
-                    Text("설정")
-                        .font(.system(size: 17, weight: .semibold))
-                        .frame(maxWidth: .infinity)
+                // 임베드 모드(맥 사이드바 셸)에서는 숨김 — 사이드바가 이미 내비게이션을 제공하므로 불필요
+                if !isEmbedded {
+                    ZStack {
+                        // 가운데 타이틀
+                        Text("설정")
+                            .font(.system(size: 17, weight: .semibold))
+                            .frame(maxWidth: .infinity)
 
-                    HStack {
-                        // x 버튼으로 화면 닫기
-                        Button { dismiss() } label: {
-                            Image(systemName: "xmark")
-                                .font(.system(size: 12, weight: .bold))
-                                .foregroundStyle(Color(UIColor.secondaryLabel))
-                                .frame(width: 34, height: 34)
-                                .background(Color.cardBackground)
-                                .clipShape(RoundedRectangle(cornerRadius: 10))
-                                .shadow(color: Color.black.opacity(0.08), radius: 8, x: 0, y: 2)
+                        HStack {
+                            // x 버튼으로 화면 닫기
+                            Button { dismiss() } label: {
+                                Image(systemName: "xmark")
+                                    .font(.system(size: 12, weight: .bold))
+                                    .foregroundStyle(Color.secondary)  // UIColor.secondaryLabel과 동일 톤 (크로스플랫폼)
+                                    .frame(width: 34, height: 34)
+                                    .background(Color.cardBackground)
+                                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                                    .shadow(color: Color.black.opacity(0.08), radius: 8, x: 0, y: 2)
+                            }
+                            .buttonStyle(.plain)
+                            Spacer()
                         }
-                        .buttonStyle(.plain)
-                        Spacer()
+                        .padding(.horizontal, 20)
                     }
-                    .padding(.horizontal, 20)
+                    .frame(height: 44)
+                    .padding(.top, 4)
+                    .background(Color.appBackground)
+                    // 스크롤 내려가면 헤더 하단 그림자 표시
+                    .shadow(
+                        color: Color.black.opacity(isScrolled ? 0.07 : 0),
+                        radius: 8, x: 0, y: 4
+                    )
                 }
-                .frame(height: 44)
-                .padding(.top, 4)
-                .background(Color.appBackground)
-                // 스크롤 내려가면 헤더 하단 그림자 표시
-                .shadow(
-                    color: Color.black.opacity(isScrolled ? 0.07 : 0),
-                    radius: 8, x: 0, y: 4
-                )
 
                 // 설정 섹션 스크롤 영역
                 ScrollView {
@@ -88,6 +93,9 @@ struct SettingsView: View {
                     .padding(.horizontal, 20)
                     .padding(.top, 12)
                     .padding(.bottom, 40)
+                    // 와이드 화면(아이패드·맥)에선 설정 목록을 중앙 560pt로 제한 (아이폰 영향 없음)
+                    .frame(maxWidth: 560)
+                    .frame(maxWidth: .infinity)
                 }
                 // 스크롤 위치에 따라 헤더 그림자 토글
                 .onScrollGeometryChange(for: CGFloat.self) { geo in
@@ -99,7 +107,7 @@ struct SettingsView: View {
                 }
             }
             .background(Color.appBackground.ignoresSafeArea())
-            .toolbar(.hidden, for: .navigationBar)  // 기본 툴바 숨김
+            .hideNavigationBar()  // 기본 툴바 숨김 (iOS 전용 API 래퍼 — macOS no-op)
             .onAppear {
                 // 현재 저장된 실행 속도에 맞는 슬라이더 인덱스 설정
                 let idx = Self.speedValues.firstIndex(of: settings.executionSpeed) ?? 1
@@ -239,34 +247,20 @@ struct SettingsView: View {
 
     // MARK: - 피드백 섹션
 
-    /// 햅틱과 효과음 토글 설정
+    /// 효과음 토글 설정 (햅틱 기능은 제거됨)
     private var feedbackSection: some View {
         VStack(alignment: .leading, spacing: 10) {
             sectionLabel("피드백")
             settingsCard {
-                VStack(spacing: 0) {
-                    // 햅틱 토글
-                    settingsRow(
-                        icon: "waveform",
-                        iconColor: Color(red: 0.93, green: 0.42, blue: 0.42),  // 빨간 계열
-                        title: "햅틱",
-                        subtitle: "블럭 추가시 진동"
-                    ) {
-                        Toggle("", isOn: $settings.hapticEnabled)
-                            .labelsHidden()
-                            .tint(toggleTint)
-                    }
-                    rowDivider
-                    // 효과음 토글
-                    settingsRow(
-                        icon: "speaker.wave.2.fill",
-                        iconColor: Color(red: 0.98, green: 0.72, blue: 0.28),  // 노란 계열
-                        title: "효과음"
-                    ) {
-                        Toggle("", isOn: $settings.soundEnabled)
-                            .labelsHidden()
-                            .tint(toggleTint)
-                    }
+                // 효과음 토글
+                settingsRow(
+                    icon: "speaker.wave.2.fill",
+                    iconColor: Color(red: 0.98, green: 0.72, blue: 0.28),  // 노란 계열
+                    title: "효과음"
+                ) {
+                    Toggle("", isOn: $settings.soundEnabled)
+                        .labelsHidden()
+                        .tint(toggleTint)
                 }
             }
         }
@@ -346,7 +340,7 @@ struct SettingsView: View {
                     // iCloud 동기화 (비활성 — 향후 구현 예정)
                     settingsRow(
                         icon: "icloud.fill",
-                        iconColor: Color(UIColor.systemGray2),
+                        iconColor: Color.systemGray2Color,  // UIColor.systemGray2와 동일 값 (크로스플랫폼)
                         title: "iCloud 동기화",
                         subtitle: "모든 기기에서 진행도"
                     ) {

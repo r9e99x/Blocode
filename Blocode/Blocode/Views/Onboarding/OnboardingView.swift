@@ -64,7 +64,9 @@ struct OnboardingView: View {
                 // MARK: 상단 바 (페이지 카운터 + 건너뛰기)
                 topBar
 
-                // MARK: 슬라이드 콘텐츠 (탭뷰로 스와이프)
+                // MARK: 슬라이드 콘텐츠
+                #if os(iOS)
+                // iOS: 페이지 스타일 탭뷰로 스와이프 전환 (기존과 동일)
                 TabView(selection: $currentPage) {
                     ForEach(pages.indices, id: \.self) { i in
                         pageContent(pages[i])
@@ -73,10 +75,21 @@ struct OnboardingView: View {
                 }
                 .tabViewStyle(.page(indexDisplayMode: .never))
                 .animation(.easeInOut(duration: 0.3), value: currentPage)
+                #else
+                // macOS: 페이지 스타일 TabView 미지원 — 현재 페이지만 표시하고 "다음" 버튼으로 전환
+                pageContent(pages[currentPage])
+                    .id(currentPage)                  // 페이지 전환 시 뷰 교체로 페이드 효과 적용
+                    .transition(.opacity)
+                    .animation(.easeInOut(duration: 0.3), value: currentPage)
+                    .frame(maxHeight: .infinity)
+                #endif
 
                 // MARK: 하단 (점 인디케이터 + 버튼)
                 bottomBar
             }
+            // 와이드 화면(아이패드·맥)에선 온보딩 콘텐츠를 중앙 640pt로 제한 (아이폰 영향 없음)
+            .frame(maxWidth: 640)
+            .frame(maxWidth: .infinity)
         }
     }
 
@@ -87,6 +100,7 @@ struct OnboardingView: View {
             Spacer()
 
             // 건너뛰기 버튼 — 오른쪽 정렬
+            // buttonStyle(.plain) 필수 — 없으면 맥에서 네이티브 회색 버튼 모양으로 렌더링됨
             Button {
                 finish()
             } label: {
@@ -94,6 +108,7 @@ struct OnboardingView: View {
                     .font(.system(size: 14, weight: .medium))
                     .foregroundStyle(.secondary)
             }
+            .buttonStyle(.plain)
             .opacity(currentPage < pages.count - 1 ? 1 : 0)  // 마지막 슬라이드에서는 숨김
         }
         .padding(.horizontal, 24)
@@ -286,7 +301,10 @@ struct OnboardingView: View {
                              color: Color(red: 142/255, green: 176/255, blue: 200/255),
                              icon: "arrow.turn.up.right")
             }
-            .background(Color(UIColor.systemBackground))
+            .background(
+                // UIColor.systemBackground와 동일 값 (라이트 흰색 / 다크 검정 — 크로스플랫폼)
+                Color.dynamic(light: (1.0, 1.0, 1.0), dark: (0.0, 0.0, 0.0))
+            )
             .clipShape(RoundedRectangle(cornerRadius: 20))
             .shadow(color: Color.black.opacity(0.07), radius: 14, x: 0, y: 4)
             .padding(.horizontal, 30)

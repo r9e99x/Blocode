@@ -64,7 +64,7 @@ final class HomeViewModel: ObservableObject {
 
     /// 진행 기록이 전혀 없는 첫 실행 상태인지 여부
     var isFirstTime: Bool {
-        progress.totalEarnedStars(chapters: chapters) == 0
+        earnedStars == 0
     }
 
     /// 이어서 할 다음 스테이지 (없으면 모두 완료)

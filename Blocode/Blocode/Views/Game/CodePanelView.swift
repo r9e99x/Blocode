@@ -25,12 +25,29 @@ struct CodePanelView: View {
     @Binding var codeListFrame: CGRect
     @Binding var rowMidYs: [Int: CGFloat]
 
+    // 코드 리스트 내부 순서 변경(재정렬) 드래그 상태 — StageView의 reorder ghost와 공유
+    @Binding var reorderIndex: Int?
+    @Binding var reorderPosition: CGPoint
+    @Binding var reorderTargetIndex: Int
+
     @Binding var navPath: NavigationPath      // 컨트롤 바 설정 초기화 시 홈 복귀용
     @Binding var isPanelExpanded: Bool        // 패널 확장/최소화 — StageView와 공유 (stageInfoBar 연동)
+
+    /// 와이드 레이아웃(아이패드·맥) 여부 — true면 코드 리스트가 고정 높이(160pt) 대신 남은 세로 공간을 전부 사용
+    var isWideLayout: Bool = false
 
     // MARK: - Body
 
     var body: some View {
+        #if os(macOS)
+        macOSBody
+        #else
+        iOSBody
+        #endif
+    }
+
+    /// iOS/iPadOS 배치 — 코드 카드(핸들+확장·축소) → 팔레트 → 컨트롤 바 (기존 그대로)
+    private var iOSBody: some View {
         VStack(spacing: 0) {
 
             // ── 패널 카드 (핸들 + 코드 리스트) ──
@@ -69,42 +86,10 @@ struct CodePanelView: View {
                 }
                 .padding(.horizontal, 20)
 
-                // 블럭 팔레트 — 스테이지별 허용 블럭만 표시 / 탭 추가 / 드래그 삽입 지원
-                PaletteView(
-                    availableBlocks: viewModel.availableBlocks,
-                    onSelect: { type in
-                        // 탭: 코드 리스트 맨 뒤에 추가
-                        viewModel.addBlock(type)
-                    },
-                    onDragStart: { type, pt in
-                        // 드래그 시작: idle 상태일 때만 허용
-                        guard viewModel.gameState == .idle else { return }
-                        withAnimation(.spring(duration: 0.2)) {
-                            dragType = type
-                            dragPosition = pt
-                            dragInsertIndex = calculateInsertIndex(for: pt.y)
-                        }
-                    },
-                    onDragChange: { _, pt in
-                        // 드래그 중: 위치와 삽입 인덱스 갱신
-                        dragPosition = pt
-                        dragInsertIndex = calculateInsertIndex(for: pt.y)
-                    },
-                    onDragEnd: { type, location in
-                        // 코드 리스트 영역 안에서 손을 뗐을 때만 삽입 (영역 밖이면 취소)
-                        if codeListFrame.contains(location) {
-                            withAnimation(.spring(duration: 0.2)) {
-                                viewModel.insertBlock(type, at: dragInsertIndex)
-                            }
-                        }
-                        withAnimation(.spring(duration: 0.2)) {
-                            dragType = nil  // 고스트 블럭 제거 (삽입했든 취소했든)
-                        }
-                    }
-                )
-                // 실행 중에는 팔레트 비활성화 + 흐리게
-                .allowsHitTesting(viewModel.gameState != .running)
-                .opacity(viewModel.gameState == .running ? 0.4 : 1.0)
+                paletteView
+                    // 실행 중에는 팔레트 비활성화 + 흐리게
+                    .allowsHitTesting(viewModel.gameState != .running)
+                    .opacity(viewModel.gameState == .running ? 0.4 : 1.0)
             }
             .padding(.top, 8)
 
@@ -113,6 +98,79 @@ struct CodePanelView: View {
                 .padding(.top, 6)
                 .padding(.bottom, 24)
         }
+    }
+
+    #if os(macOS)
+    /// 맥 전용 배치 — 팔레트를 코드 영역 위에 배치하고, 확장/축소 토글 없이 코드 리스트가 남은 세로 공간을 전부 사용
+    private var macOSBody: some View {
+        VStack(spacing: 10) {
+
+            // ── 팔레트 (코드 영역 위) ──
+            VStack(spacing: 4) {
+                HStack {
+                    Text("PALETTE")
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundStyle(.secondary)
+                        .tracking(1.2)
+                    Spacer()
+                }
+                .padding(.horizontal, 4)
+
+                paletteView
+                    .allowsHitTesting(viewModel.gameState != .running)
+                    .opacity(viewModel.gameState == .running ? 0.4 : 1.0)
+            }
+
+            // ── 코드 리스트 (확장/축소 토글 없이 항상 펼침, 남은 세로 공간 전부 사용) ──
+            // 되돌리기/실행/설정은 StageView 상단바(별점 옆)로 이동했으므로 여기선 ControlBarView 미사용
+            VStack(spacing: 0) {
+                codeListHeader
+                codeBlockList
+            }
+            .background(Color.panelBackground)
+            .clipShape(RoundedRectangle(cornerRadius: 20))
+            .shadow(color: Color.black.opacity(0.07), radius: 12, x: 0, y: 2)
+        }
+        .padding(.horizontal, 16)
+        .padding(.top, 12)
+        .padding(.bottom, 16)
+    }
+    #endif
+
+    /// 블럭 팔레트 — 스테이지별 허용 블럭만 표시 / 탭 추가 / 드래그 삽입 지원 (플랫폼 공용)
+    private var paletteView: some View {
+        PaletteView(
+            availableBlocks: viewModel.availableBlocks,
+            onSelect: { type in
+                // 탭: 코드 리스트 맨 뒤에 추가
+                viewModel.addBlock(type)
+            },
+            onDragStart: { type, pt in
+                // 드래그 시작: idle 상태일 때만 허용
+                guard viewModel.gameState == .idle else { return }
+                withAnimation(.spring(duration: 0.2)) {
+                    dragType = type
+                    dragPosition = pt
+                    dragInsertIndex = calculateInsertIndex(for: pt.y)
+                }
+            },
+            onDragChange: { _, pt in
+                // 드래그 중: 위치와 삽입 인덱스 갱신
+                dragPosition = pt
+                dragInsertIndex = calculateInsertIndex(for: pt.y)
+            },
+            onDragEnd: { type, location in
+                // 코드 리스트 영역 안에서 손을 뗐을 때만 삽입 (영역 밖이면 취소)
+                if codeListFrame.contains(location) {
+                    withAnimation(.spring(duration: 0.2)) {
+                        viewModel.insertBlock(type, at: dragInsertIndex)
+                    }
+                }
+                withAnimation(.spring(duration: 0.2)) {
+                    dragType = nil  // 고스트 블럭 제거 (삽입했든 취소했든)
+                }
+            }
+        )
     }
 
     // MARK: - 드래그 핸들 (확장/최소화 토글)
@@ -211,82 +269,124 @@ struct CodePanelView: View {
                 .frame(maxWidth: .infinity)
                 .frame(height: 80)
             } else {
-                List {
-                    ForEach(Array(viewModel.codeBlocks.enumerated()), id: \.element.id) { offset, block in
-                        // 드래그 삽입 인디케이터 — 첫 번째 위치
-                        if let dragType, codeListFrame.contains(dragPosition), dragInsertIndex == 0 && offset == 0 {
-                            insertionIndicator(color: dragType.blockColor)
-                                .listRowBackground(Color.clear)
-                                .listRowSeparator(.hidden)
-                                .listRowInsets(EdgeInsets(top: 0, leading: 12, bottom: 0, trailing: 12))
-                        }
+                // 순서 변경 중인 블럭의 색상 — 재정렬 삽입 인디케이터 표시용
+                let reorderColor = reorderIndex.flatMap { viewModel.codeBlocks.indices.contains($0) ? viewModel.codeBlocks[$0].type.blockColor : nil }
 
-                        // 블럭 행 뷰
-                        BlockRowView(
-                            block: block,
-                            index: offset,
-                            // 실행 중이고 현재 경로의 최상위 인덱스와 일치하면 활성 표시
-                            // (자식/손자 실행 중에도 부모 행 하이라이트 유지)
-                            isActive: viewModel.currentBlockPath?.first == offset && viewModel.gameState == .running,
-                            isFailed: viewModel.failedBlockPath?.first == offset,
-                            // 이 행 내부에서 실행 중인 자식의 상대 경로 — [자식] 또는 [자식, 손자]
-                            // (다른 행이 실행 중이면 빈 배열 → 자식 하이라이트 없음)
-                            activeChildPath: (viewModel.gameState == .running && viewModel.currentBlockPath?.first == offset)
-                                ? Array((viewModel.currentBlockPath ?? []).dropFirst()) : [],
-                            // 이 행 내부에서 실패한 자식의 상대 경로 (형식 동일)
-                            failedChildPath: viewModel.failedBlockPath?.first == offset
-                                ? Array((viewModel.failedBlockPath ?? []).dropFirst()) : [],
-                            onDelete: { viewModel.removeBlock(at: offset) },
-                            onAddChild: { childType in
-                                viewModel.addChildBlock(childType, to: offset)
-                            },
-                            onRemoveChild: { childIndex in
-                                viewModel.removeChildBlock(at: childIndex, from: offset)
-                            },
-                            onRepeatCountChange: { count in
-                                viewModel.setRepeatCount(count, at: offset)
-                            },
-                            onIfConditionChange: { condition in
-                                viewModel.setIfCondition(condition, at: offset)
-                            },
-                            onAddGrandchild: { type, childIndex in
-                                viewModel.addGrandchildBlock(type, parentIndex: offset, childIndex: childIndex)
-                            },
-                            onRemoveGrandchild: { gcIdx, childIndex in
-                                viewModel.removeGrandchildBlock(grandchildIndex: gcIdx, parentIndex: offset, childIndex: childIndex)
-                            },
-                            onSetChildIfCondition: { condition, childIndex in
-                                viewModel.setChildIfCondition(condition, parentIndex: offset, childIndex: childIndex)
-                            },
-                            onSetChildRepeatCount: { count, childIndex in
-                                viewModel.setChildRepeatCount(count, parentIndex: offset, childIndex: childIndex)
+                // List의 onMove 기본 재정렬은 시스템 흰 카드 고스트가 앱의 3D 블럭 스타일과 안 맞아서
+                // ScrollView+LazyVStack과 커스텀 드래그(BlockRowView.onReorderDrag*)로 교체 —
+                // 팔레트 삽입 드래그와 동일한 ghost 오버레이 방식(StageView.reorderGhost)을 그대로 재사용
+                ScrollView {
+                    LazyVStack(spacing: 8) {
+                        ForEach(Array(viewModel.codeBlocks.enumerated()), id: \.element.id) { offset, block in
+                            // 삽입 인디케이터 — 첫 번째 위치 (팔레트 삽입 / 순서 변경 공용)
+                            if let dragType, codeListFrame.contains(dragPosition), dragInsertIndex == 0 && offset == 0 {
+                                insertionIndicator(color: dragType.blockColor)
                             }
-                        )
-                        .listRowBackground(Color.clear)
-                        .listRowSeparator(.hidden)
-                        .listRowInsets(EdgeInsets(top: 4, leading: 12, bottom: 4, trailing: 12))
-                        // 각 행의 중간 Y 좌표를 preference로 보고 (드래그 인덱스 계산용)
-                        .background(GeometryReader { geo in
-                            Color.clear.preference(
-                                key: RowMidYKey.self,
-                                value: [offset: geo.frame(in: .global).midY]
-                            )
-                        })
+                            if let reorderColor, codeListFrame.contains(reorderPosition), reorderTargetIndex == 0 && offset == 0 {
+                                insertionIndicator(color: reorderColor)
+                            }
 
-                        // 드래그 삽입 인디케이터 — 현재 블럭 다음 위치
-                        if let dragType, codeListFrame.contains(dragPosition), dragInsertIndex == offset + 1 {
-                            insertionIndicator(color: dragType.blockColor)
-                                .listRowBackground(Color.clear)
-                                .listRowSeparator(.hidden)
-                                .listRowInsets(EdgeInsets(top: 0, leading: 12, bottom: 0, trailing: 12))
+                            // 블럭 행 뷰
+                            BlockRowView(
+                                block: block,
+                                index: offset,
+                                // 실행 중이고 현재 경로의 최상위 인덱스와 일치하면 활성 표시
+                                // (자식/손자 실행 중에도 부모 행 하이라이트 유지)
+                                isActive: viewModel.currentBlockPath?.first == offset && viewModel.gameState == .running,
+                                isFailed: viewModel.failedBlockPath?.first == offset,
+                                // 이 행 내부에서 실행 중인 자식의 상대 경로 — [자식] 또는 [자식, 손자]
+                                // (다른 행이 실행 중이면 빈 배열 → 자식 하이라이트 없음)
+                                activeChildPath: (viewModel.gameState == .running && viewModel.currentBlockPath?.first == offset)
+                                    ? Array((viewModel.currentBlockPath ?? []).dropFirst()) : [],
+                                // 이 행 내부에서 실패한 자식의 상대 경로 (형식 동일)
+                                failedChildPath: viewModel.failedBlockPath?.first == offset
+                                    ? Array((viewModel.failedBlockPath ?? []).dropFirst()) : [],
+                                onDelete: { viewModel.removeBlock(at: offset) },
+                                onAddChild: { childType in
+                                    viewModel.addChildBlock(childType, to: offset)
+                                },
+                                onRemoveChild: { childIndex in
+                                    viewModel.removeChildBlock(at: childIndex, from: offset)
+                                },
+                                onRepeatCountChange: { count in
+                                    viewModel.setRepeatCount(count, at: offset)
+                                },
+                                onIfConditionChange: { condition in
+                                    viewModel.setIfCondition(condition, at: offset)
+                                },
+                                onAddGrandchild: { type, childIndex in
+                                    viewModel.addGrandchildBlock(type, parentIndex: offset, childIndex: childIndex)
+                                },
+                                onRemoveGrandchild: { gcIdx, childIndex in
+                                    viewModel.removeGrandchildBlock(grandchildIndex: gcIdx, parentIndex: offset, childIndex: childIndex)
+                                },
+                                onSetChildIfCondition: { condition, childIndex in
+                                    viewModel.setChildIfCondition(condition, parentIndex: offset, childIndex: childIndex)
+                                },
+                                onSetChildRepeatCount: { count, childIndex in
+                                    viewModel.setChildRepeatCount(count, parentIndex: offset, childIndex: childIndex)
+                                },
+                                onAddGreatGrandchild: { type, childIndex, gcIdx in
+                                    viewModel.addGreatGrandchildBlock(type, parentIndex: offset, childIndex: childIndex, grandchildIndex: gcIdx)
+                                },
+                                onRemoveGreatGrandchild: { ggcIdx, childIndex, gcIdx in
+                                    viewModel.removeGreatGrandchildBlock(greatGrandchildIndex: ggcIdx, parentIndex: offset, childIndex: childIndex, grandchildIndex: gcIdx)
+                                },
+                                onSetGrandchildIfCondition: { condition, childIndex, gcIdx in
+                                    viewModel.setGrandchildIfCondition(condition, parentIndex: offset, childIndex: childIndex, grandchildIndex: gcIdx)
+                                },
+                                onSetGrandchildRepeatCount: { count, childIndex, gcIdx in
+                                    viewModel.setGrandchildRepeatCount(count, parentIndex: offset, childIndex: childIndex, grandchildIndex: gcIdx)
+                                },
+                                onReorderDragStart: { pt in
+                                    guard viewModel.gameState == .idle else { return }
+                                    withAnimation(.spring(duration: 0.2)) {
+                                        reorderIndex = offset
+                                        reorderPosition = pt
+                                        reorderTargetIndex = calculateInsertIndex(for: pt.y)
+                                    }
+                                },
+                                onReorderDragChange: { pt in
+                                    reorderPosition = pt
+                                    reorderTargetIndex = calculateInsertIndex(for: pt.y)
+                                },
+                                onReorderDragEnd: { location in
+                                    // 코드 리스트 영역 안에서 손을 뗐을 때만 순서 변경 (영역 밖이면 취소)
+                                    if let source = reorderIndex, codeListFrame.contains(location) {
+                                        withAnimation(.spring(duration: 0.2)) {
+                                            viewModel.moveBlock(from: IndexSet(integer: source), to: reorderTargetIndex)
+                                        }
+                                    }
+                                    withAnimation(.spring(duration: 0.2)) {
+                                        reorderIndex = nil  // 고스트 제거 (이동했든 취소했든)
+                                    }
+                                }
+                            )
+                            .padding(.horizontal, 12)
+                            // 각 행의 중간 Y 좌표를 preference로 보고 (드래그 인덱스 계산용)
+                            .background(GeometryReader { geo in
+                                Color.clear.preference(
+                                    key: RowMidYKey.self,
+                                    value: [offset: geo.frame(in: .global).midY]
+                                )
+                            })
+
+                            // 삽입 인디케이터 — 현재 블럭 다음 위치 (팔레트 삽입 / 순서 변경 공용)
+                            if let dragType, codeListFrame.contains(dragPosition), dragInsertIndex == offset + 1 {
+                                insertionIndicator(color: dragType.blockColor)
+                            }
+                            if let reorderColor, codeListFrame.contains(reorderPosition), reorderTargetIndex == offset + 1 {
+                                insertionIndicator(color: reorderColor)
+                            }
                         }
                     }
+                    .padding(.vertical, 4)
                 }
-                .listStyle(.plain)
-                .scrollContentBackground(.hidden)
             }
         }
-        .frame(height: 160)  // 패널 확장 시 고정 높이
+        // 컴팩트(아이폰): 고정 160pt / 와이드(아이패드·맥): 남은 세로 공간을 전부 사용
+        .frame(height: isWideLayout ? nil : 160)
+        .frame(maxHeight: isWideLayout ? .infinity : nil)
         // 코드 리스트 글로벌 프레임 추적 (드래그 감지용)
         // size가 아닌 frame(위치+크기) 변화를 추적 — 빈 상태에선 size가 안 바뀌어
         // 좌표 갱신이 누락돼 영역 판정이 어긋났음(빈 영역 드래그 추가 불가)

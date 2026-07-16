@@ -35,38 +35,48 @@ struct ChapterView: View {
         ChapterCatalog.chapter(vm.chapter)?.color ?? Color.accentColor
     }
 
-    // safe area 조회 실패 시 사용할 폴백 높이 (노치 기기 status bar 기준 기본값)
-    private let safeAreaTopFallback: CGFloat = 47
-
-    // status bar 높이 (safe area top) — 헤더 레이아웃 계산에 사용
-    private var safeAreaTop: CGFloat {
-        (UIApplication.shared.connectedScenes.first as? UIWindowScene)?
-            .windows.first?.safeAreaInsets.top ?? safeAreaTopFallback
-    }
-
     var body: some View {
-        VStack(spacing: 0) {
-            chapterHeader   // 고정 헤더 (챕터 색상 배경)
+        // GeometryReader는 safe area를 소비하지 않으므로 여기서 실제 상단 인셋을 읽고,
+        // 내부 VStack만 상단 safe area를 무시해 헤더가 status bar 영역까지 확장되게 한다
+        // (기존 UIApplication 기반 조회는 macOS에서 컴파일 불가 + 폴백 상수 의존이라 교체)
+        GeometryReader { geo in
+            if geo.size.width >= LayoutBreakpoint.wide {
+                // ── 와이드(아이패드·맥): 좌측 챕터 헤더 패널 + 우측 스테이지 목록 분할 ──
+                HStack(alignment: .top, spacing: 0) {
+                    // 왼쪽 — 챕터 정보 패널 (색상 헤더를 고정 폭 카드로 사용)
+                    chapterHeader(safeAreaTop: geo.safeAreaInsets.top)
+                        .frame(width: 380)
+                        .frame(maxHeight: .infinity, alignment: .top)
 
-            // 스테이지 목록 스크롤
-            ScrollView(showsIndicators: false) {
-                stageList
-                    .padding(.top, 8)
-                    .padding(.bottom, 48)
-            }
-        }
-        .ignoresSafeArea(edges: .top)    // 헤더가 status bar 영역까지 확장
-        .navigationBarHidden(true)
-        .background(Color.appBackground.ignoresSafeArea())
-        // 잠긴 스테이지 탭 시 해금 조건 팝업
-        .overlay {
-            if let lockInfo {
-                LockInfoOverlay(info: lockInfo) {
-                    withAnimation(.easeInOut(duration: 0.2)) { self.lockInfo = nil }
+                    // 오른쪽 — 스테이지 목록 (중앙 640pt 제한)
+                    ScrollView(showsIndicators: false) {
+                        stageList
+                            .frame(maxWidth: 640)
+                            .frame(maxWidth: .infinity)
+                            .padding(.top, geo.safeAreaInsets.top + 16)
+                            .padding(.bottom, 48)
+                    }
                 }
-                .transition(.opacity)
+                .ignoresSafeArea(edges: .top)
+            } else {
+                // ── 컴팩트(아이폰): 기존 세로 스택 ──
+                VStack(spacing: 0) {
+                    chapterHeader(safeAreaTop: geo.safeAreaInsets.top)   // 고정 헤더 (챕터 색상 배경)
+
+                    // 스테이지 목록 스크롤
+                    ScrollView(showsIndicators: false) {
+                        stageList
+                            .padding(.top, 8)
+                            .padding(.bottom, 48)
+                    }
+                }
+                .ignoresSafeArea(edges: .top)    // 헤더가 status bar 영역까지 확장
             }
         }
+        .hideNavigationBar()  // iOS 전용 API 래퍼 (macOS no-op)
+        .background(Color.appBackground.ignoresSafeArea())
+        // 잠긴 스테이지 탭 시 해금 조건 팝업 (표시 패턴은 공용 모디파이어)
+        .lockInfoPopup($lockInfo)
         // 이미 클리어한 스테이지 탭 시 재도전 확인 알럿
         .alert("이미 클리어한 스테이지예요", isPresented: Binding(
             get: { retryAlertStage != nil },
@@ -87,7 +97,8 @@ struct ChapterView: View {
     // MARK: - 챕터 헤더 (컬러 배경)
 
     /// 챕터 색상 배경과 제목, 별 진행도를 표시하는 헤더
-    private var chapterHeader: some View {
+    /// - Parameter safeAreaTop: 상단 safe area 높이 (body의 GeometryReader에서 전달 — macOS에선 0)
+    private func chapterHeader(safeAreaTop: CGFloat) -> some View {
         let depth: CGFloat = 5  // 3D 효과 깊이
         // 하단 모서리만 둥근 모양
         let shape = UnevenRoundedRectangle(
@@ -289,13 +300,10 @@ struct ChapterView: View {
             Group {
                 if isCurrent {
                     // 라이트: 기존 탄색 유지 / 다크: 앞면(슬레이트)보다 약간 어두운 그림자 톤
-                    // (slateButtonBottomBack 다크 값과 동일)
+                    // (slateButtonBottomBack 다크 값과 동일, Color.dynamic 크로스플랫폼 헬퍼 사용)
                     RoundedRectangle(cornerRadius: radius)
-                        .fill(Color(UIColor { traits in
-                            traits.userInterfaceStyle == .dark
-                                ? UIColor(red: 56/255, green: 61/255, blue: 76/255, alpha: 1.0)
-                                : UIColor(red: 195/255, green: 189/255, blue: 172/255, alpha: 1.0)
-                        }))
+                        .fill(Color.dynamic(light: (195/255, 189/255, 172/255),
+                                            dark: (56/255, 61/255, 76/255)))
                 } else {
                     // 잠긴 아이콘은 다크모드에서만 챕터 선택 화면 잠긴 카드와 동일한 0.10으로 낮춤 (라이트는 기존 0.28 유지)
                     ZStack {

@@ -25,13 +25,10 @@ struct PaletteView: View {
     /// 드래그 종료 콜백 — 최종 위치 전달
     var onDragEnd:    ((BlockType, CGPoint) -> Void)? = nil
 
-    /// 팔레트 카드 컨테이너 배경 — 다크/라이트 모드 대응
+    /// 팔레트 카드 컨테이너 배경 — 다크/라이트 모드 대응 (Color.dynamic 크로스플랫폼 헬퍼 사용)
     private var containerColor: Color {
-        Color(UIColor { traits in
-            traits.userInterfaceStyle == .dark
-                ? UIColor(red: 0.18, green: 0.19, blue: 0.23, alpha: 1.0)
-                : UIColor(red: 251/255, green: 246/255, blue: 232/255, alpha: 1.0) // #fbf6e8
-        })
+        Color.dynamic(light: (251/255, 246/255, 232/255),  // 라이트: #fbf6e8
+                      dark: (0.18, 0.19, 0.23))
     }
 
     var body: some View {
@@ -77,11 +74,18 @@ struct PaletteCardView: View {
     /// 드래그 활성화 여부 — onDragStart 콜백이 있을 때만 활성화
     private var dragEnabled: Bool { onDragStart != nil }
 
-    // 3D 카드 파라미터
+    // 3D 카드 파라미터 — 맥은 코드 패널 폭이 좁아 카드도 축소, iOS/아이패드는 기존 크기 유지
+    #if os(macOS)
+    private let btnSize:   CGFloat = 42
+    private let radius:    CGFloat = 13
+    private let topDepth:  CGFloat = 1.5
+    private let botDepth:  CGFloat = 2.5
+    #else
     private let btnSize:   CGFloat = 54   // 버튼 크기
     private let radius:    CGFloat = 16   // 모서리 반지름
     private let topDepth:  CGFloat = 2    // 위 뒷면 두께
     private let botDepth:  CGFloat = 3.5  // 아래 뒷면 두께
+    #endif
 
     var body: some View {
         ThreeDSurface(topDepth: topDepth, bottomDepth: botDepth) {
@@ -114,44 +118,60 @@ struct PaletteCardView: View {
         .opacity(isDragging ? 0.5 : 1.0)
         .animation(.spring(response: 0.25, dampingFraction: 0.7), value: isDragging)
         .animation(.spring(response: 0.2,  dampingFraction: 0.8), value: isPressed)
-        .gesture(
-            DragGesture(minimumDistance: 0, coordinateSpace: .global)
-                .onChanged { value in
-                    if isDragging {
-                        // 이미 드래그 중이면 위치만 갱신
-                        onDragChange?(value.location)
-                    } else if longPressTimer == nil && dragEnabled {
-                        // 처음 터치 시 눌린 상태 표시 + 롱프레스 타이머 시작
-                        withAnimation { isPressed = true }
-                        longPressTimer = Timer.scheduledTimer(
-                            withTimeInterval: 0.38,  // 0.38초 이상 누르면 드래그 시작
-                            repeats: false
-                        ) { _ in
-                            DispatchQueue.main.async {
-                                // 드래그 모드 전환
-                                withAnimation { isDragging = true; isPressed = false }
-                                onDragStart?(value.location)
-                            }
+        // 맥에서는 이 카드를 감싼 가로 스크롤뷰(PaletteView)의 스크롤 제스처가 드래그를 가로채는 문제가 있어
+        // highPriorityGesture로 우선순위를 올림 (iOS는 이 문제가 없어 기존 .gesture 그대로 유지)
+        #if os(macOS)
+        .highPriorityGesture(dragGesture)
+        #else
+        .gesture(dragGesture)
+        #endif
+    }
+
+    /// 팔레트 카드 드래그 제스처 — 0.38초 롱프레스 후 드래그 모드 전환, 아니면 탭으로 처리 (플랫폼 공용 정의)
+    private var dragGesture: some Gesture {
+        DragGesture(minimumDistance: 0, coordinateSpace: .global)
+            .onChanged { value in
+                if isDragging {
+                    // 이미 드래그 중이면 위치만 갱신
+                    onDragChange?(value.location)
+                } else if longPressTimer == nil && dragEnabled {
+                    // 처음 터치 시 눌린 상태 표시 + 롱프레스 타이머 시작
+                    withAnimation { isPressed = true }
+                    let timer = Timer(timeInterval: 0.38, repeats: false) { _ in  // 0.38초 이상 누르면 드래그 시작
+                        DispatchQueue.main.async {
+                            // 드래그 모드 전환
+                            withAnimation { isDragging = true; isPressed = false }
+                            onDragStart?(value.location)
                         }
                     }
+                    #if os(macOS)
+                    // 맥은 마우스 버튼을 누르고 있는 동안 .eventTracking 런루프로 전환되는데,
+                    // .default 모드로 등록된 타이머는 그동안 멈춰서 롱프레스가 아예 감지되지 않음 —
+                    // .common 모드로 등록해 드래그 중에도 타이머가 계속 돌도록 함
+                    RunLoop.current.add(timer, forMode: .common)
+                    #else
+                    // iOS/아이패드는 기존 Timer.scheduledTimer와 동일한 .default 모드 (동작 변화 없음)
+                    RunLoop.current.add(timer, forMode: .default)
+                    #endif
+                    longPressTimer = timer
                 }
-                .onEnded { value in
-                    // 타이머 취소
-                    longPressTimer?.invalidate()
-                    longPressTimer = nil
+            }
+            .onEnded { value in
+                // 타이머 취소
+                longPressTimer?.invalidate()
+                longPressTimer = nil
 
-                    if isDragging {
-                        // 드래그 종료 — 최종 위치 전달
-                        onDragEnd?(value.location)
-                    } else {
-                        // 탭 (드래그 없이 손가락 뗌) — 블럭 추가
-                        onTap()
-                    }
-
-                    // 상태 초기화
-                    withAnimation { isDragging = false; isPressed = false }
+                if isDragging {
+                    // 드래그 종료 — 최종 위치 전달
+                    onDragEnd?(value.location)
+                } else {
+                    // 탭 (드래그 없이 손가락 뗌) — 블럭 추가
+                    onTap()
                 }
-        )
+
+                // 상태 초기화
+                withAnimation { isDragging = false; isPressed = false }
+            }
     }
 }
 

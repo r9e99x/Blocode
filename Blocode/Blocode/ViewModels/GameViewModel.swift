@@ -197,6 +197,57 @@ final class GameViewModel: ObservableObject {
         codeBlocks[parentIndex].children?[childIndex].repeatCount = max(1, min(10, count))
     }
 
+    // MARK: - 3단 중첩 블럭 관리 (손자 컨테이너의 자식 = 증손자 조작)
+
+    /// 손자 컨테이너(repeat/if)에 증손자 블럭 추가
+    func addGreatGrandchildBlock(_ type: BlockType, parentIndex: Int, childIndex: Int, grandchildIndex: Int) {
+        guard gameState == .idle,
+              codeBlocks.indices.contains(parentIndex),
+              let children = codeBlocks[parentIndex].children,
+              children.indices.contains(childIndex),
+              let grandchildren = children[childIndex].children,
+              grandchildren.indices.contains(grandchildIndex),
+              grandchildren[grandchildIndex].hasChildren else { return }
+        codeBlocks[parentIndex].children?[childIndex].children?[grandchildIndex].children?.append(Block(type: type))
+    }
+
+    /// 손자 컨테이너(repeat/if)에서 증손자 블럭 삭제
+    func removeGreatGrandchildBlock(greatGrandchildIndex: Int, parentIndex: Int, childIndex: Int, grandchildIndex: Int) {
+        guard gameState == .idle,
+              codeBlocks.indices.contains(parentIndex),
+              let children = codeBlocks[parentIndex].children,
+              children.indices.contains(childIndex),
+              let grandchildren = children[childIndex].children,
+              grandchildren.indices.contains(grandchildIndex),
+              let greatGrandchildren = grandchildren[grandchildIndex].children,
+              greatGrandchildren.indices.contains(greatGrandchildIndex) else { return }
+        codeBlocks[parentIndex].children?[childIndex].children?[grandchildIndex].children?.remove(at: greatGrandchildIndex)
+    }
+
+    /// 손자 if 블럭의 조건 변경
+    func setGrandchildIfCondition(_ condition: IfCondition, parentIndex: Int, childIndex: Int, grandchildIndex: Int) {
+        guard gameState == .idle,
+              codeBlocks.indices.contains(parentIndex),
+              let children = codeBlocks[parentIndex].children,
+              children.indices.contains(childIndex),
+              let grandchildren = children[childIndex].children,
+              grandchildren.indices.contains(grandchildIndex),
+              grandchildren[grandchildIndex].type == .ifBlock else { return }
+        codeBlocks[parentIndex].children?[childIndex].children?[grandchildIndex].ifCondition = condition
+    }
+
+    /// 손자 repeat 블럭의 반복 횟수 변경
+    func setGrandchildRepeatCount(_ count: Int, parentIndex: Int, childIndex: Int, grandchildIndex: Int) {
+        guard gameState == .idle,
+              codeBlocks.indices.contains(parentIndex),
+              let children = codeBlocks[parentIndex].children,
+              children.indices.contains(childIndex),
+              let grandchildren = children[childIndex].children,
+              grandchildren.indices.contains(grandchildIndex),
+              grandchildren[grandchildIndex].type == .repeatBlock else { return }
+        codeBlocks[parentIndex].children?[childIndex].children?[grandchildIndex].repeatCount = max(1, min(10, count))
+    }
+
     /// 특정 위치에 블럭 삽입 (팔레트 드래그-앤-드롭 위치 지정 삽입)
     func insertBlock(_ type: BlockType, at index: Int) {
         guard gameState == .idle else { return }
@@ -206,11 +257,11 @@ final class GameViewModel: ObservableObject {
         codeBlocks.insert(block, at: safeIndex)
     }
 
-    /// repeat 블럭의 반복 횟수 변경 (최소 1회 보장)
+    /// repeat 블럭의 반복 횟수 변경 (1~10회로 제한 — 자식/손자 조작 함수와 동일 규칙)
     func setRepeatCount(_ count: Int, at index: Int) {
         guard codeBlocks.indices.contains(index),
               codeBlocks[index].isRepeatBlock else { return }
-        codeBlocks[index].repeatCount = max(1, count)  // 최소 1회
+        codeBlocks[index].repeatCount = max(1, min(10, count))
     }
 
     /// 현재 사용된 총 블럭 수 (별점 계산용) — flatCount로 repeat 내부 블럭 포함
@@ -242,15 +293,6 @@ final class GameViewModel: ObservableObject {
                 stopTimer()
             }
         }
-    }
-
-    /// 실행 중단 (■ 버튼) — running 상태일 때만 동작
-    func stop() {
-        guard gameState == .running else { return }
-        gameState = .idle
-        stopTimer()
-        scene?.resetCharacter()  // 캐릭터를 시작 위치로 되돌림
-        currentBlockPath = nil
     }
 
     /// 캐릭터만 리셋 — 블럭 목록은 유지
@@ -345,6 +387,9 @@ final class GameViewModel: ObservableObject {
             }
 
             // 각 블럭 실행 후 목표 도달 여부 확인
+            // 자식 재귀 안에서 이미 성공/실패 처리가 끝났으면 중복 처리하지 않도록 running일 때만 검사
+            // (중첩 클리어 시 handleSuccess가 깊이만큼 반복 호출돼 recordClear가 중복 저장되던 문제 수정)
+            guard gameState == .running else { return }
             if checkGoal() {
                 handleSuccess()
                 return

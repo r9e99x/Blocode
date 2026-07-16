@@ -101,6 +101,31 @@ struct LockInfoOverlay: View {
     }
 }
 
+// MARK: - 잠금 팝업 표시 패턴 공용화
+/// "lockInfo가 nil이 아니면 오버레이로 팝업 표시 + 닫기 시 애니메이션과 함께 nil 복귀" 패턴을
+/// 한 곳에서 관리 — 챕터 선택/챕터 상세/맥 챕터맵/맥 브라우저가 동일하게 사용
+private struct LockInfoPopupModifier: ViewModifier {
+    @Binding var lockInfo: LockInfo?
+
+    func body(content: Content) -> some View {
+        content.overlay {
+            if let info = lockInfo {
+                LockInfoOverlay(info: info) {
+                    withAnimation(.easeInOut(duration: 0.2)) { lockInfo = nil }
+                }
+                .transition(.opacity)
+            }
+        }
+    }
+}
+
+extension View {
+    /// 잠금 안내 팝업 오버레이 — 값이 있으면 표시, 확인/배경 탭 시 nil로 닫힘
+    func lockInfoPopup(_ lockInfo: Binding<LockInfo?>) -> some View {
+        modifier(LockInfoPopupModifier(lockInfo: lockInfo))
+    }
+}
+
 // MARK: - Preview
 #Preview {
     LockInfoOverlay(

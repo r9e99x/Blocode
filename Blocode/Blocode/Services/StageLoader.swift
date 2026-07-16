@@ -6,12 +6,17 @@
 //
 
 import Foundation
+import os
 
 // MARK: - StageLoader
 /// JSON 파일에서 스테이지 데이터를 로드하는 데이터 접근 계층(Repository)
 /// MVVM에서 데이터 소스 접근은 View가 아닌 Service 계층의 책임이므로
 /// Models/가 아닌 Services/에 위치한다.
 enum StageLoader {
+
+    /// 로딩 오류 로그 — print 대신 os.Logger 사용 (릴리즈 빌드에서도 Console.app에서 필터링 가능)
+    private static let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "Blocode",
+                                       category: "StageLoader")
     /// 특정 챕터와 스테이지 번호의 JSON 파일을 로드하여 Stage 반환
     /// - Parameters:
     ///   - chapter: 챕터 번호
@@ -25,7 +30,7 @@ enum StageLoader {
 
         // 번들에서 JSON 파일 URL 조회
         guard let url = Bundle.main.url(forResource: fileName, withExtension: "json") else {
-            print("❌ 스테이지 파일을 찾을 수 없음: \(fileName).json")
+            logger.error("스테이지 파일을 찾을 수 없음: \(fileName, privacy: .public).json")
             return nil
         }
 
@@ -37,7 +42,7 @@ enum StageLoader {
             return stage
         } catch {
             // 파싱 실패 시 콘솔 로그 후 nil 반환
-            print("❌ 스테이지 파싱 실패: \(error)")
+            logger.error("스테이지 파싱 실패: \(String(describing: error), privacy: .public)")
             return nil
         }
     }

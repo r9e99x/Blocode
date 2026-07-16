@@ -65,6 +65,16 @@ final class ChapterSelectViewModel: ObservableObject {
         return progress.totalStars(chapter: chapter.number, stageCount: chapter.stageCount)
     }
 
+    /// 챕터 카드 아래 별 3개 표시용 환산값 (0~3)
+    /// 획득 비율을 반올림해 최대 3개로 압축하되, 1개라도 획득했으면 최소 1개 표시
+    /// (챕터 선택 화면·맥 챕터 지도가 공용으로 사용 — 화면별 계산 중복 제거)
+    func displayStarCount(_ chapter: ChapterInfo) -> Int {
+        let earned = chapterStars(chapter)
+        guard earned > 0 else { return 0 }
+        let maxStars = max(chapter.stageCount * 3, 3)
+        return max(1, min(3, Int(Double(earned) / Double(maxStars) * 3 + 0.5)))
+    }
+
     /// 잠긴 챕터의 해금 조건 안내 문구 (B안: 별 합 AND 종합 클리어)
     func lockMessage(for chapter: ChapterInfo) -> String {
         "이전 챕터에서 별 \(chapter.requiredStarsFromPrev)개를 모으고\n종합 스테이지를 클리어하면 열려요"

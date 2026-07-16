@@ -48,7 +48,10 @@ struct ChapterSelectView: View {
 
             // 챕터 맵 스크롤 영역
             ScrollView(showsIndicators: false) {
+                // 와이드 화면(아이패드·맥)에선 지그재그 맵을 중앙 680pt로 제한 (아이폰에선 영향 없음)
                 mapSection
+                    .frame(maxWidth: 680)
+                    .frame(maxWidth: .infinity)
             }
             // 스크롤 위치에 따라 헤더 축소 상태 갱신
             .onScrollGeometryChange(for: CGFloat.self) { geo in
@@ -59,17 +62,10 @@ struct ChapterSelectView: View {
                 }
             }
         }
-        .navigationBarHidden(true)
+        .hideNavigationBar()  // iOS 전용 API 래퍼 (macOS no-op)
         .background(Color.appBackground.ignoresSafeArea())
-        // 잠긴 챕터 탭 시 해금 조건 팝업
-        .overlay {
-            if let lockInfo {
-                LockInfoOverlay(info: lockInfo) {
-                    withAnimation(.easeInOut(duration: 0.2)) { self.lockInfo = nil }
-                }
-                .transition(.opacity)
-            }
-        }
+        // 잠긴 챕터 탭 시 해금 조건 팝업 (표시 패턴은 공용 모디파이어)
+        .lockInfoPopup($lockInfo)
     }
 
     // MARK: - 헤더 (고정 + 스크롤 시 축소)
@@ -102,7 +98,7 @@ struct ChapterSelectView: View {
             Button { if !navPath.isEmpty { navPath.removeLast() } } label: {
                 Image(systemName: "house")
                     .font(.system(size: 14, weight: .semibold))
-                    .foregroundStyle(Color(UIColor.secondaryLabel))
+                    .foregroundStyle(Color.secondary)  // UIColor.secondaryLabel과 동일 톤 (크로스플랫폼)
                     .frame(width: 36, height: 36)
                     .background(Color.cardBackground)
                     .clipShape(RoundedRectangle(cornerRadius: 10))
@@ -110,6 +106,9 @@ struct ChapterSelectView: View {
             }
             .buttonStyle(.plain)
         }
+        // 와이드 화면에선 헤더 콘텐츠도 맵과 같은 680pt로 제한해 정렬 유지 (아이폰 영향 없음)
+        .frame(maxWidth: 680)
+        .frame(maxWidth: .infinity)
         .padding(.horizontal, 24)
         .padding(.top, 28)
         .padding(.bottom, isCompact ? 14 : 24)
@@ -190,7 +189,6 @@ struct ChapterSelectView: View {
     /// 개별 챕터를 표현하는 3D 카드 + 이름 + 별점 요약 뷰
     private func chapterNode(_ chapter: ChapterInfo) -> some View {
         let unlocked  = vm.isUnlocked(chapter)
-        let earned    = vm.chapterStars(chapter)
         let isPressed = pressedChapterId == chapter.id  // 현재 눌린 카드 여부
 
         let topD: CGFloat = 2   // 위 뒷면 두께
@@ -278,13 +276,8 @@ struct ChapterSelectView: View {
                 .font(.system(size: 13, weight: .medium))
                 .foregroundStyle(unlocked ? Color.primary : Color.secondary)
 
-            // 별 진행도 (비율 기반으로 최대 3개 표시)
-            let maxStars = max(chapter.stageCount * 3, 3)
-            let filledCount: Int = {
-                guard maxStars > 0, earned > 0 else { return 0 }
-                return max(1, min(3, Int(Double(earned) / Double(maxStars) * 3 + 0.5)))
-            }()
-            StarRatingView(earned: filledCount, size: 11)
+            // 별 진행도 (비율 기반으로 최대 3개 표시 — 환산 계산은 VM 담당)
+            StarRatingView(earned: vm.displayStarCount(chapter), size: 11)
                 .opacity(unlocked ? 1.0 : 0.35)  // 잠긴 챕터는 흐리게
         }
         .frame(width: cardSize + 20)  // 레이블이 카드보다 조금 넓게

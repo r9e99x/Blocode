@@ -77,6 +77,12 @@ final class ChapterViewModel: ObservableObject {
         progress.stars(for: stage.id)
     }
 
+    /// 특정 스테이지의 최고 기록(최소 블럭 수) — 기록 없으면 0
+    /// (맥 스테이지 미리보기가 사용 — 뷰가 ProgressService에 직접 접근하지 않도록 VM이 제공)
+    func bestBlockCount(_ stage: Stage) -> Int {
+        progress.result(for: stage.id)?.bestBlockCount ?? 0
+    }
+
     /// 특정 스테이지가 현재 진행 위치인지 여부
     func isCurrent(_ stage: Stage) -> Bool {
         stage.stageNumber == currentStageNumber

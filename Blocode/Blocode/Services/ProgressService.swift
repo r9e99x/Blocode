@@ -8,6 +8,7 @@
 import Foundation
 import Combine
 import SwiftData
+import os
 
 // MARK: - StageResult
 /// 스테이지 하나의 클리어 기록을 뷰에 전달하기 위한 경량 값 타입(DTO)
@@ -38,6 +39,10 @@ final class ProgressService: ObservableObject {
 
     // MARK: 싱글톤
     static let shared = ProgressService()
+
+    /// 저장 오류 로그 — print 대신 os.Logger 사용 (릴리즈 빌드에서도 Console.app에서 필터링 가능)
+    private let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "Blocode",
+                                category: "ProgressService")
 
     // MARK: SwiftData 컨테이너 / 컨텍스트
     /// 앱 전역에서 공유하는 단일 ModelContainer
@@ -212,7 +217,7 @@ final class ProgressService: ObservableObject {
         do {
             try context.save()
         } catch {
-            print("⚠️ 진행도 저장 실패(recordClear): \(error)")
+            logger.error("진행도 저장 실패(recordClear): \(String(describing: error), privacy: .public)")
         }
         // 메모리 미러 재구성 → @Published 변경으로 뷰 자동 갱신
         reloadMirror()
@@ -251,7 +256,7 @@ final class ProgressService: ObservableObject {
             try context.delete(model: StageProgress.self)
             try context.save()
         } catch {
-            print("⚠️ 진행도 초기화 실패(resetAll): \(error)")
+            logger.error("진행도 초기화 실패(resetAll): \(String(describing: error), privacy: .public)")
         }
         // 메모리 미러 비우기 → @Published 변경으로 뷰 자동 갱신
         results = [:]

@@ -38,23 +38,63 @@ struct ClearOverlayView: View {
             Color.appBackground.ignoresSafeArea()
 
             // 별 3개: 특별 레이아웃 / 별 1~2개: 일반 레이아웃
-            if stars == 3 {
-                threeStarLayout
-            } else {
-                lowStarLayout
+            // 와이드 화면(아이패드·맥)에선 콘텐츠를 중앙 560pt로 제한 (아이폰 영향 없음)
+            Group {
+                if stars == 3 {
+                    threeStarLayout
+                } else {
+                    lowStarLayout
+                }
             }
+            .frame(maxWidth: 560)
+            .frame(maxWidth: .infinity)
+
+            #if os(macOS)
+            // 맥 전용: 콘텐츠가 창 가운데 560pt로 좁혀지므로, X버튼만 창 전체 기준 우상단에 별도 고정
+            // (레이아웃 내부의 X버튼은 숨김 처리해 중복 방지 — closeButton/embeddedCloseButton 참고)
+            VStack {
+                HStack {
+                    Spacer()
+                    macTopRightCloseButton
+                }
+                Spacer()
+            }
+            .padding(.horizontal, 24)
+            .padding(.top, 20)
+            #endif
         }
         .onAppear { animateIn() }  // 화면 등장 시 순차 애니메이션 시작
     }
+
+    #if os(macOS)
+    /// 맥 전용 — 창 우상단 절대 위치에 고정되는 닫기 버튼 (스타일은 기존 X버튼과 동일)
+    private var macTopRightCloseButton: some View {
+        Button(action: onClose) {
+            Image(systemName: "xmark")
+                .font(.system(size: 13, weight: .bold))
+                .foregroundStyle(Color.secondary)
+                .frame(width: 40, height: 40)
+                .background(
+                    Color.dynamic(light: (1.0, 1.0, 1.0),
+                                  dark: (0.18, 0.19, 0.23))
+                )
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+                .shadow(color: Color.black.opacity(0.08), radius: 8, x: 0, y: 2)
+        }
+        .buttonStyle(.plain)
+    }
+    #endif
 
     // MARK: - 별 3개 레이아웃
 
     private var threeStarLayout: some View {
         VStack(spacing: 0) {
-            // 닫기 버튼 (오른쪽 상단)
+            // 닫기 버튼 (오른쪽 상단) — 맥은 창 우상단에 별도 고정되므로 여기선 숨김(중복 방지)
+            #if !os(macOS)
             closeButton
                 .padding(.horizontal, 24)
                 .padding(.top, 16)
+            #endif
 
             Spacer(minLength: 0)
 
@@ -147,23 +187,23 @@ struct ClearOverlayView: View {
                     .foregroundStyle(.secondary)
                     .tracking(0.5)
                 Spacer()
-                // x 버튼으로 닫기
+                // x 버튼으로 닫기 — 맥은 창 우상단에 별도 고정되므로 여기선 숨김(중복 방지)
+                #if !os(macOS)
                 Button(action: onClose) {
                     Image(systemName: "xmark")
                         .font(.system(size: 13, weight: .bold))
-                        .foregroundStyle(Color(UIColor.secondaryLabel))
+                        .foregroundStyle(Color.secondary)  // UIColor.secondaryLabel과 동일 톤 (크로스플랫폼)
                         .frame(width: 40, height: 40)
                         .background(
-                            Color(UIColor { traits in
-                                traits.userInterfaceStyle == .dark
-                                    ? UIColor(red: 0.18, green: 0.19, blue: 0.23, alpha: 1.0)
-                                    : UIColor.white
-                            })
+                            // Color.dynamic 크로스플랫폼 헬퍼 (값은 기존과 동일)
+                            Color.dynamic(light: (1.0, 1.0, 1.0),
+                                          dark: (0.18, 0.19, 0.23))
                         )
                         .clipShape(RoundedRectangle(cornerRadius: 12))
                         .shadow(color: Color.black.opacity(0.08), radius: 8, x: 0, y: 2)
                 }
                 .buttonStyle(.plain)
+                #endif
             }
             .padding(.horizontal, 24)
             .padding(.top, 56)  // status bar 공간 확보
@@ -223,11 +263,9 @@ struct ClearOverlayView: View {
                         .frame(maxWidth: .infinity)
                         .frame(height: 54)
                         .background(
-                            Color(UIColor { traits in
-                                traits.userInterfaceStyle == .dark
-                                    ? UIColor(red: 0.18, green: 0.19, blue: 0.23, alpha: 1.0)
-                                    : UIColor(red: 251/255, green: 246/255, blue: 232/255, alpha: 1.0)
-                            })
+                            // Color.dynamic 크로스플랫폼 헬퍼 (값은 기존과 동일)
+                            Color.dynamic(light: (251/255, 246/255, 232/255),
+                                          dark: (0.18, 0.19, 0.23))
                         )
                         .clipShape(RoundedRectangle(cornerRadius: 27))
                         .shadow(color: Color.black.opacity(0.06), radius: 8, x: 0, y: 2)
@@ -278,11 +316,9 @@ struct ClearOverlayView: View {
             )
         }
         .background(
-            Color(UIColor { traits in
-                traits.userInterfaceStyle == .dark
-                    ? UIColor(red: 0.14, green: 0.15, blue: 0.18, alpha: 1.0)
-                    : UIColor(red: 251/255, green: 246/255, blue: 232/255, alpha: 1.0) // #fbf6e8
-            })
+            // Color.dynamic 크로스플랫폼 헬퍼 (값은 기존과 동일)
+            Color.dynamic(light: (251/255, 246/255, 232/255),  // 라이트: #fbf6e8
+                          dark: (0.14, 0.15, 0.18))
         )
         .clipShape(RoundedRectangle(cornerRadius: 20))
         .shadow(color: Color.black.opacity(0.06), radius: 12, x: 0, y: 3)
@@ -305,21 +341,20 @@ struct ClearOverlayView: View {
 
     // MARK: - 공통 서브뷰
 
-    /// 오른쪽 상단 닫기 버튼 (x 아이콘)
+    #if !os(macOS)
+    /// 오른쪽 상단 닫기 버튼 (x 아이콘) — 맥은 macTopRightCloseButton으로 대체
     private var closeButton: some View {
         HStack {
             Spacer()
             Button(action: onClose) {
                 Image(systemName: "xmark")
                     .font(.system(size: 13, weight: .bold))
-                    .foregroundStyle(Color(UIColor.secondaryLabel))
+                    .foregroundStyle(Color.secondary)  // UIColor.secondaryLabel과 동일 톤 (크로스플랫폼)
                     .frame(width: 40, height: 40)
                     .background(
-                        Color(UIColor { traits in
-                            traits.userInterfaceStyle == .dark
-                                ? UIColor(red: 0.18, green: 0.19, blue: 0.23, alpha: 1.0)
-                                : UIColor.white
-                        })
+                        // Color.dynamic 크로스플랫폼 헬퍼 (값은 기존과 동일)
+                        Color.dynamic(light: (1.0, 1.0, 1.0),
+                                      dark: (0.18, 0.19, 0.23))
                     )
                     .clipShape(RoundedRectangle(cornerRadius: 12))
                     .shadow(color: Color.black.opacity(0.08), radius: 8, x: 0, y: 2)
@@ -327,6 +362,7 @@ struct ClearOverlayView: View {
             .buttonStyle(.plain)
         }
     }
+    #endif
 
     /// 캐릭터 아이콘 — 3D 다크 블럭 + 화살표 (별 3개 레이아웃 중앙에 표시)
     private var characterIcon: some View {
@@ -453,11 +489,9 @@ struct ClearOverlayView: View {
         .frame(maxWidth: .infinity)
         .padding(.vertical, 14)
         .background(
-            Color(UIColor { traits in
-                traits.userInterfaceStyle == .dark
-                    ? UIColor(red: 0.14, green: 0.15, blue: 0.18, alpha: 1.0)
-                    : UIColor(red: 251/255, green: 246/255, blue: 232/255, alpha: 1.0)
-            })
+            // Color.dynamic 크로스플랫폼 헬퍼 (값은 기존과 동일)
+            Color.dynamic(light: (251/255, 246/255, 232/255),
+                          dark: (0.14, 0.15, 0.18))
         )
         .clipShape(RoundedRectangle(cornerRadius: 16))
         .shadow(color: Color.black.opacity(0.06), radius: 8, x: 0, y: 2)

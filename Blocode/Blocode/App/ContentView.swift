@@ -27,27 +27,34 @@ struct ContentView: View {
     var body: some View {
         // 루트 NavigationStack — path 바인딩으로 화면 전환 관리
         NavigationStack(path: $navPath) {
-            homeContent
-                // MARK: 라우트별 목적지 등록
-                .navigationDestination(for: AppRoute.self) { route in
-                    switch route {
-                    case .chapterSelect:
-                        ChapterSelectView(navPath: $navPath)
-
-                    case .chapter(let number):
-                        ChapterView(navPath: $navPath, chapter: number)
-
-                    case .stage(let chapter, let number):
-                        // 로딩은 StageView의 ViewModel이 담당 (View 계층 데이터 호출 제거)
-                        StageView(chapter: chapter, number: number, navPath: $navPath)
-                            .id("stage-\(chapter)-\(number)")
-                    }
+            // 화면 폭에 따라 홈 레이아웃 분기 (아이폰: 세로 스택 / 아이패드·맥: 좌우 분할)
+            GeometryReader { geo in
+                if geo.size.width >= LayoutBreakpoint.wide {
+                    wideHomeContent
+                } else {
+                    homeContent
                 }
+            }
+            // MARK: 라우트별 목적지 등록
+            .navigationDestination(for: AppRoute.self) { route in
+                switch route {
+                case .chapterSelect:
+                    ChapterSelectView(navPath: $navPath)
+
+                case .chapter(let number):
+                    ChapterView(navPath: $navPath, chapter: number)
+
+                case .stage(let chapter, let number):
+                    // 로딩은 StageView의 ViewModel이 담당 (View 계층 데이터 호출 제거)
+                    StageView(chapter: chapter, number: number, navPath: $navPath)
+                        .id("stage-\(chapter)-\(number)")
+                }
+            }
         }
         // 설정에 따라 라이트/다크/시스템 테마 적용
         .preferredColorScheme(settings.theme.colorScheme)
-        // 설정 화면 — fullScreenCover로 모달 표시
-        .fullScreenCover(isPresented: $showSettings) {
+        // 설정 화면 — 모달 표시 (iOS: fullScreenCover / macOS: sheet)
+        .fullScreenCoverCompat(isPresented: $showSettings) {
             SettingsView(onResetProgress: {
                 // 진행 상황 초기화 후 홈으로 돌아오기 (navPath 초기화)
                 navPath = NavigationPath()
@@ -88,40 +95,88 @@ struct ContentView: View {
                 .background(Color.appBackground)
         }
         .background(Color.appBackground.ignoresSafeArea())
-        .navigationBarHidden(true)
+        .hideNavigationBar()  // iOS 전용 API 래퍼 (macOS no-op)
     }
 
     // MARK: - 헤더 섹션
 
     private var headerSection: some View {
         HStack(alignment: .center) {
-
             // 왼쪽: 미니 앱 아이콘 블럭 + "Blocode" 텍스트
-            HStack(spacing: 10) {
-                // 미니 3D 블럭 아이콘 — 어두운 색상의 작은 3D 사각형
-                miniBlockIcon
-                // 앱 이름
-                Text("Blocode")
-                    .font(.system(size: 22, weight: .bold, design: .rounded))
-                    .foregroundStyle(.primary)
-            }
+            brandRow
 
             Spacer()
 
-            // 오른쪽: 설정 버튼 — 챕터 선택 화면 홈 버튼과 동일한 스타일
-            Button {
-                showSettings = true
-            } label: {
-                Image(systemName: "gearshape")
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundStyle(Color(UIColor.secondaryLabel))
-                    .frame(width: 36, height: 36)
-                    .background(Color.cardBackground)
-                    .clipShape(RoundedRectangle(cornerRadius: 10))
-                    .shadow(color: Color.black.opacity(0.08), radius: 8, x: 0, y: 2)
-            }
-            .buttonStyle(.plain)
+            // 오른쪽: 설정 버튼
+            settingsButton
         }
+    }
+
+    /// 로고 + 앱 이름 행 — 컴팩트 헤더와 와이드 레이아웃 왼쪽 열에서 공용 사용
+    private var brandRow: some View {
+        HStack(spacing: 10) {
+            // 미니 3D 블럭 아이콘 — 어두운 색상의 작은 3D 사각형
+            miniBlockIcon
+            // 앱 이름
+            Text("Blocode")
+                .font(.system(size: 22, weight: .bold, design: .rounded))
+                .foregroundStyle(.primary)
+        }
+    }
+
+    /// 설정 버튼 — 챕터 선택 화면 홈 버튼과 동일한 스타일
+    /// (컴팩트: 헤더 오른쪽 / 와이드: 화면 우상단 오버레이로 공용 사용)
+    private var settingsButton: some View {
+        Button {
+            showSettings = true
+        } label: {
+            Image(systemName: "gearshape")
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(Color.secondary)  // UIColor.secondaryLabel과 동일 톤 (크로스플랫폼)
+                .frame(width: 36, height: 36)
+                .background(Color.cardBackground)
+                .clipShape(RoundedRectangle(cornerRadius: 10))
+                .shadow(color: Color.black.opacity(0.08), radius: 8, x: 0, y: 2)
+        }
+        .buttonStyle(.plain)
+    }
+
+    // MARK: - 와이드 레이아웃 홈 (아이패드·맥)
+
+    /// 좌: 브랜딩+인용구 / 우: 통계 카드+시작 버튼 — 큰 화면에서 좌우 분할 배치
+    private var wideHomeContent: some View {
+        ZStack(alignment: .topTrailing) {
+
+            // 중앙 분할 콘텐츠 (최대 1120pt로 제한해 초대형 화면에서도 밀도 유지)
+            HStack(alignment: .center, spacing: 56) {
+
+                // ── 왼쪽 열: 로고 + 인용구 ──
+                VStack(alignment: .leading, spacing: 0) {
+                    brandRow
+                    quoteSection
+                        .padding(.top, 40)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+                // ── 오른쪽 열: 통계 카드 + 시작/둘러보기 버튼 ──
+                VStack(spacing: 14) {
+                    statsRow
+                    buttonSection
+                        .padding(.top, 8)
+                }
+                .frame(width: 400)
+            }
+            .padding(.horizontal, 64)
+            .frame(maxWidth: 1120)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)  // 화면 중앙 정렬
+
+            // 우상단 설정 버튼 (컴팩트 헤더의 버튼과 동일)
+            settingsButton
+                .padding(.trailing, 24)
+                .padding(.top, 20)
+        }
+        .background(Color.appBackground.ignoresSafeArea())
+        .hideNavigationBar()  // iOS 전용 API 래퍼 (macOS no-op)
     }
 
     // MARK: - 미니 3D 블럭 아이콘 (헤더 왼쪽)
@@ -279,22 +334,16 @@ struct ContentView: View {
         let botD:     CGFloat = 2.5
         let cr:       CGFloat = 18
         // 다크 버튼 색상 — 라이트: 기존 값 그대로 / 다크: 슬레이트 톤으로 전환
-        // (다크 배경에서 따뜻한 브라운+탄색 베벨이 충돌하던 문제 수정)
-        let frontColor = Color(UIColor { traits in
-            traits.userInterfaceStyle == .dark
-                ? UIColor(red: 72/255, green: 78/255, blue: 96/255, alpha: 1.0)     // 다크: 슬레이트 앞면
-                : UIColor(red: 0.165, green: 0.145, blue: 0.125, alpha: 1.0)        // 라이트: 기존 값 유지
-        })
+        // (다크 배경에서 따뜻한 브라운+탄색 베벨이 충돌하던 문제 수정, Color.dynamic 크로스플랫폼 헬퍼 사용)
+        let frontColor = Color.dynamic(light: (0.165, 0.145, 0.125),      // 라이트: 기존 값 유지
+                                       dark: (72/255, 78/255, 96/255))    // 다크: 슬레이트 앞면
         // 위 뒷면 색상 — 라이트 #807869 / 다크 밝은 슬레이트
         let topBackColor  = Color.slateButtonTopBack
-        // 아래 뒷면 색상 — 라이트 #beb59f / 다크 더 밝은 슬레이트 (그림자 효과)
+        // 아래 뒷면 색상 — 라이트 #beb59f / 다크 앞면보다 약간 어두운 슬레이트 (그림자 효과)
         let botBackColor  = Color.slateButtonBottomBack
         // 눌림 시 앞면 색상 — 라이트: 기존 #565048 / 다크: 슬레이트를 살짝 밝게
-        let pressedFrontColor = Color(UIColor { traits in
-            traits.userInterfaceStyle == .dark
-                ? UIColor(red: 88/255, green: 95/255, blue: 116/255, alpha: 1.0)    // 다크: 눌림 슬레이트
-                : UIColor(red: 86/255, green: 80/255, blue: 72/255, alpha: 1.0)     // 라이트: 기존 값 유지
-        })
+        let pressedFrontColor = Color.dynamic(light: (86/255, 80/255, 72/255),      // 라이트: 기존 값 유지
+                                              dark: (88/255, 95/255, 116/255))      // 다크: 눌림 슬레이트
 
         // 다음 스테이지 정보 (없으면 모든 완료 상태)
         let next = vm.nextStage
@@ -381,24 +430,15 @@ struct ContentView: View {
         let topD:     CGFloat = 0.8
         let botD:     CGFloat = 2.5
         let cr:       CGFloat = 18
-        // 크림 버튼 색상
-        let frontColor = Color(UIColor { traits in
-            traits.userInterfaceStyle == .dark
-                ? UIColor(red: 0.22, green: 0.23, blue: 0.27, alpha: 1.0)
-                : UIColor(red: 252/255, green: 249/255, blue: 238/255, alpha: 1.0) // #fcf9ee (앞면)
-        })
+        // 크림 버튼 색상 (Color.dynamic 크로스플랫폼 헬퍼 사용 — 값은 기존과 동일)
+        let frontColor = Color.dynamic(light: (252/255, 249/255, 238/255),  // 라이트: #fcf9ee (앞면)
+                                       dark: (0.22, 0.23, 0.27))
         // 위 뒷면 색상 — #fcf9ee (연한 크림, 앞면보다 살짝 밝음)
-        let topBackColor = Color(UIColor { traits in
-            traits.userInterfaceStyle == .dark
-                ? UIColor(red: 0.18, green: 0.19, blue: 0.22, alpha: 1.0)
-                : UIColor(red: 252/255, green: 249/255, blue: 238/255, alpha: 1.0) // #fcf9ee
-        })
+        let topBackColor = Color.dynamic(light: (252/255, 249/255, 238/255),  // 라이트: #fcf9ee
+                                         dark: (0.18, 0.19, 0.22))
         // 아래 뒷면 색상 — #c4c0b5 (회베이지, 그림자 효과)
-        let botBackColor = Color(UIColor { traits in
-            traits.userInterfaceStyle == .dark
-                ? UIColor(red: 0.13, green: 0.14, blue: 0.17, alpha: 1.0)
-                : UIColor(red: 196/255, green: 192/255, blue: 181/255, alpha: 1.0) // #c4c0b5
-        })
+        let botBackColor = Color.dynamic(light: (196/255, 192/255, 181/255),  // 라이트: #c4c0b5
+                                         dark: (0.13, 0.14, 0.17))
 
         return Button {
             navPath.append(AppRoute.chapterSelect)
