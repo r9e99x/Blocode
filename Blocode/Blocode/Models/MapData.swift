@@ -39,7 +39,8 @@ enum Direction: String, Codable {
 
 // MARK: - Position
 /// 타일 맵 위의 좌표 (열, 행)
-struct Position: Codable, Equatable {
+/// Hashable — 기믹 상태(수집한 보석/열린 문)를 Set으로 추적하기 위함
+struct Position: Codable, Equatable, Hashable {
     var x: Int  // 열 (왼→오른쪽, 0부터 시작)
     var y: Int  // 행 (위→아래, 0부터 시작)
 
@@ -67,6 +68,20 @@ enum TileType: Int, Codable {
     case floor = 1  // 바닥 (이동 가능)
 }
 
+// MARK: - 기믹 요소 (챕터 6+ 전용 — 전부 옵셔널이라 기존 스테이지 JSON 하위호환)
+
+/// 스위치-문 연결 — 스위치 타일을 밟으면 연결된 문(벽)이 열려 지나갈 수 있음
+struct SwitchGate: Codable, Equatable {
+    var switchAt: Position   // 스위치 위치 (바닥 타일 위에 배치)
+    var gateAt: Position     // 문 위치 (grid에서는 벽 0으로 표기 — 열리기 전까지 통행 불가)
+}
+
+/// 포탈 짝 — 한쪽에 들어가면 다른 쪽으로 순간이동 (양방향, 1회 이동 — 체인 없음)
+struct PortalPair: Codable, Equatable {
+    var a: Position
+    var b: Position
+}
+
 // MARK: - MapData
 /// 스테이지 맵의 데이터 구조
 /// JSON 파일에서 디코딩하여 사용
@@ -83,6 +98,17 @@ struct MapData: Codable {
 
     /// 목표 지점 위치 (여기 도달하면 클리어)
     var goal: Position
+
+    // MARK: 기믹 (전부 옵셔널 — 없으면 기존 스테이지와 완전히 동일하게 동작)
+
+    /// 보석 위치 목록 — 전부 수집하지 않고 클리어하면 별 최대 2개
+    var items: [Position]?
+
+    /// 스위치-문 연결 목록
+    var switches: [SwitchGate]?
+
+    /// 포탈 짝 목록
+    var portals: [PortalPair]?
 
     // MARK: - 헬퍼
 

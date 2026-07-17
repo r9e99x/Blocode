@@ -55,10 +55,10 @@ struct BlockRowView: View {
 
     // 3D 카드 파라미터 — 맥은 코드 패널 폭이 좁아 블럭도 축소, iOS/아이패드는 기존 크기 유지
     #if os(macOS)
-    private let frontH:  CGFloat = 34
-    private let topD:    CGFloat = 1.3
-    private let botD:    CGFloat = 2.2
-    private let cr:      CGFloat = 10
+    private let frontH:  CGFloat = 29
+    private let topD:    CGFloat = 1.1
+    private let botD:    CGFloat = 1.9
+    private let cr:      CGFloat = 9
     #else
     private let frontH:  CGFloat = 48  // 앞면 높이
     private let topD:    CGFloat = 2   // 위 뒷면 두께

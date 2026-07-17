@@ -146,6 +146,7 @@ struct StageView: View {
                     stageName: stage.name,
                     threeStarCut: stage.starThresholds.threeStar,
                     isLastStage: !viewModel.hasNextStage,
+                    itemHint: viewModel.itemHint,
                     onClose: {
                         // 닫기 → 챕터 화면으로 이동 (빈 스택이면 무시 — 언더플로우 방지)
                         if !navPath.isEmpty { navPath.removeLast() }
@@ -358,6 +359,18 @@ struct StageView: View {
                 .font(.system(size: 12))
                 .foregroundStyle(.secondary)
             #endif
+
+            // 보석 수집 카운터 — 보석이 있는 스테이지에서만 표시 (기믹 없는 기존 스테이지는 items가 nil이라 렌더 안 됨)
+            if let items = stage.mapData.items, !items.isEmpty {
+                HStack(spacing: 3) {
+                    Image(systemName: "diamond.fill")
+                        .font(.system(size: 10))
+                        .foregroundStyle(Color.accentMint)
+                    Text("\(viewModel.collectedItems.count)/\(items.count)")
+                        .font(.system(size: 12, weight: .semibold, design: .monospaced))
+                        .foregroundStyle(.secondary)
+                }
+            }
 
             // 별점 표시 — 클리어 후 획득한 별 수 반영
             StarRatingView(earned: viewModel.clearedStars, size: 13)

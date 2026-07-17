@@ -76,10 +76,10 @@ struct PaletteCardView: View {
 
     // 3D 카드 파라미터 — 맥은 코드 패널 폭이 좁아 카드도 축소, iOS/아이패드는 기존 크기 유지
     #if os(macOS)
-    private let btnSize:   CGFloat = 42
-    private let radius:    CGFloat = 13
-    private let topDepth:  CGFloat = 1.5
-    private let botDepth:  CGFloat = 2.5
+    private let btnSize:   CGFloat = 36
+    private let radius:    CGFloat = 11
+    private let topDepth:  CGFloat = 1.3
+    private let botDepth:  CGFloat = 2.1
     #else
     private let btnSize:   CGFloat = 54   // 버튼 크기
     private let radius:    CGFloat = 16   // 모서리 반지름

@@ -20,6 +20,7 @@ struct ClearOverlayView: View {
     let stageName: String        // 스테이지 이름 (예: "지그재그")
     let threeStarCut: Int        // 별 3개 기준 블럭 수
     let isLastStage: Bool        // 챕터 마지막 스테이지 여부 (다음 버튼 레이블 결정)
+    var itemHint: String? = nil  // 보석을 다 못 모아서 별 3개를 놓쳤을 때 안내 문구 (nil이면 표시 안 함, 기존 호출부는 무수정으로 컴파일)
     let onClose: () -> Void      // 닫기 버튼 — 스테이지 선택으로
     let onRetry: () -> Void      // 다시 도전
     let onNext: () -> Void       // 다음 스테이지 or 챕터 목록 (별 3개용)
@@ -222,6 +223,14 @@ struct ClearOverlayView: View {
                      : "조금 더 줄여봐요 — 별 2개까지 파이팅")
                     .font(.system(size: 14))
                     .foregroundStyle(.secondary)
+
+                // 보석을 다 못 모아서 별 3개를 놓쳤을 때만 추가 안내 (기믹 없는 스테이지는 itemHint가 항상 nil이라 무해)
+                if let itemHint {
+                    Text(itemHint)
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundStyle(Color.accentMint)
+                        .padding(.top, 2)
+                }
             }
             .multilineTextAlignment(.center)
             .padding(.horizontal, 28)

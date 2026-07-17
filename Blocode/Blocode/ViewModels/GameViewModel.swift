@@ -57,6 +57,10 @@ final class GameViewModel: ObservableObject {
     /// 캐릭터가 시작 위치에서 벗어났는지 (리셋 버튼 아이콘 결정용)
     @Published var characterMoved: Bool = false
 
+    /// 수집한 보석 위치 집합 (기믹 스테이지 전용) — 상단바 보석 카운터 표시 + 별점 계산에 사용
+    /// (기믹 없는 스테이지는 stage.mapData.items가 nil이라 항상 빈 상태로 아무 영향 없음)
+    @Published var collectedItems: Set<Position> = []
+
     // MARK: - 내부 상태
 
     /// 현재 스테이지 데이터 — 별점 기준, 맵 정보 포함
@@ -68,6 +72,9 @@ final class GameViewModel: ObservableObject {
 
     /// GameScene 참조 (캐릭터 이동 명령용) — weak으로 순환 참조 방지
     weak var scene: GameScene?
+
+    /// 열린 문 위치 집합 (기믹 스테이지 전용, 내부 판정용) — 이동 가능 여부 계산에만 쓰이고 UI에 직접 노출 안 됨
+    private var openedGates: Set<Position> = []
 
     /// 실행 속도 배율 — SettingsService에서 실시간으로 읽어옴
     private var executionSpeed: Double { SettingsService.shared.executionSpeed }
@@ -303,7 +310,11 @@ final class GameViewModel: ObservableObject {
         failedBlockPath = nil
         failureMessage = ""
         characterMoved = false
-        scene?.resetCharacter()  // 캐릭터를 시작 위치로 되돌림
+        // 기믹 상태 초기화 (기믹 없는 스테이지는 항상 빈 상태라 무해)
+        collectedItems = []
+        openedGates = []
+        // 캐릭터를 시작 위치로 되돌림 (기믹 스테이지는 씬이 보석 재등장·문 다시 닫힘까지 함께 복원)
+        scene?.resetCharacter()
     }
 
     /// 전체 초기화 — 캐릭터 + 블럭 + 도전 횟수 모두 삭제
@@ -405,6 +416,15 @@ final class GameViewModel: ObservableObject {
         stage.paletteBlocks
     }
 
+    // MARK: - 기믹 표시용 (StageView 상단바 보석 카운터 / ClearOverlayView 안내 문구)
+
+    /// 보석을 다 못 모아서 별 3개를 놓쳤을 때만 안내 문구 반환 (기믹 없는 스테이지·전부 수집 시 nil)
+    var itemHint: String? {
+        guard let items = stage.mapData.items, !items.isEmpty,
+              collectedItems.count < items.count else { return nil }
+        return "보석 \(collectedItems.count)/\(items.count)개 — 전부 모으면 별 3개!"
+    }
+
     // MARK: - 조건문 평가
 
     /// ifBlock 조건 평가: 앞 칸 이동 가능 여부를 확인 (GameScene 메인스레드 접근)
@@ -418,11 +438,45 @@ final class GameViewModel: ObservableObject {
         }
         // 현재 방향 기준 한 칸 앞 위치 계산
         let nextPos = scene.characterPosition.next(direction: scene.characterDirection)
-        // 맵 데이터로 이동 가능 여부 확인 (범위 밖 = 벽으로 처리)
-        let isWalkable = scene.mapData.isFloor(nextPos)
+        let walkable = isWalkable(nextPos)
         switch condition {
-        case .pathClear:   return isWalkable   // 뚫려있으면 실행
-        case .pathBlocked: return !isWalkable  // 막혀있으면 실행
+        case .pathClear:   return walkable   // 뚫려있으면 실행
+        case .pathBlocked: return !walkable  // 막혀있으면 실행
+        }
+    }
+
+    // MARK: - 기믹 판정 (챕터 6+ 전용 — items/switches/portals가 없는 스테이지는 항상 기존과 동일하게 동작)
+
+    /// 특정 좌표가 이동 가능한지 확인 — 바닥이거나, 열린 문이면 true
+    /// (기믹 없는 스테이지는 openedGates가 항상 비어있어 기존 isFloor 판정과 완전히 동일)
+    private func isWalkable(_ position: Position) -> Bool {
+        guard let scene else { return false }
+        if scene.mapData.isFloor(position) { return true }
+        return openedGates.contains(position)
+    }
+
+    /// 이동 후 도착한 칸의 기믹 효과 적용 (보석 수집 / 스위치 누름 / 포탈 이동)
+    /// 기믹 필드가 전부 nil인 스테이지는 아래 세 블록이 전부 조용히 스킵되므로 완전히 무해
+    private func applyTileEffects(at position: Position) {
+        guard let scene else { return }
+
+        // 보석 수집 — 처음 밟았을 때만 1회 수집 (별점 계산은 handleSuccess에서)
+        if scene.mapData.items?.contains(position) == true, !collectedItems.contains(position) {
+            collectedItems.insert(position)
+            scene.collectItem(at: position)
+        }
+
+        // 스위치 — 밟으면 연결된 문을 염 (이미 열려 있으면 재실행 안 함)
+        if let gate = scene.mapData.switches?.first(where: { $0.switchAt == position })?.gateAt,
+           !openedGates.contains(gate) {
+            openedGates.insert(gate)
+            scene.openGate(at: gate)
+        }
+
+        // 포탈 — 입장하면 짝으로 순간이동 (도착 칸에서는 재귀 적용 없이 1회만 이동)
+        if let pair = scene.mapData.portals?.first(where: { $0.a == position || $0.b == position }) {
+            let destination = pair.a == position ? pair.b : pair.a
+            scene.teleportCharacter(to: destination)
         }
     }
 
@@ -448,9 +502,9 @@ final class GameViewModel: ObservableObject {
                 nextPos = scene.characterPosition.previous(direction: scene.characterDirection)
             }
 
-            // 이동 가능 여부 확인 (맵 범위 & 바닥 타일)
-            guard scene.mapData.isFloor(nextPos) else {
-                continuation.resume(returning: false)  // 벽: 이동 실패
+            // 이동 가능 여부 확인 (맵 범위 & 바닥 타일 또는 열린 문)
+            guard isWalkable(nextPos) else {
+                continuation.resume(returning: false)  // 벽(또는 닫힌 문): 이동 실패
                 return
             }
 
@@ -458,10 +512,11 @@ final class GameViewModel: ObservableObject {
             scene.characterPosition = nextPos
             scene.updateCharacterTransform(animated: true)
 
-            // 이동 애니메이션 완료 후 다음 블럭 실행 (속도 배율 적용)
+            // 이동 애니메이션 완료 후 도착 칸의 기믹 효과 적용 + 다음 블럭 실행 (속도 배율 적용)
             // asyncAfter는 스레드 점프가 아닌 "애니메이션 대기 시간"이라 그대로 유지
             let delay = 0.3 / executionSpeed
-            DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
+            DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in
+                self?.applyTileEffects(at: nextPos)
                 continuation.resume(returning: true)  // 이동 성공
             }
         }
@@ -503,7 +558,12 @@ final class GameViewModel: ObservableObject {
     private func handleSuccess() {
         stopTimer()
         // 사용한 블럭 수 기준으로 별점 계산
-        let stars = stage.starThresholds.stars(for: totalBlockCount)
+        var stars = stage.starThresholds.stars(for: totalBlockCount)
+        // 보석이 있는 스테이지인데 전부 수집하지 못했으면 별 3개는 주지 않음 (최대 2개)
+        // (기믹 없는 스테이지는 items가 nil이라 이 분기 자체가 실행 안 됨 — 기존 계산과 완전히 동일)
+        if let items = stage.mapData.items, !items.isEmpty, collectedItems.count < items.count {
+            stars = min(stars, 2)
+        }
         clearedStars = stars
         currentBlockPath = nil
         gameState = .success

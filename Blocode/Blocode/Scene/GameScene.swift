@@ -20,6 +20,12 @@ class GameScene: SKScene {
     private var characterColor = SKColor.darkInk // #2a2520
     private let goalColor   = SKColor(red: 0.93, green: 0.67, blue: 0.24, alpha: 1.0) // 골드 (공통)
 
+    // 기믹 색상 (챕터 6+ 전용 — goalColor와 동일하게 라이트/다크 구분 없는 고정값)
+    private let itemColor       = SKColor(red: 0.42, green: 0.82, blue: 0.68, alpha: 1.0) // 민트 보석
+    private let switchColor     = SKColor(red: 0.93, green: 0.62, blue: 0.28, alpha: 1.0) // 주황 스위치
+    private let gateMarkerColor = SKColor(red: 0.93, green: 0.62, blue: 0.28, alpha: 1.0) // 문 표시(스위치와 동일 톤)
+    private let portalColor     = SKColor(red: 0.62, green: 0.45, blue: 0.85, alpha: 1.0) // 보라 포탈
+
     // 바닥 타일 테두리 — 라이트: #d2c6ac (기존 고정값) / 다크: 바닥 채우기보다 살짝 밝은 쿨톤
     private var floorStrokeColor = SKColor(red: 210/255, green: 198/255, blue: 172/255, alpha: 1.0)
     // 벽 3D 베벨 — 라이트: #c7b694 / #9f8b65 (기존 고정값) / 다크: 벽 채우기와 어울리는 쿨톤
@@ -42,6 +48,14 @@ class GameScene: SKScene {
 
     // MARK: - 노드 참조
     private var characterNode: SKNode?  // 캐릭터 SKNode — 이동/회전 애니메이션 적용 대상
+
+    // MARK: - 기믹 상태 (챕터 6+ 전용)
+    // setupMap()이 리사이즈·다크모드 전환마다 전체 노드를 재생성하므로,
+    // "이미 수집한 보석/이미 열린 문"은 씬이 자체적으로 기억해뒀다가 재생성 시 그대로 반영한다
+    // (기믹 없는 스테이지는 이 두 Set이 항상 비어있어 아래 로직이 전부 조용히 스킵됨)
+    private var itemNodes: [Position: SKNode] = [:]        // 아직 안 먹은 보석 노드 (setupMap마다 재생성)
+    private var collectedItemPositions: Set<Position> = []  // 이미 수집한 보석 — 재구성 시에도 숨김 유지
+    private var openGatePositions: Set<Position> = []       // 이미 열린 문 — 재구성 시에도 열림 유지
 
     // MARK: - 초기화
     init(mapData: MapData) {
@@ -162,6 +176,7 @@ class GameScene: SKScene {
     func setupMap() {
         // 기존 노드 전체 제거
         removeAllChildren()
+        itemNodes = [:]  // 노드 자체는 removeAllChildren으로 이미 제거됨 — 참조만 비움
         guard size.width > 0, size.height > 0 else { return }
 
         let cols = mapData.width
@@ -175,11 +190,16 @@ class GameScene: SKScene {
         let originY  = layout.originY
         let cornerRadius = tileSize * 0.22  // 타일 모서리 반지름 (타일 크기의 22%)
 
-        // MARK: 타일 렌더링 — 경로 + 빈 칸 모두 그리기
+        // MARK: 타일 렌더링 — 경로 + 빈 칸 + 기믹(문/보석/스위치/포탈) 모두 그리기
         for row in 0..<rows {
             for col in 0..<cols {
-                // 바닥 타일인지 벽 타일인지 확인
-                let isFloor = mapData.grid[row][col] == TileType.floor.rawValue
+                let pos = Position(x: col, y: row)
+
+                // 문(게이트) 타일인지 확인 — grid 원본은 항상 벽(0)이고, 열렸으면 바닥처럼 통행 가능
+                // (mapData.switches가 nil인 기존 35개 스테이지는 isGateTile이 항상 false라 아래 로직 전부 무해)
+                let isGateTile = mapData.switches?.contains(where: { $0.gateAt == pos }) ?? false
+                let isOpenGate = isGateTile && openGatePositions.contains(pos)
+                let isFloor = mapData.grid[row][col] == TileType.floor.rawValue || isOpenGate
 
                 // SpriteKit은 y가 아래에서 위 방향이므로 행을 반전하여 계산
                 let x = originX + CGFloat(col) * cellSize + tileSize / 2
@@ -192,6 +212,39 @@ class GameScene: SKScene {
                     isFloor: isFloor
                 )
                 addChild(tile)
+
+                // 문 표시 마커 — 닫힘: 벽 위에 진한 링 / 열림: 바닥 위에 옅은 링(잔상)
+                if isGateTile {
+                    let marker = makeGateMarkerNode(size: tileSize, isOpen: isOpenGate)
+                    marker.position = CGPoint(x: x, y: y)
+                    marker.zPosition = 1
+                    addChild(marker)
+                }
+
+                // 스위치 — 바닥 위에 눌리는 버튼 표시
+                if mapData.switches?.contains(where: { $0.switchAt == pos }) == true {
+                    let switchNode = makeSwitchNode(size: tileSize)
+                    switchNode.position = CGPoint(x: x, y: y)
+                    switchNode.zPosition = 1
+                    addChild(switchNode)
+                }
+
+                // 보석 — 이미 수집한 위치는 다시 그리지 않음(재구성해도 숨김 유지)
+                if mapData.items?.contains(pos) == true, !collectedItemPositions.contains(pos) {
+                    let itemNode = makeItemNode(size: tileSize)
+                    itemNode.position = CGPoint(x: x, y: y)
+                    itemNode.zPosition = 1
+                    addChild(itemNode)
+                    itemNodes[pos] = itemNode
+                }
+
+                // 포탈 — 양쪽 위치 모두에 표시
+                if mapData.portals?.contains(where: { $0.a == pos || $0.b == pos }) == true {
+                    let portalNode = makePortalNode(size: tileSize)
+                    portalNode.position = CGPoint(x: x, y: y)
+                    portalNode.zPosition = 1
+                    addChild(portalNode)
+                }
             }
         }
 
@@ -325,6 +378,55 @@ class GameScene: SKScene {
         return container
     }
 
+    // MARK: - 기믹 노드 생성 (챕터 6+ 전용)
+
+    /// 보석 노드 — 민트 다이아몬드 모양
+    private func makeItemNode(size: CGFloat) -> SKShapeNode {
+        let s = size * 0.28
+        let path = CGMutablePath()
+        path.move(to: CGPoint(x: 0, y: s))
+        path.addLine(to: CGPoint(x: s, y: 0))
+        path.addLine(to: CGPoint(x: 0, y: -s))
+        path.addLine(to: CGPoint(x: -s, y: 0))
+        path.closeSubpath()
+        let node = SKShapeNode(path: path)
+        node.fillColor = itemColor
+        node.strokeColor = .clear
+        return node
+    }
+
+    /// 스위치 노드 — 주황 원형 버튼
+    private func makeSwitchNode(size: CGFloat) -> SKShapeNode {
+        let node = SKShapeNode(circleOfRadius: size * 0.24)
+        node.fillColor = switchColor
+        node.strokeColor = .clear
+        return node
+    }
+
+    /// 문(게이트) 표시 마커 — 닫힘: 진한 링(벽 위) / 열림: 옅은 링(바닥 위 잔상)
+    private func makeGateMarkerNode(size: CGFloat, isOpen: Bool) -> SKShapeNode {
+        let ring = SKShapeNode(circleOfRadius: size * 0.22)
+        ring.fillColor = .clear
+        ring.strokeColor = gateMarkerColor.withAlphaComponent(isOpen ? 0.35 : 0.9)
+        ring.lineWidth = isOpen ? 2 : 3
+        return ring
+    }
+
+    /// 포탈 노드 — 보라 이중 원형
+    private func makePortalNode(size: CGFloat) -> SKNode {
+        let container = SKNode()
+        let outer = SKShapeNode(circleOfRadius: size * 0.32)
+        outer.fillColor = .clear
+        outer.strokeColor = portalColor
+        outer.lineWidth = 3
+        let inner = SKShapeNode(circleOfRadius: size * 0.16)
+        inner.fillColor = portalColor.withAlphaComponent(0.5)
+        inner.strokeColor = .clear
+        container.addChild(outer)
+        container.addChild(inner)
+        return container
+    }
+
     /// 캐릭터 노드 — 3D 다크 정사각형 + 흰 삼각형 화살표로 방향 표시
     private func makeCharacterNode(tileSize: CGFloat, cornerRadius: CGFloat) -> SKNode {
         let container = SKNode()
@@ -437,12 +539,59 @@ class GameScene: SKScene {
         }
     }
 
+    // MARK: - 기믹 효과 (챕터 6+ 전용 — GameViewModel.applyTileEffects가 호출)
+
+    /// 보석 수집 — 노드를 사라지는 애니메이션과 함께 제거, 재구성 시에도 숨김 유지
+    func collectItem(at position: Position) {
+        collectedItemPositions.insert(position)
+        itemNodes[position]?.run(.sequence([
+            .scale(to: 1.4, duration: 0.1),
+            .group([.fadeOut(withDuration: 0.15), .scale(to: 0.1, duration: 0.15)]),
+            .removeFromParent()
+        ]))
+        itemNodes[position] = nil
+    }
+
+    /// 문 열기 — 벽→바닥 전환은 타일 자체를 다시 그려야 해서 맵 전체를 재구성
+    /// (updateColorScheme도 색만 바꾸려고 동일하게 setupMap()을 다시 부르는 기존 패턴과 동일)
+    func openGate(at position: Position) {
+        openGatePositions.insert(position)
+        setupMap()
+    }
+
+    /// 포탈 이동 — 캐릭터를 목적지로 즉시 재배치 (짧은 페이드 효과로 순간이동 느낌)
+    func teleportCharacter(to destination: Position) {
+        guard let character = characterNode else { return }
+        characterPosition = destination
+
+        let rows = mapData.height
+        let layout = layoutMetrics()
+        let x = layout.originX + CGFloat(destination.x) * layout.cellSize + layout.tileSize / 2
+        let y = layout.originY + CGFloat(rows - 1 - destination.y) * layout.cellSize + layout.tileSize / 2
+
+        character.run(.sequence([
+            .fadeOut(withDuration: 0.12),
+            .move(to: CGPoint(x: x, y: y), duration: 0),
+            .fadeIn(withDuration: 0.12)
+        ]))
+    }
+
     // MARK: - 리셋
 
     /// 캐릭터를 시작 위치와 방향으로 되돌림 (애니메이션 포함)
+    /// 기믹 상태(수집한 보석/열린 문)가 없으면 기존과 완전히 동일한 슬라이드 애니메이션만 실행
+    /// 기믹 상태가 있으면 맵을 통째로 재구성해 보석 재등장·문 다시 닫힘까지 함께 복원
     func resetCharacter() {
         characterPosition = mapData.start
         characterDirection = mapData.startDirection
-        updateCharacterTransform(animated: true)
+
+        if collectedItemPositions.isEmpty && openGatePositions.isEmpty {
+            // 기믹 없는(또는 아직 발동 전인) 스테이지 — 기존 그대로 부드러운 슬라이드
+            updateCharacterTransform(animated: true)
+        } else {
+            collectedItemPositions = []
+            openGatePositions = []
+            setupMap()  // 내부에서 캐릭터도 시작 위치에 즉시 배치됨
+        }
     }
 }
