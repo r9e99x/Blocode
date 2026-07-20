@@ -23,10 +23,12 @@ extension Color {
         })
         #else
         // macOS — NSAppearance 기반 다이나믹 프로바이더
+        // 반드시 srgbRed 이니셜라이저 사용 — NSColor(red:green:blue:) 기본형은 Generic(Calibrated) RGB라
+        // iOS의 UIColor(sRGB)와 같은 숫자를 넣어도 실제 렌더링 톤이 달라짐(다크모드 색이 iOS와 미묘하게 어긋나던 원인)
         return Color(NSColor(name: nil) { appearance in
             appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
-                ? NSColor(red: dark.red, green: dark.green, blue: dark.blue, alpha: 1.0)
-                : NSColor(red: light.red, green: light.green, blue: light.blue, alpha: 1.0)
+                ? NSColor(srgbRed: dark.red, green: dark.green, blue: dark.blue, alpha: 1.0)
+                : NSColor(srgbRed: light.red, green: light.green, blue: light.blue, alpha: 1.0)
         })
         #endif
     }

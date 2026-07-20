@@ -18,7 +18,7 @@ struct ChapterView: View {
 
     /// 다크/라이트 모드 감지 — 잠긴 스테이지 아이콘의 베벨 강도를 다크에서만 조정하는 데 사용
     @Environment(\.colorScheme) private var colorScheme
-    @State private var retryAlertStage:    Stage? = nil  // 재도전 확인 알럿 대상 스테이지
+    @State private var retryConfirmInfo: RetryConfirmInfo? = nil  // 재도전 확인 팝업 (nil이면 숨김)
     @State private var pressedStageNumber: Int?   = nil  // 눌린 스테이지 아이콘 번호 추적
     @State private var lockInfo: LockInfo?         = nil  // 잠금 안내 팝업 (nil이면 숨김)
 
@@ -77,21 +77,8 @@ struct ChapterView: View {
         .background(Color.appBackground.ignoresSafeArea())
         // 잠긴 스테이지 탭 시 해금 조건 팝업 (표시 패턴은 공용 모디파이어)
         .lockInfoPopup($lockInfo)
-        // 이미 클리어한 스테이지 탭 시 재도전 확인 알럿
-        .alert("이미 클리어한 스테이지예요", isPresented: Binding(
-            get: { retryAlertStage != nil },
-            set: { if !$0 { retryAlertStage = nil } }
-        )) {
-            Button("다시 하기") {
-                if let s = retryAlertStage {
-                    navPath.append(AppRoute.stage(chapter: s.chapter, number: s.stageNumber))
-                }
-                retryAlertStage = nil
-            }
-            Button("취소", role: .cancel) { retryAlertStage = nil }
-        } message: {
-            if let s = retryAlertStage { Text("\(s.name) — 다시 도전하겠습니까?") }
-        }
+        // 이미 클리어한 스테이지 탭 시 재도전 확인 팝업 (잠금 안내와 동일한 커스텀 카드 스타일 — 시스템 기본 Alert 미사용)
+        .retryConfirmPopup($retryConfirmInfo)
     }
 
     // MARK: - 챕터 헤더 (컬러 배경)
@@ -216,7 +203,18 @@ struct ChapterView: View {
                     )
                 }
             } else if cleared {
-                retryAlertStage = stage  // 클리어했으면 재도전 확인
+                // 클리어했으면 재도전 확인 팝업 표시 — "다시 하기" 선택 시 스테이지로 이동 후 팝업 닫기
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    retryConfirmInfo = RetryConfirmInfo(
+                        title: "이미 클리어한 스테이지예요",
+                        message: "\(stage.name) — 다시 도전하겠습니까?",
+                        accentColor: chapterColor,
+                        onRetry: {
+                            navPath.append(AppRoute.stage(chapter: stage.chapter, number: stage.stageNumber))
+                            withAnimation(.easeInOut(duration: 0.2)) { retryConfirmInfo = nil }
+                        }
+                    )
+                }
             } else {
                 navPath.append(AppRoute.stage(chapter: stage.chapter, number: stage.stageNumber))
             }

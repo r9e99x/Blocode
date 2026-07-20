@@ -101,6 +101,132 @@ struct LockInfoOverlay: View {
     }
 }
 
+// MARK: - RetryConfirmInfo
+/// "이미 클리어한 스테이지 다시 도전" 확인 팝업에 표시할 내용
+struct RetryConfirmInfo: Identifiable {
+    let id = UUID()
+    let title: String        // 팝업 제목
+    let message: String      // 안내 문구 (스테이지 이름 등)
+    let accentColor: Color   // 강조 색 (챕터 색)
+    let onRetry: () -> Void  // "다시 하기" 선택 시 실행할 동작
+}
+
+// MARK: - RetryConfirmOverlay
+/// 이미 클리어한 스테이지를 탭했을 때 재도전 여부를 물어보는 커스텀 팝업
+/// LockInfoOverlay와 동일한 카드 스타일 — 시스템 기본 Alert 대신 앱 톤에 맞춘 UI로 통일
+struct RetryConfirmOverlay: View {
+
+    let info: RetryConfirmInfo
+    let onCancel: () -> Void  // "취소" 또는 배경 탭 시 닫기 콜백
+
+    @State private var isRetryPressed = false  // "다시 하기" 버튼 눌림 상태 (3D 효과)
+    private let retryTopDepth: CGFloat = 0.8
+    private let retryBotDepth: CGFloat = 2.5
+
+    var body: some View {
+        ZStack {
+            // 배경 딤 — 탭하면 취소
+            Color.black.opacity(0.45)
+                .ignoresSafeArea()
+                .onTapGesture { onCancel() }
+
+            // 안내 카드
+            VStack(spacing: 18) {
+                // 체크 아이콘 (원형 배경 + 강조 색) — 이미 클리어했음을 시각화
+                ZStack {
+                    Circle()
+                        .fill(info.accentColor.opacity(0.18))
+                        .frame(width: 64, height: 64)
+                    Image(systemName: "checkmark")
+                        .font(.system(size: 26, weight: .semibold))
+                        .foregroundStyle(info.accentColor)
+                }
+                .padding(.top, 4)
+
+                // 제목
+                Text(info.title)
+                    .font(.system(size: 19, weight: .bold))
+                    .foregroundStyle(.primary)
+
+                // 안내 문구
+                Text(info.message)
+                    .font(.system(size: 15))
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                    .lineSpacing(3)
+
+                // "다시 하기" 버튼 (3D + 눌림 효과) — LockInfoOverlay의 확인 버튼과 동일 스타일
+                Button {
+                    info.onRetry()
+                } label: {
+                    ThreeDSurface(topDepth: retryTopDepth, bottomDepth: retryBotDepth, isPressed: isRetryPressed) {
+                        RoundedRectangle(cornerRadius: 25).fill(Color.slateButtonTopBack)
+                            .frame(maxWidth: .infinity).frame(height: 50)
+                    } bottomBack: {
+                        RoundedRectangle(cornerRadius: 25).fill(Color.slateButtonBottomBack)
+                            .frame(maxWidth: .infinity).frame(height: 50)
+                    } front: {
+                        ZStack {
+                            RoundedRectangle(cornerRadius: 25).fill(Color.slateButtonFace)
+                            if isRetryPressed {
+                                RoundedRectangle(cornerRadius: 25).fill(Color.black.opacity(0.10))
+                            }
+                            Text("다시 하기")
+                                .font(.system(size: 16, weight: .bold))
+                                .foregroundStyle(.white)
+                        }
+                        .frame(maxWidth: .infinity).frame(height: 50)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 50 + retryTopDepth + retryBotDepth)
+                }
+                .buttonStyle(.plain)
+                .onPressState(isPressed: $isRetryPressed)
+                .padding(.top, 2)
+
+                // "취소" 버튼 — 보조 액션이라 3D 없이 텍스트로만 (다시 하기와 위계 구분)
+                Button(action: onCancel) {
+                    Text("취소")
+                        .font(.system(size: 15, weight: .medium))
+                        .foregroundStyle(.secondary)
+                }
+                .buttonStyle(.plain)
+            }
+            .padding(24)
+            .frame(maxWidth: 300)
+            .background(Color.cardBackground)
+            .clipShape(RoundedRectangle(cornerRadius: 24))
+            .shadow(color: Color.black.opacity(0.15), radius: 20, x: 0, y: 8)
+            .padding(.horizontal, 40)
+        }
+    }
+}
+
+// MARK: - 재도전 확인 팝업 표시 패턴 공용화
+/// lockInfoPopup과 동일한 구조 — retryConfirmInfo가 nil이 아니면 오버레이로 표시, 닫힐 때 애니메이션과 함께 nil 복귀
+private struct RetryConfirmPopupModifier: ViewModifier {
+    @Binding var retryConfirmInfo: RetryConfirmInfo?
+
+    func body(content: Content) -> some View {
+        content.overlay {
+            if let info = retryConfirmInfo {
+                RetryConfirmOverlay(info: info) {
+                    withAnimation(.easeInOut(duration: 0.2)) { retryConfirmInfo = nil }
+                }
+                .transition(.opacity)
+            }
+        }
+    }
+}
+
+extension View {
+    /// 재도전 확인 팝업 오버레이 — 값이 있으면 표시, 취소/배경 탭 시 nil로 닫힘
+    /// (onRetry 실행 시 닫는 것은 호출부 책임 — RetryConfirmInfo.onRetry 안에서 nil 대입)
+    func retryConfirmPopup(_ retryConfirmInfo: Binding<RetryConfirmInfo?>) -> some View {
+        modifier(RetryConfirmPopupModifier(retryConfirmInfo: retryConfirmInfo))
+    }
+}
+
 // MARK: - 잠금 팝업 표시 패턴 공용화
 /// "lockInfo가 nil이 아니면 오버레이로 팝업 표시 + 닫기 시 애니메이션과 함께 nil 복귀" 패턴을
 /// 한 곳에서 관리 — 챕터 선택/챕터 상세/맥 챕터맵/맥 브라우저가 동일하게 사용

@@ -290,7 +290,10 @@ struct MacContentShell: View {
         let topD: CGFloat = 0.8
         let botD: CGFloat = 2.5
         let cr: CGFloat = 18
-        let frontColor = Color(red: 0.165, green: 0.145, blue: 0.125)
+        // 라이트: 기존 값 유지 / 다크: iOS ContentView.continueButton과 동일한 슬레이트 톤
+        // (예전엔 Color(red:...) 고정값이라 다크모드에서도 라이트 색 그대로 나오던 버그 — Color.dynamic으로 교체)
+        let frontColor = Color.dynamic(light: (0.165, 0.145, 0.125), dark: (72/255, 78/255, 96/255))
+        let pressedFrontColor = Color.dynamic(light: (86/255, 80/255, 72/255), dark: (88/255, 95/255, 116/255))
         let next = homeVM.nextStage
         let isFirstTime = homeVM.isFirstTime
 
@@ -302,15 +305,15 @@ struct MacContentShell: View {
             }
         } label: {
             ThreeDSurface(topDepth: topD, bottomDepth: botD, isPressed: isContinuePressed) {
-                RoundedRectangle(cornerRadius: cr).fill(Color.bevelTopBack)
+                RoundedRectangle(cornerRadius: cr).fill(Color.slateButtonTopBack)
                     .frame(maxWidth: .infinity).frame(height: frontH)
             } bottomBack: {
-                RoundedRectangle(cornerRadius: cr).fill(Color.bevelBottomBack)
+                RoundedRectangle(cornerRadius: cr).fill(Color.slateButtonBottomBack)
                     .frame(maxWidth: .infinity).frame(height: frontH)
             } front: {
                 ZStack {
                     RoundedRectangle(cornerRadius: cr)
-                        .fill(isContinuePressed ? Color(red: 86/255, green: 80/255, blue: 72/255) : frontColor)
+                        .fill(isContinuePressed ? pressedFrontColor : frontColor)
                     HStack {
                         HStack(spacing: 8) {
                             Image(systemName: isFirstTime ? "sparkles" : "play.fill")
@@ -342,19 +345,24 @@ struct MacContentShell: View {
         let topD: CGFloat = 0.8
         let botD: CGFloat = 2.5
         let cr: CGFloat = 18
+        // iOS ContentView.browseButton과 동일한 크림(라이트)/슬레이트(다크) 톤
+        // (예전엔 아래 뒷면이 Color(red:...) 고정 베이지라 다크모드에서도 그대로 나오던 버그)
+        let frontColor = Color.dynamic(light: (252/255, 249/255, 238/255), dark: (0.22, 0.23, 0.27))
+        let topBackColor = Color.dynamic(light: (252/255, 249/255, 238/255), dark: (0.18, 0.19, 0.22))
+        let botBackColor = Color.dynamic(light: (196/255, 192/255, 181/255), dark: (0.13, 0.14, 0.17))
 
         return Button {
             section = .chapters
         } label: {
             ThreeDSurface(topDepth: topD, bottomDepth: botD, isPressed: isBrowsePressed) {
-                RoundedRectangle(cornerRadius: cr).fill(Color.cardBackground)
+                RoundedRectangle(cornerRadius: cr).fill(topBackColor)
                     .frame(maxWidth: .infinity).frame(height: frontH)
             } bottomBack: {
-                RoundedRectangle(cornerRadius: cr).fill(Color(red: 196/255, green: 192/255, blue: 181/255))
+                RoundedRectangle(cornerRadius: cr).fill(botBackColor)
                     .frame(maxWidth: .infinity).frame(height: frontH)
             } front: {
                 ZStack {
-                    RoundedRectangle(cornerRadius: cr).fill(Color.cardBackground)
+                    RoundedRectangle(cornerRadius: cr).fill(frontColor)
                     if isBrowsePressed {
                         RoundedRectangle(cornerRadius: cr).fill(Color.black.opacity(0.06))
                     }
