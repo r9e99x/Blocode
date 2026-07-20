@@ -279,7 +279,7 @@ struct SettingsView: View {
 
     // MARK: - 게임 섹션
 
-    /// 실행 속도 슬라이더와 힌트 사용 현황
+    /// 실행 속도 슬라이더
     private var gameSection: some View {
         VStack(alignment: .leading, spacing: 10) {
             sectionLabel("게임")
@@ -321,19 +321,6 @@ struct SettingsView: View {
                     .padding(.horizontal, 16)
                     .padding(.vertical, 14)
 
-                    rowDivider
-
-                    // 힌트 사용 — 남은 횟수 표시 (향후 힌트 기능 진입점)
-                    settingsRow(
-                        icon: "questionmark",
-                        iconColor: Color(red: 0.45, green: 0.62, blue: 0.95),  // 블루 계열
-                        title: "힌트 사용",
-                        subtitle: "\(settings.hintsRemaining)회 남음"
-                    ) {
-                        Image(systemName: "chevron.right")
-                            .font(.system(size: 13, weight: .semibold))
-                            .foregroundStyle(.secondary.opacity(0.5))
-                    }
                 }
             }
         }

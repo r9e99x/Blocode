@@ -45,6 +45,11 @@ struct OnboardingView: View {
                 description: "블럭 순서대로 캐릭터가 움직여요.\n목표 지점에 도달하면 클리어!"
             ),
             OnboardingPage(
+                illustration: AnyView(gimmickIllustration),
+                title: "챕터 6부터는\n특별한 칸도 만나요",
+                description: "보석을 모으고, 스위치로 문을 열고,\n포탈로 순간이동도 해보세요."
+            ),
+            OnboardingPage(
                 illustration: AnyView(starIllustration),
                 title: "별을 모아\n스테이지를 클리어해요",
                 description: "적은 블럭으로 클리어할수록\n더 많은 별을 얻을 수 있어요."
@@ -378,7 +383,50 @@ struct OnboardingView: View {
         .frame(maxWidth: .infinity)
     }
 
-    // ④ 별 일러스트 — 별 3개 + 클리어 카드
+    // ④ 기믹 일러스트 — 보석/스위치/포탈 아이콘 (게임 화면과 동일한 색상)
+    private var gimmickIllustration: some View {
+        HStack(spacing: 24) {
+            gimmickIcon(label: "보석") {
+                Image(systemName: "diamond.fill")
+                    .font(.system(size: 30))
+                    .foregroundStyle(Color(red: 0.42, green: 0.82, blue: 0.68))  // GameScene.itemColor와 동일
+            }
+            gimmickIcon(label: "스위치") {
+                Circle()
+                    .fill(Color(red: 0.93, green: 0.62, blue: 0.28))  // GameScene.switchColor와 동일
+                    .frame(width: 32, height: 32)
+            }
+            gimmickIcon(label: "포탈") {
+                ZStack {
+                    Circle()
+                        .stroke(Color(red: 0.62, green: 0.45, blue: 0.85), lineWidth: 3)  // GameScene.portalColor와 동일
+                        .frame(width: 38, height: 38)
+                    Circle()
+                        .fill(Color(red: 0.62, green: 0.45, blue: 0.85).opacity(0.5))
+                        .frame(width: 18, height: 18)
+                }
+            }
+        }
+        .frame(maxWidth: .infinity)
+    }
+
+    /// 기믹 아이콘 하나 — 원형 카드 배경 + 아이콘 + 라벨 (holder 클로저로 아이콘 모양만 교체)
+    private func gimmickIcon<Content: View>(label: String, @ViewBuilder icon: () -> Content) -> some View {
+        VStack(spacing: 10) {
+            ZStack {
+                Circle()
+                    .fill(Color.cardBackground)
+                    .frame(width: 76, height: 76)
+                    .shadow(color: Color.black.opacity(0.07), radius: 10, x: 0, y: 3)
+                icon()
+            }
+            Text(label)
+                .font(.system(size: 13, weight: .medium))
+                .foregroundStyle(.secondary)
+        }
+    }
+
+    // ⑤ 별 일러스트 — 별 3개 + 클리어 카드
     private var starIllustration: some View {
         VStack(spacing: 20) {
             // 별 3개

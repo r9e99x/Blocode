@@ -59,11 +59,6 @@ final class SettingsService: ObservableObject {
         didSet { UserDefaults.standard.set(executionSpeed, forKey: "executionSpeed") }
     }
 
-    /// 남은 힌트 사용 횟수 — 변경 시 UserDefaults에 자동 저장
-    @Published var hintsRemaining: Int {
-        didSet { UserDefaults.standard.set(hintsRemaining, forKey: "hintsRemaining") }
-    }
-
     // MARK: - Init
 
     /// private init으로 외부 인스턴스 생성 방지 (싱글톤 패턴)
@@ -76,14 +71,15 @@ final class SettingsService: ObservableObject {
         self.soundEnabled   = ud.object(forKey: "soundEnabled")  as? Bool   ?? true
         // 저장된 실행 속도 로드 (없으면 기본값 1.0배속)
         self.executionSpeed = ud.object(forKey: "executionSpeed") as? Double ?? 1.0
-        // 저장된 힌트 횟수 로드 (없으면 기본값 3회)
-        self.hintsRemaining = ud.object(forKey: "hintsRemaining") as? Int   ?? 3
     }
 
     // MARK: - 진행도 초기화
 
     /// 모든 스테이지 클리어 기록 초기화 — ProgressService에 위임
+    /// 온보딩도 다시 보게 초기화(hasSeenOnboarding) — BlocodeApp의 @AppStorage가 같은 키를 관찰하므로
+    /// 여기서 UserDefaults 값만 바꿔도 앱 진입점이 자동으로 온보딩 화면으로 전환됨
     func resetProgress() {
         ProgressService.shared.resetAll()
+        UserDefaults.standard.set(false, forKey: "hasSeenOnboarding")
     }
 }
