@@ -1,0 +1,39 @@
+{
+  "id": "ch10_stage4",
+  "chapter": 10,
+  "stageNumber": 4,
+  "name": "미궁의 심장",
+  "mapData": {
+    "grid": [
+      [1, 1, 1, 1, 1, 1, 1, 0, 0],
+      [1, 0, 0, 0, 0, 0, 1, 0, 0],
+      [1, 0, 1, 1, 1, 0, 1, 0, 0],
+      [1, 0, 0, 0, 1, 0, 1, 0, 0],
+      [0, 0, 0, 1, 1, 0, 0, 0, 1],
+      [0, 0, 0, 0, 0, 0, 1, 0, 1],
+      [0, 0, 0, 0, 0, 0, 1, 0, 1],
+      [0, 0, 0, 0, 0, 0, 1, 0, 1],
+      [0, 0, 0, 0, 0, 0, 1, 1, 1]
+    ],
+    "start": {"x": 2, "y": 2},
+    "startDirection": "right",
+    "goal": {"x": 8, "y": 4},
+    "items": [
+      {"x": 7, "y": 8}
+    ],
+    "switches": [
+      {
+        "switchAt": {"x": 5, "y": 0},
+        "gateAt": {"x": 6, "y": 4}
+      }
+    ],
+    "portals": [
+      {
+        "a": {"x": 3, "y": 4},
+        "b": {"x": 0, "y": 3}
+      }
+    ]
+  },
+  "availableBlocks": ["moveForward", "turnLeft", "turnRight", "repeat", "if", "function", "collectItem", "activateSwitch"],
+  "starThresholds": {"threeStar": 10, "twoStar": 26}
+}

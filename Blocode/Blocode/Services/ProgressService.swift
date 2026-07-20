@@ -246,6 +246,21 @@ final class ProgressService: ObservableObject {
         UserDefaults.standard.set(streak, forKey: streakKey)
     }
 
+    // MARK: - 개발자 전용 (설정 화면 개발자 섹션 — 테스트 편의)
+
+    /// 지정 챕터까지(포함) 모든 스테이지를 3별로 강제 클리어 처리 — 정식 플레이 경로를 건너뛰고
+    /// 진행 기록을 직접 기록해 해당 챕터를 바로 플레이 가능한 상태로 만듦
+    /// (chapter/stage 잠금 조건이 전부 "직전 스테이지·직전 챕터 클리어" 기준이라, 1번 챕터부터
+    ///  순서대로 전부 기록해야 목표 챕터까지 해금 체인이 끊기지 않음)
+    func devUnlock(throughChapter chapterNumber: Int, chapters: [(id: Int, stageCount: Int)]) {
+        for ch in chapters where ch.id <= chapterNumber {
+            guard ch.stageCount > 0 else { continue }
+            for stageNum in 1...ch.stageCount {
+                recordClear(stageId: "ch\(ch.id)_stage\(stageNum)", stars: 3, blockCount: 1)
+            }
+        }
+    }
+
     // MARK: - 진행도 초기화 (설정 화면 / 테스트 편의)
 
     /// 모든 스테이지 클리어 기록 초기화 — SwiftData에서도 전부 삭제

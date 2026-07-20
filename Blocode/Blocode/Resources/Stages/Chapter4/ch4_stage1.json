@@ -5,19 +5,14 @@
   "name": "첫 함수",
   "mapData": {
     "grid": [
-      [0, 0, 0, 0, 0, 0, 0, 0],
-      [1, 1, 1, 1, 1, 1, 1, 1],
-      [0, 0, 0, 0, 0, 0, 0, 0],
-      [0, 0, 0, 0, 0, 0, 0, 0],
-      [0, 0, 0, 0, 0, 0, 0, 0]
+      [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+      [1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+      [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
     ],
-    "start": { "x": 0, "y": 1 },
+    "start": {"x": 0, "y": 1},
     "startDirection": "right",
-    "goal":  { "x": 7, "y": 1 }
+    "goal": {"x": 9, "y": 1}
   },
   "availableBlocks": ["moveForward", "repeat", "function"],
-  "starThresholds": {
-    "threeStar": 1,
-    "twoStar": 5
-  }
+  "starThresholds": {"threeStar": 1, "twoStar": 5}
 }

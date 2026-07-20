@@ -75,23 +75,11 @@ struct CodePanelView: View {
             .animation(.spring(duration: 0.3), value: isPanelExpanded)
 
             // ── 팔레트 (카드 밖, 앱 배경에 직접) ──
-            VStack(spacing: 4) {
-                // "PALETTE" 레이블
-                HStack {
-                    Text("PALETTE")
-                        .font(.system(size: 11, weight: .bold))
-                        .foregroundStyle(.secondary)
-                        .tracking(1.2)
-                    Spacer()
-                }
-                .padding(.horizontal, 20)
-
-                paletteView
-                    // 실행 중에는 팔레트 비활성화 + 흐리게
-                    .allowsHitTesting(viewModel.gameState != .running)
-                    .opacity(viewModel.gameState == .running ? 0.4 : 1.0)
-            }
-            .padding(.top, 8)
+            paletteView
+                // 실행 중에는 팔레트 비활성화 + 흐리게
+                .allowsHitTesting(viewModel.gameState != .running)
+                .opacity(viewModel.gameState == .running ? 0.4 : 1.0)
+                .padding(.top, 8)
 
             // 컨트롤 바
             ControlBarView(viewModel: viewModel, navPath: $navPath)
@@ -106,20 +94,9 @@ struct CodePanelView: View {
         VStack(spacing: 10) {
 
             // ── 팔레트 (코드 영역 위) ──
-            VStack(spacing: 4) {
-                HStack {
-                    Text("PALETTE")
-                        .font(.system(size: 11, weight: .bold))
-                        .foregroundStyle(.secondary)
-                        .tracking(1.2)
-                    Spacer()
-                }
-                .padding(.horizontal, 4)
-
-                paletteView
-                    .allowsHitTesting(viewModel.gameState != .running)
-                    .opacity(viewModel.gameState == .running ? 0.4 : 1.0)
-            }
+            paletteView
+                .allowsHitTesting(viewModel.gameState != .running)
+                .opacity(viewModel.gameState == .running ? 0.4 : 1.0)
 
             // ── 코드 리스트 (확장/축소 토글 없이 항상 펼침, 남은 세로 공간 전부 사용) ──
             // 되돌리기/실행/설정은 StageView 상단바(별점 옆)로 이동했으므로 여기선 ControlBarView 미사용

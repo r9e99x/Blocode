@@ -7,17 +7,13 @@
     "grid": [
       [0, 0, 0, 1, 0],
       [0, 0, 0, 1, 0],
-      [0, 0, 0, 1, 0],
-      [1, 1, 1, 1, 0],
-      [0, 0, 0, 0, 0]
+      [0, 0, 0, 1, 1],
+      [1, 1, 1, 1, 0]
     ],
-    "start": { "x": 0, "y": 3 },
+    "start": {"x": 0, "y": 3},
     "startDirection": "right",
-    "goal":  { "x": 3, "y": 0 }
+    "goal": {"x": 3, "y": 0}
   },
   "availableBlocks": ["moveForward", "turnLeft"],
-  "starThresholds": {
-    "threeStar": 7,
-    "twoStar": 9
-  }
+  "starThresholds": {"threeStar": 7, "twoStar": 9}
 }

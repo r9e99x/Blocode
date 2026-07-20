@@ -1,0 +1,23 @@
+{
+  "id": "ch10_stage1",
+  "chapter": 10,
+  "stageNumber": 1,
+  "name": "첫 정복",
+  "mapData": {
+    "grid": [
+      [0, 0, 0, 0, 1, 1, 1],
+      [0, 0, 0, 0, 0, 0, 1],
+      [1, 1, 1, 1, 1, 1, 1],
+      [1, 0, 0, 0, 0, 0, 0],
+      [1, 1, 1, 1, 1, 0, 0]
+    ],
+    "start": {"x": 4, "y": 0},
+    "startDirection": "right",
+    "goal": {"x": 4, "y": 4},
+    "items": [
+      {"x": 1, "y": 4}
+    ]
+  },
+  "availableBlocks": ["moveForward", "turnLeft", "turnRight", "repeat", "if", "function", "collectItem"],
+  "starThresholds": {"threeStar": 7, "twoStar": 23}
+}

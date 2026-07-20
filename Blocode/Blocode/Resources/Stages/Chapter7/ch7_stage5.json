@@ -1,0 +1,32 @@
+{
+  "id": "ch7_stage5",
+  "chapter": 7,
+  "stageNumber": 5,
+  "name": "두 개의 문",
+  "mapData": {
+    "grid": [
+      [0, 0, 0, 0, 0, 0, 1],
+      [0, 0, 0, 0, 0, 0, 1],
+      [1, 0, 1, 1, 1, 0, 1],
+      [1, 0, 0, 0, 1, 0, 1],
+      [1, 0, 1, 1, 1, 0, 1],
+      [1, 0, 0, 0, 0, 0, 1],
+      [1, 1, 1, 1, 0, 1, 1]
+    ],
+    "start": {"x": 2, "y": 4},
+    "startDirection": "right",
+    "goal": {"x": 6, "y": 0},
+    "switches": [
+      {
+        "switchAt": {"x": 4, "y": 4},
+        "gateAt": {"x": 1, "y": 2}
+      },
+      {
+        "switchAt": {"x": 0, "y": 4},
+        "gateAt": {"x": 4, "y": 6}
+      }
+    ]
+  },
+  "availableBlocks": ["moveForward", "turnLeft", "turnRight", "repeat", "if", "activateSwitch"],
+  "starThresholds": {"threeStar": 8, "twoStar": 18}
+}

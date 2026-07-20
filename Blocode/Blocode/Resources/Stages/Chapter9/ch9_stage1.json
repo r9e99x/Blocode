@@ -1,0 +1,29 @@
+{
+  "id": "ch9_stage1",
+  "chapter": 9,
+  "stageNumber": 1,
+  "name": "보석과 스위치",
+  "mapData": {
+    "grid": [
+      [1, 0, 0, 0, 0],
+      [1, 0, 0, 0, 0],
+      [1, 0, 1, 1, 1],
+      [1, 0, 0, 0, 1],
+      [1, 1, 0, 1, 1]
+    ],
+    "start": {"x": 2, "y": 2},
+    "startDirection": "right",
+    "goal": {"x": 0, "y": 0},
+    "items": [
+      {"x": 0, "y": 2}
+    ],
+    "switches": [
+      {
+        "switchAt": {"x": 3, "y": 2},
+        "gateAt": {"x": 2, "y": 4}
+      }
+    ]
+  },
+  "availableBlocks": ["moveForward", "turnLeft", "turnRight", "repeat", "if", "collectItem", "activateSwitch"],
+  "starThresholds": {"threeStar": 8, "twoStar": 20}
+}

@@ -1,0 +1,31 @@
+{
+  "id": "ch10_stage3",
+  "chapter": 10,
+  "stageNumber": 3,
+  "name": "포탈 관문",
+  "mapData": {
+    "grid": [
+      [0, 0, 0, 0, 1, 1, 1, 1, 1],
+      [0, 0, 0, 0, 0, 0, 0, 0, 1],
+      [1, 1, 1, 1, 1, 1, 1, 1, 1],
+      [1, 0, 0, 0, 0, 0, 0, 0, 0],
+      [1, 0, 1, 1, 1, 0, 0, 0, 0],
+      [1, 0, 0, 0, 1, 0, 0, 0, 0],
+      [0, 0, 0, 1, 1, 0, 0, 0, 0]
+    ],
+    "start": {"x": 2, "y": 4},
+    "startDirection": "right",
+    "goal": {"x": 4, "y": 0},
+    "items": [
+      {"x": 8, "y": 0}
+    ],
+    "portals": [
+      {
+        "a": {"x": 3, "y": 6},
+        "b": {"x": 0, "y": 5}
+      }
+    ]
+  },
+  "availableBlocks": ["moveForward", "turnLeft", "turnRight", "repeat", "if", "function", "collectItem"],
+  "starThresholds": {"threeStar": 7, "twoStar": 23}
+}

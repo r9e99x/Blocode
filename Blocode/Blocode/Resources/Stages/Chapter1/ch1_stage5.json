@@ -5,19 +5,17 @@
   "name": "미로",
   "mapData": {
     "grid": [
-      [0, 0, 0, 1, 0],
-      [0, 0, 0, 1, 0],
-      [0, 1, 1, 1, 0],
-      [0, 1, 0, 0, 0],
-      [1, 1, 0, 0, 0]
+      [1, 1, 1, 1, 1, 0],
+      [1, 0, 0, 0, 1, 0],
+      [1, 1, 1, 0, 1, 0],
+      [1, 0, 1, 0, 1, 1],
+      [1, 0, 1, 1, 1, 1],
+      [1, 0, 1, 0, 0, 0]
     ],
-    "start": { "x": 0, "y": 4 },
+    "start": {"x": 0, "y": 0},
     "startDirection": "right",
-    "goal":  { "x": 3, "y": 0 }
+    "goal": {"x": 5, "y": 4}
   },
   "availableBlocks": ["moveForward", "moveBackward", "turnLeft", "turnRight"],
-  "starThresholds": {
-    "threeStar": 10,
-    "twoStar": 13
-  }
+  "starThresholds": {"threeStar": 11, "twoStar": 15}
 }

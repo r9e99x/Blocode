@@ -1,0 +1,22 @@
+{
+  "id": "ch7_stage1",
+  "chapter": 7,
+  "stageNumber": 1,
+  "name": "첫 스위치",
+  "mapData": {
+    "grid": [
+      [1, 1, 1, 0, 1, 1]
+    ],
+    "start": {"x": 0, "y": 0},
+    "startDirection": "right",
+    "goal": {"x": 5, "y": 0},
+    "switches": [
+      {
+        "switchAt": {"x": 2, "y": 0},
+        "gateAt": {"x": 3, "y": 0}
+      }
+    ]
+  },
+  "availableBlocks": ["moveForward", "repeat", "activateSwitch"],
+  "starThresholds": {"threeStar": 3, "twoStar": 8}
+}

@@ -2,22 +2,23 @@
   "id": "ch3_stage7",
   "chapter": 3,
   "stageNumber": 7,
-  "name": "긴 직선",
+  "name": "거대한 미로",
   "mapData": {
     "grid": [
-      [1, 1, 1, 1, 1, 1, 1],
-      [0, 0, 0, 0, 0, 0, 1],
-      [0, 0, 0, 0, 0, 0, 1],
-      [0, 0, 0, 0, 0, 0, 1],
-      [0, 0, 0, 0, 0, 0, 0]
+      [1, 1, 1, 1, 1, 1, 1, 1, 1],
+      [1, 0, 0, 0, 0, 0, 0, 0, 1],
+      [1, 0, 1, 1, 1, 1, 1, 0, 1],
+      [1, 0, 1, 0, 0, 0, 1, 0, 1],
+      [1, 0, 1, 0, 1, 1, 1, 0, 1],
+      [1, 0, 1, 0, 0, 0, 0, 0, 1],
+      [1, 0, 1, 1, 1, 1, 1, 1, 1],
+      [1, 0, 0, 0, 0, 0, 0, 0, 0],
+      [1, 0, 0, 0, 0, 0, 0, 0, 0]
     ],
-    "start": { "x": 0, "y": 0 },
+    "start": {"x": 4, "y": 4},
     "startDirection": "right",
-    "goal":  { "x": 6, "y": 3 }
+    "goal": {"x": 0, "y": 8}
   },
   "availableBlocks": ["moveForward", "turnLeft", "turnRight", "repeat", "if"],
-  "starThresholds": {
-    "threeStar": 2,
-    "twoStar": 9
-  }
+  "starThresholds": {"threeStar": 2, "twoStar": 54}
 }

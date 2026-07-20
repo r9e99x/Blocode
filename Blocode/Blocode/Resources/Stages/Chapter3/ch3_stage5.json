@@ -2,22 +2,21 @@
   "id": "ch3_stage5",
   "chapter": 3,
   "stageNumber": 5,
-  "name": "더 긴 길",
+  "name": "반대로 도는 미로",
   "mapData": {
     "grid": [
-      [1, 1, 1, 1, 1, 1],
-      [0, 0, 0, 0, 0, 1],
-      [0, 0, 0, 0, 0, 1],
-      [0, 0, 0, 0, 0, 1],
-      [0, 0, 0, 0, 0, 0]
+      [0, 0, 0, 0, 0, 0, 1],
+      [0, 0, 0, 0, 0, 0, 1],
+      [1, 1, 1, 1, 1, 0, 1],
+      [1, 0, 0, 0, 1, 0, 1],
+      [1, 0, 1, 1, 1, 0, 1],
+      [1, 0, 0, 0, 0, 0, 1],
+      [1, 1, 1, 1, 1, 1, 1]
     ],
-    "start": { "x": 0, "y": 0 },
+    "start": {"x": 2, "y": 4},
     "startDirection": "right",
-    "goal":  { "x": 5, "y": 3 }
+    "goal": {"x": 6, "y": 0}
   },
   "availableBlocks": ["moveForward", "turnLeft", "turnRight", "repeat", "if"],
-  "starThresholds": {
-    "threeStar": 2,
-    "twoStar": 8
-  }
+  "starThresholds": {"threeStar": 2, "twoStar": 34}
 }

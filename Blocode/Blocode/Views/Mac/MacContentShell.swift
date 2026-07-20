@@ -387,9 +387,10 @@ struct MacContentShell: View {
             .padding(.top, 40)
             .padding(.bottom, 20)
 
-            // 지도는 가로 스크롤만 필요 — 세로+가로 동시 스크롤로 두면 헤더 근처에 렌더링 아티팩트가 생겼음
-            ScrollView(.horizontal) {
-                zigzagRow
+            // 지도는 세로 스크롤 (iOS 챕터 지도와 동일한 방향 — 예전엔 가로 스크롤이었으나
+            // 챕터가 10개로 늘면서 카드가 옆으로 계속 넓어지는 게 부자연스러워 세로 지그재그로 변경)
+            ScrollView(.vertical, showsIndicators: false) {
+                zigzagColumn
                     .padding(.horizontal, 40)
             }
         }
@@ -397,42 +398,53 @@ struct MacContentShell: View {
         .lockInfoPopup($lockInfo)
     }
 
-    /// 챕터를 가로로 나열하되 짝/홀 인덱스에 따라 위·아래로 지그재그 배치 (iOS의 세로 지그재그를 가로 버전으로)
-    private var zigzagRow: some View {
+    /// 챕터를 세로로 나열하며 좌우로 지그재그 배치 (iOS ChapterSelectView.mapSection과 동일한 방식 —
+    /// GeometryReader로 가로폭을 얻어 카드 중심을 비율(xCenterFrac)로 배치)
+    private var zigzagColumn: some View {
         let chapters = chapterSelectVM.chapters
-        let zigzagOffset: CGFloat = 70
-        let colSpacing: CGFloat = 60
         let cardSize: CGFloat = 100
         // chapterCard의 실제 프레임 폭(cardSize + 20, 라벨 여유분 포함)과 반드시 일치시켜야
-        // 점선 연결점이 카드 중심에서 어긋나지 않음 (챕터가 뒤로 갈수록 오차가 누적되던 버그 수정)
+        // 점선 연결점이 카드 중심에서 어긋나지 않음
         let cardOuterWidth = cardSize + 20
-        let colWidth = cardOuterWidth + colSpacing
+        let rowSpacing: CGFloat = 172
+        let topPad: CGFloat = 8
+        // iOS ChapterSelectView.xCenterFracs와 동일한 시퀀스 — 두 플랫폼 챕터 지도가 같은 리듬으로 지그재그 (좌우 진폭이 매 챕터 확실히 바뀌도록 10개 값 전부 채움)
+        let xCenterFracs: [CGFloat] = [0.26, 0.70, 0.22, 0.68, 0.30, 0.72, 0.24, 0.66, 0.28, 0.74]
+        func xCenterFrac(_ index: Int) -> CGFloat { xCenterFracs[index % xCenterFracs.count] }
+        let totalHeight = topPad + CGFloat(chapters.count) * rowSpacing + 60
 
-        return ZStack(alignment: .topLeading) {
-            // 연결선 (곡선 점선)
-            ForEach(0..<max(chapters.count - 1, 0), id: \.self) { i in
-                let fromY: CGFloat = i.isMultiple(of: 2) ? cardSize / 2 : zigzagOffset + cardSize / 2
-                let toY: CGFloat = (i + 1).isMultiple(of: 2) ? cardSize / 2 : zigzagOffset + cardSize / 2
-                connectorPath(
-                    from: CGPoint(x: CGFloat(i) * colWidth + cardOuterWidth / 2, y: fromY),
-                    to: CGPoint(x: CGFloat(i + 1) * colWidth + cardOuterWidth / 2, y: toY)
-                )
-            }
+        return GeometryReader { geo in
+            let w = geo.size.width
 
-            HStack(alignment: .top, spacing: colSpacing) {
+            ZStack(alignment: .topLeading) {
+                // 연결선 (곡선 점선)
+                ForEach(0..<max(chapters.count - 1, 0), id: \.self) { i in
+                    connectorPath(
+                        from: CGPoint(x: xCenterFrac(i) * w, y: topPad + CGFloat(i) * rowSpacing + cardSize),
+                        to: CGPoint(x: xCenterFrac(i + 1) * w, y: topPad + CGFloat(i + 1) * rowSpacing)
+                    )
+                }
+
                 ForEach(Array(chapters.enumerated()), id: \.element.id) { index, chapter in
                     chapterCard(chapter, cardSize: cardSize)
-                        .offset(y: index.isMultiple(of: 2) ? 0 : zigzagOffset)
+                        .offset(
+                            x: xCenterFrac(index) * w - cardOuterWidth / 2,
+                            y: topPad + CGFloat(index) * rowSpacing
+                        )
                 }
             }
+            .frame(maxWidth: .infinity)
         }
-        .padding(.bottom, zigzagOffset + 50)
+        .frame(height: totalHeight)
+        .padding(.bottom, 40)
     }
 
+    /// 두 챕터 카드를 연결하는 이차 베지어 곡선 점선 (좌→우 이동이면 위로, 우→좌 이동이면 아래로 살짝 휨)
     private func connectorPath(from: CGPoint, to: CGPoint) -> some View {
         let midX = (from.x + to.x) / 2
         let midY = (from.y + to.y) / 2
-        let controlPt = CGPoint(x: midX, y: midY + (to.y > from.y ? 30 : -30))
+        let goingRight = to.x > from.x
+        let controlPt = CGPoint(x: midX + (goingRight ? -30 : 30), y: midY)
         return Path { p in
             p.move(to: from)
             p.addQuadCurve(to: to, control: controlPt)

@@ -1,0 +1,24 @@
+{
+  "id": "ch8_stage2",
+  "chapter": 8,
+  "stageNumber": 2,
+  "name": "포탈과 회전",
+  "mapData": {
+    "grid": [
+      [1, 1, 0, 0, 0, 1, 1],
+      [0, 0, 0, 0, 0, 0, 1],
+      [1, 1, 1, 1, 1, 1, 1]
+    ],
+    "start": {"x": 0, "y": 0},
+    "startDirection": "right",
+    "goal": {"x": 0, "y": 2},
+    "portals": [
+      {
+        "a": {"x": 1, "y": 0},
+        "b": {"x": 5, "y": 0}
+      }
+    ]
+  },
+  "availableBlocks": ["moveForward", "turnRight", "repeat", "if"],
+  "starThresholds": {"threeStar": 2, "twoStar": 14}
+}

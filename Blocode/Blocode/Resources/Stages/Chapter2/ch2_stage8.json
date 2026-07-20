@@ -5,20 +5,18 @@
   "name": "반복 종합",
   "mapData": {
     "grid": [
-      [1, 1, 1, 1, 1, 1],
-      [0, 0, 0, 0, 1, 1],
-      [0, 0, 0, 1, 1, 0],
-      [0, 0, 1, 1, 0, 0],
-      [0, 1, 1, 0, 0, 0],
-      [0, 1, 1, 1, 1, 1]
+      [0, 0, 0, 0, 0, 0, 0],
+      [1, 1, 1, 1, 1, 1, 0],
+      [0, 0, 0, 0, 0, 1, 0],
+      [0, 1, 1, 1, 1, 1, 0],
+      [0, 1, 0, 0, 0, 0, 0],
+      [0, 1, 1, 1, 1, 1, 1],
+      [0, 0, 0, 0, 0, 0, 0]
     ],
-    "start": { "x": 0, "y": 0 },
+    "start": {"x": 0, "y": 1},
     "startDirection": "right",
-    "goal":  { "x": 5, "y": 5 }
+    "goal": {"x": 6, "y": 5}
   },
   "availableBlocks": ["moveForward", "turnLeft", "turnRight", "repeat"],
-  "starThresholds": {
-    "threeStar": 9,
-    "twoStar": 16
-  }
+  "starThresholds": {"threeStar": 9, "twoStar": 20}
 }

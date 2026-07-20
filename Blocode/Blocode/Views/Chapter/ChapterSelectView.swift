@@ -17,7 +17,9 @@ struct ChapterSelectView: View {
     @StateObject private var vm = ChapterSelectViewModel()
 
     /// 각 챕터 카드 중심의 X 비율 (지그재그 배치) — 화면 너비 기준 0.0~1.0
-    private let xCenterFracs: [CGFloat] = [0.26, 0.70, 0.22, 0.68, 0.30]
+    /// 챕터 수(10개)만큼 값을 다 채워둠 — 5개만 두고 순환시키면 인덱스4→5(마지막→처음) 전환에서
+    /// 좌우 진폭이 거의 없어져(0.30→0.26) 지그재그가 끊겨 보이는 문제가 있었음
+    private let xCenterFracs: [CGFloat] = [0.26, 0.70, 0.22, 0.68, 0.30, 0.72, 0.24, 0.66, 0.28, 0.74]
 
     /// 챕터 인덱스의 X 비율 — 챕터 수가 배열 길이를 넘어도 순환 접근해 인덱스 크래시 방지
     private func xCenterFrac(_ index: Int) -> CGFloat {

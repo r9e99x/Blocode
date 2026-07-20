@@ -5,19 +5,16 @@
   "name": "계단",
   "mapData": {
     "grid": [
-      [1, 1, 0, 0, 0],
-      [0, 1, 1, 0, 0],
-      [0, 0, 1, 1, 0],
-      [0, 0, 0, 1, 1],
-      [0, 0, 0, 0, 1]
+      [1, 1, 0, 0, 0, 0],
+      [0, 1, 1, 0, 0, 0],
+      [0, 0, 1, 1, 0, 0],
+      [0, 0, 0, 1, 1, 0],
+      [0, 0, 0, 0, 1, 1]
     ],
-    "start": { "x": 0, "y": 0 },
+    "start": {"x": 0, "y": 0},
     "startDirection": "right",
-    "goal":  { "x": 4, "y": 4 }
+    "goal": {"x": 5, "y": 4}
   },
   "availableBlocks": ["moveForward", "turnLeft", "turnRight", "repeat"],
-  "starThresholds": {
-    "threeStar": 4,
-    "twoStar": 10
-  }
+  "starThresholds": {"threeStar": 5, "twoStar": 12}
 }

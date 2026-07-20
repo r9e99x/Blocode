@@ -1,0 +1,23 @@
+{
+  "id": "ch7_stage3",
+  "chapter": 7,
+  "stageNumber": 3,
+  "name": "갈림길의 스위치",
+  "mapData": {
+    "grid": [
+      [0, 1, 0, 0, 0],
+      [1, 1, 0, 1, 1]
+    ],
+    "start": {"x": 0, "y": 1},
+    "startDirection": "right",
+    "goal": {"x": 4, "y": 1},
+    "switches": [
+      {
+        "switchAt": {"x": 1, "y": 0},
+        "gateAt": {"x": 2, "y": 1}
+      }
+    ]
+  },
+  "availableBlocks": ["moveForward", "moveBackward", "turnLeft", "turnRight", "repeat", "if", "activateSwitch"],
+  "starThresholds": {"threeStar": 7, "twoStar": 17}
+}

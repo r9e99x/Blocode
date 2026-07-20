@@ -5,20 +5,20 @@
   "name": "긴 C자",
   "mapData": {
     "grid": [
-      [1, 1, 1, 1, 1],
-      [0, 0, 0, 0, 1],
-      [0, 0, 0, 0, 1],
-      [0, 0, 0, 0, 1],
-      [0, 0, 0, 0, 1],
-      [1, 1, 1, 1, 1]
+      [1, 1, 1, 1, 1, 1, 1, 1, 1],
+      [1, 0, 0, 0, 0, 0, 0, 0, 0],
+      [1, 0, 1, 1, 1, 1, 1, 0, 0],
+      [1, 0, 1, 0, 0, 0, 1, 0, 0],
+      [1, 0, 1, 0, 1, 0, 1, 0, 0],
+      [1, 0, 1, 0, 1, 0, 1, 0, 0],
+      [1, 0, 1, 1, 1, 0, 1, 0, 0],
+      [1, 0, 0, 0, 0, 0, 1, 0, 0],
+      [1, 1, 1, 1, 1, 1, 1, 0, 0]
     ],
-    "start": { "x": 0, "y": 0 },
-    "startDirection": "right",
-    "goal":  { "x": 0, "y": 5 }
+    "start": {"x": 4, "y": 4},
+    "startDirection": "down",
+    "goal": {"x": 8, "y": 0}
   },
   "availableBlocks": ["moveForward", "moveBackward", "turnLeft", "turnRight", "repeat", "if", "function"],
-  "starThresholds": {
-    "threeStar": 2,
-    "twoStar": 13
-  }
+  "starThresholds": {"threeStar": 2, "twoStar": 54}
 }

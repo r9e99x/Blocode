@@ -5,19 +5,16 @@
   "name": "두 구간",
   "mapData": {
     "grid": [
-      [1, 1, 1, 1, 1],
-      [0, 0, 0, 0, 1],
-      [0, 0, 0, 0, 1],
-      [0, 0, 0, 0, 1],
-      [0, 0, 0, 0, 0]
+      [1, 1, 1, 1, 1, 1],
+      [0, 0, 0, 0, 0, 1],
+      [0, 0, 0, 0, 0, 1],
+      [0, 0, 0, 0, 0, 1],
+      [0, 0, 0, 0, 0, 1]
     ],
-    "start": { "x": 0, "y": 0 },
+    "start": {"x": 0, "y": 0},
     "startDirection": "right",
-    "goal":  { "x": 4, "y": 3 }
+    "goal": {"x": 5, "y": 4}
   },
   "availableBlocks": ["moveForward", "turnRight", "repeat"],
-  "starThresholds": {
-    "threeStar": 3,
-    "twoStar": 6
-  }
+  "starThresholds": {"threeStar": 3, "twoStar": 7}
 }

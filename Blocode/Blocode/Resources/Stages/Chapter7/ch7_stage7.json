@@ -1,0 +1,32 @@
+{
+  "id": "ch7_stage7",
+  "chapter": 7,
+  "stageNumber": 7,
+  "name": "스위치 종합",
+  "mapData": {
+    "grid": [
+      [1, 0, 1, 0, 0, 0, 0],
+      [1, 0, 1, 0, 0, 0, 0],
+      [1, 0, 1, 0, 0, 0, 0],
+      [1, 0, 1, 0, 0, 0, 0],
+      [1, 0, 1, 0, 1, 1, 1],
+      [0, 0, 1, 0, 0, 0, 1],
+      [0, 0, 1, 1, 0, 1, 1]
+    ],
+    "start": {"x": 4, "y": 4},
+    "startDirection": "right",
+    "goal": {"x": 0, "y": 4},
+    "switches": [
+      {
+        "switchAt": {"x": 6, "y": 4},
+        "gateAt": {"x": 4, "y": 6}
+      },
+      {
+        "switchAt": {"x": 2, "y": 3},
+        "gateAt": {"x": 1, "y": 0}
+      }
+    ]
+  },
+  "availableBlocks": ["moveForward", "turnLeft", "turnRight", "repeat", "if", "function", "activateSwitch"],
+  "starThresholds": {"threeStar": 10, "twoStar": 20}
+}

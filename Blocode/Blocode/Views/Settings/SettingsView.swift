@@ -25,6 +25,7 @@ struct SettingsView: View {
     @State private var showResetAlert   = false  // 진행도 초기화 확인 알럿 표시 여부
     @State private var showResetSuccess = false  // 초기화 완료 알럿 표시 여부
     @State private var isScrolled       = false  // 스크롤 여부 (헤더 그림자 표시용)
+    @State private var devUnlockedLabel: String? = nil  // 개발자 해금 완료 알럿에 표시할 챕터 설명 (nil이면 알럿 숨김)
 
     // 슬라이더 인덱스: 0=0.5× / 1=1.0× / 2=2.0×
     @State private var speedIndex: Double = 1
@@ -84,11 +85,12 @@ struct SettingsView: View {
                 // 설정 섹션 스크롤 영역
                 ScrollView {
                     VStack(spacing: 28) {
-                        themeSection    // 테마 선택 섹션
-                        feedbackSection // 햅틱/효과음 섹션
-                        gameSection     // 실행 속도/힌트 섹션
-                        dataSection     // iCloud/초기화 섹션
-                        footerView      // 버전 정보
+                        themeSection      // 테마 선택 섹션
+                        feedbackSection   // 햅틱/효과음 섹션
+                        gameSection       // 실행 속도/힌트 섹션
+                        dataSection       // iCloud/초기화 섹션
+                        developerSection  // 챕터 강제 해금(테스트 편의) — 임시, 정식 배포 전 제거 예정
+                        footerView        // 버전 정보
                     }
                     .padding(.horizontal, 20)
                     .padding(.top, 12)
@@ -134,6 +136,15 @@ struct SettingsView: View {
             }
         } message: {
             Text("모든 진행도가 삭제됐어요.")
+        }
+        // 개발자 해금 완료 알럿
+        .alert("해금 완료", isPresented: Binding(
+            get: { devUnlockedLabel != nil },
+            set: { if !$0 { devUnlockedLabel = nil } }
+        )) {
+            Button("확인", role: .cancel) {}
+        } message: {
+            Text("\(devUnlockedLabel ?? "")까지 전부 3별로 처리됐어요.")
         }
     }
 
@@ -364,6 +375,39 @@ struct SettingsView: View {
                             .font(.system(size: 15, weight: .medium))
                             .foregroundStyle(Color(red: 0.93, green: 0.28, blue: 0.18))  // 빨간 텍스트
                             .buttonStyle(.plain)
+                    }
+                }
+            }
+        }
+    }
+
+    // MARK: - 개발자 섹션 (챕터 강제 해금 — 테스트 편의용 임시 기능, 정식 배포 전 제거 예정)
+
+    /// 챕터별 "해금" 버튼 — 정식 플레이(스테이지 클리어) 없이 1번 챕터부터 눌린 챕터까지
+    /// 모든 스테이지를 3별 클리어 기록으로 채워 바로 플레이 가능하게 만듦
+    /// (매번 진행도 초기화 후 마지막 챕터까지 직접 깨면서 테스트하는 시간을 줄이기 위한 용도)
+    private var developerSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            sectionLabel("개발자")
+            settingsCard {
+                VStack(spacing: 0) {
+                    ForEach(Array(ChapterCatalog.all.enumerated()), id: \.element.id) { index, chapter in
+                        settingsRow(
+                            title: "챕터 \(chapter.number) · \(chapter.title)",
+                            subtitle: "1~\(chapter.number)챕터 전체 스테이지 3별 처리"
+                        ) {
+                            Button("해금") {
+                                let chapters = ChapterCatalog.all.map { (id: $0.id, stageCount: $0.stageCount) }
+                                ProgressService.shared.devUnlock(throughChapter: chapter.number, chapters: chapters)
+                                devUnlockedLabel = "챕터 \(chapter.number) · \(chapter.title)"
+                            }
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundStyle(toggleTint)
+                            .buttonStyle(.plain)
+                        }
+                        if index < ChapterCatalog.all.count - 1 {
+                            rowDivider
+                        }
                     }
                 }
             }

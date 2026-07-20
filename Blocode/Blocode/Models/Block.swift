@@ -34,43 +34,51 @@ enum BlockType: String, Codable, CaseIterable {
     case repeatBlock   = "repeat"        // 반복 (자식 블럭들을 N번 반복 실행)
     case ifBlock       = "if"            // 조건문 (앞 칸 상태에 따라 자식 블럭 실행)
     case functionBlock = "function"      // 함수 (자식 블럭들을 서브루틴으로 묶어 실행)
+    case collectItem   = "collectItem"   // 보석 획득 (현재 칸에 보석이 있을 때만 성공, 아니면 실패 — 챕터6+ 전용)
+    case activateSwitch = "activateSwitch" // 스위치 작동 (현재 칸에 스위치가 있을 때만 성공, 아니면 실패 — 챕터7+ 전용)
 
     /// 화면에 표시할 블럭 이름 (한국어)
     var displayName: String {
         switch self {
-        case .moveForward:   return "앞으로"
-        case .moveBackward:  return "뒤로"
-        case .turnLeft:      return "왼쪽 회전"
-        case .turnRight:     return "오른쪽 회전"
-        case .repeatBlock:   return "반복"
-        case .ifBlock:       return "만약에"
-        case .functionBlock: return "함수"
+        case .moveForward:    return "앞으로"
+        case .moveBackward:   return "뒤로"
+        case .turnLeft:       return "왼쪽 회전"
+        case .turnRight:      return "오른쪽 회전"
+        case .repeatBlock:    return "반복"
+        case .ifBlock:        return "만약에"
+        case .functionBlock:  return "함수"
+        case .collectItem:    return "보석 획득"
+        case .activateSwitch: return "스위치 작동"
         }
     }
 
     /// SF Symbols 아이콘 이름 — 블럭 행과 팔레트에서 사용
     var iconName: String {
         switch self {
-        case .moveForward:   return "arrow.up"
-        case .moveBackward:  return "arrow.down"
-        case .turnLeft:      return "arrow.counterclockwise"
-        case .turnRight:     return "arrow.clockwise"
-        case .repeatBlock:   return "repeat"
-        case .ifBlock:       return "arrow.triangle.branch"  // 분기 경로 아이콘
-        case .functionBlock: return "curlybraces"            // 코드 함수 아이콘
+        case .moveForward:    return "arrow.up"
+        case .moveBackward:   return "arrow.down"
+        case .turnLeft:       return "arrow.counterclockwise"
+        case .turnRight:      return "arrow.clockwise"
+        case .repeatBlock:    return "repeat"
+        case .ifBlock:        return "arrow.triangle.branch"  // 분기 경로 아이콘
+        case .functionBlock:  return "curlybraces"            // 코드 함수 아이콘
+        case .collectItem:    return "diamond.fill"           // 맵 위 보석 마커와 동일한 다이아몬드 모양
+        case .activateSwitch: return "hand.tap.fill"          // 스위치를 누르는 동작을 표현
         }
     }
 
     /// 팔레트 카드에 표시할 짧은 이름
     var shortName: String {
         switch self {
-        case .moveForward:   return "앞으로"
-        case .moveBackward:  return "뒤로"
-        case .turnLeft:      return "왼쪽"
-        case .turnRight:     return "오른쪽"
-        case .repeatBlock:   return "반복"
-        case .ifBlock:       return "만약에"
-        case .functionBlock: return "함수"
+        case .moveForward:    return "앞으로"
+        case .moveBackward:   return "뒤로"
+        case .turnLeft:       return "왼쪽"
+        case .turnRight:      return "오른쪽"
+        case .repeatBlock:    return "반복"
+        case .ifBlock:        return "만약에"
+        case .functionBlock:  return "함수"
+        case .collectItem:    return "획득"
+        case .activateSwitch: return "스위치"
         }
     }
 
@@ -87,13 +95,15 @@ enum BlockType: String, Codable, CaseIterable {
     /// (팔레트 카드·코드 행·최소화 칩·자식 행·드래그 고스트가 전부 이 색에서 파생되므로 한 곳만 관리)
     var blockColor: Color {
         switch self {
-        case .moveForward:   return Self.pastel(124/255, 196/255, 158/255) // 민트 그린
-        case .moveBackward:  return Self.pastel(207/255, 127/255, 122/255) // 살먼 로즈
-        case .turnLeft:      return Self.pastel(142/255, 176/255, 200/255) // 뮤트 블루
-        case .turnRight:     return Self.pastel(142/255, 176/255, 200/255) // 뮤트 블루
-        case .repeatBlock:   return Self.pastel(168/255, 141/255, 192/255) // 라벤더
-        case .ifBlock:       return Self.pastel(240/255, 196/255, 100/255) // 골든 옐로우
-        case .functionBlock: return Self.pastel(94/255,  198/255, 208/255) // 틸
+        case .moveForward:    return Self.pastel(124/255, 196/255, 158/255) // 민트 그린
+        case .moveBackward:   return Self.pastel(207/255, 127/255, 122/255) // 살먼 로즈
+        case .turnLeft:       return Self.pastel(142/255, 176/255, 200/255) // 뮤트 블루
+        case .turnRight:      return Self.pastel(142/255, 176/255, 200/255) // 뮤트 블루
+        case .repeatBlock:    return Self.pastel(168/255, 141/255, 192/255) // 라벤더
+        case .ifBlock:        return Self.pastel(240/255, 196/255, 100/255) // 골든 옐로우
+        case .functionBlock:  return Self.pastel(94/255,  198/255, 208/255) // 틸
+        case .collectItem:    return Self.pastel(0.42, 0.82, 0.68)          // 민트 보석 — GameScene.itemColor와 동일 톤
+        case .activateSwitch: return Self.pastel(0.93, 0.62, 0.28)          // 주황 스위치 — GameScene.switchColor와 동일 톤
         }
     }
 

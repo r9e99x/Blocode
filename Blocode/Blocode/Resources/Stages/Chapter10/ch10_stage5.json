@@ -1,0 +1,40 @@
+{
+  "id": "ch10_stage5",
+  "chapter": 10,
+  "stageNumber": 5,
+  "name": "최후의 시험",
+  "mapData": {
+    "grid": [
+      [0, 0, 0, 0, 0, 1, 1, 1, 1],
+      [0, 0, 0, 0, 0, 0, 0, 0, 1],
+      [0, 0, 0, 0, 0, 0, 1, 0, 1],
+      [0, 0, 0, 0, 1, 0, 1, 0, 1],
+      [0, 0, 0, 0, 1, 1, 1, 0, 1],
+      [0, 0, 0, 0, 0, 0, 0, 0, 1],
+      [1, 1, 1, 1, 0, 1, 1, 1, 1],
+      [1, 0, 0, 0, 0, 0, 0, 0, 0],
+      [1, 1, 1, 1, 1, 0, 0, 0, 0]
+    ],
+    "start": {"x": 6, "y": 2},
+    "startDirection": "down",
+    "goal": {"x": 4, "y": 8},
+    "items": [
+      {"x": 8, "y": 0},
+      {"x": 0, "y": 7}
+    ],
+    "switches": [
+      {
+        "switchAt": {"x": 8, "y": 5},
+        "gateAt": {"x": 4, "y": 6}
+      }
+    ],
+    "portals": [
+      {
+        "a": {"x": 4, "y": 3},
+        "b": {"x": 5, "y": 0}
+      }
+    ]
+  },
+  "availableBlocks": ["moveForward", "turnLeft", "turnRight", "repeat", "if", "function", "collectItem", "activateSwitch"],
+  "starThresholds": {"threeStar": 13, "twoStar": 29}
+}

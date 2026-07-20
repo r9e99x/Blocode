@@ -60,10 +60,23 @@ struct BlockRowView: View {
     private let botD:    CGFloat = 1.9
     private let cr:      CGFloat = 9
     #else
-    private let frontH:  CGFloat = 48  // 앞면 높이
-    private let topD:    CGFloat = 2   // 위 뒷면 두께
-    private let botD:    CGFloat = 3   // 아래 뒷면 두께
-    private let cr:      CGFloat = 14  // 모서리 반지름
+    private let frontH:  CGFloat = 40  // 앞면 높이 (코드 영역 블럭 세로 크기 축소 — 기존 48)
+    private let topD:    CGFloat = 1.6 // 위 뒷면 두께
+    private let botD:    CGFloat = 2.4 // 아래 뒷면 두께
+    private let cr:      CGFloat = 12  // 모서리 반지름
+    #endif
+
+    // 아이콘/텍스트/스테퍼 크기 — iOS는 블럭 축소에 맞춰 함께 축소, 맥은 기존 값 그대로 유지
+    #if os(macOS)
+    private let rowIconSize:    CGFloat = 16
+    private let rowTextSize:    CGFloat = 15
+    private let stepperBtnSize: CGFloat = 30
+    private let stepperFontSize: CGFloat = 13
+    #else
+    private let rowIconSize:    CGFloat = 14
+    private let rowTextSize:    CGFloat = 13
+    private let stepperBtnSize: CGFloat = 26
+    private let stepperFontSize: CGFloat = 12
     #endif
 
     var body: some View {
@@ -124,13 +137,13 @@ struct BlockRowView: View {
                         HStack(spacing: 10) {
                             // 블럭 종류 아이콘
                             Image(systemName: block.type.iconName)
-                                .font(.system(size: 16, weight: .semibold))
+                                .font(.system(size: rowIconSize, weight: .semibold))
                                 .foregroundStyle(.white)
                                 .frame(width: 22)
 
                             // 블럭 이름
                             Text(block.type.displayName)
-                                .font(.system(size: 15, weight: .semibold))
+                                .font(.system(size: rowTextSize, weight: .semibold))
                                 .foregroundStyle(.white)
 
                             Spacer(minLength: 0)
@@ -266,13 +279,13 @@ struct BlockRowView: View {
             } label: {
                 Image(systemName: "minus")
                     .font(.system(size: 11, weight: .bold))
-                    .frame(width: 30, height: 30)
+                    .frame(width: stepperBtnSize, height: stepperBtnSize)
             }
             .buttonStyle(.borderless)
 
             // 현재 횟수 표시 ("2×" 형식)
             Text("\(count)×")
-                .font(.system(size: 13, weight: .bold))
+                .font(.system(size: stepperFontSize, weight: .bold))
                 .monospacedDigit()
                 .frame(minWidth: 24)
 
@@ -282,7 +295,7 @@ struct BlockRowView: View {
             } label: {
                 Image(systemName: "plus")
                     .font(.system(size: 11, weight: .bold))
-                    .frame(width: 30, height: 30)
+                    .frame(width: stepperBtnSize, height: stepperBtnSize)
             }
             .buttonStyle(.borderless)
         }

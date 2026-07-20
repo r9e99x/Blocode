@@ -1,0 +1,31 @@
+{
+  "id": "ch10_stage2",
+  "chapter": 10,
+  "stageNumber": 2,
+  "name": "문지기",
+  "mapData": {
+    "grid": [
+      [0, 0, 0, 0, 1, 1, 1],
+      [0, 0, 0, 0, 1, 0, 1],
+      [0, 0, 0, 0, 1, 0, 1],
+      [0, 0, 0, 0, 0, 0, 1],
+      [1, 1, 1, 1, 1, 1, 0],
+      [1, 0, 0, 0, 0, 0, 0],
+      [1, 1, 1, 1, 1, 0, 0]
+    ],
+    "start": {"x": 4, "y": 2},
+    "startDirection": "up",
+    "goal": {"x": 4, "y": 6},
+    "items": [
+      {"x": 1, "y": 6}
+    ],
+    "switches": [
+      {
+        "switchAt": {"x": 5, "y": 0},
+        "gateAt": {"x": 6, "y": 4}
+      }
+    ]
+  },
+  "availableBlocks": ["moveForward", "turnLeft", "turnRight", "repeat", "if", "function", "collectItem", "activateSwitch"],
+  "starThresholds": {"threeStar": 10, "twoStar": 26}
+}

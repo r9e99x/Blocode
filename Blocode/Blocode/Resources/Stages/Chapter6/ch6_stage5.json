@@ -1,0 +1,26 @@
+{
+  "id": "ch6_stage5",
+  "chapter": 6,
+  "stageNumber": 5,
+  "name": "깊은 곳의 보석",
+  "mapData": {
+    "grid": [
+      [0, 0, 0, 0, 0, 0, 1],
+      [0, 0, 0, 0, 0, 0, 1],
+      [1, 1, 1, 1, 1, 0, 1],
+      [1, 0, 0, 0, 1, 0, 1],
+      [1, 0, 1, 1, 1, 0, 1],
+      [1, 0, 0, 0, 0, 0, 1],
+      [1, 1, 1, 1, 1, 1, 1]
+    ],
+    "start": {"x": 2, "y": 4},
+    "startDirection": "right",
+    "goal": {"x": 6, "y": 0},
+    "items": [
+      {"x": 1, "y": 2},
+      {"x": 4, "y": 6}
+    ]
+  },
+  "availableBlocks": ["moveForward", "turnLeft", "turnRight", "repeat", "if", "collectItem"],
+  "starThresholds": {"threeStar": 8, "twoStar": 18}
+}

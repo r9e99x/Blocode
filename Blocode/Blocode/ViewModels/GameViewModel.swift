@@ -395,6 +395,20 @@ final class GameViewModel: ObservableObject {
                 // 추후 챕터4 UI에서 함수 정의-호출 분리 구조로 확장 예정
                 let children = block.children ?? []
                 await executeBlocks(children, parentPath: path)
+
+            case .collectItem:
+                // 보석 획득 — 현재 칸에 아직 안 모은 보석이 있을 때만 성공, 아니면 벽 부딪힘과 동일하게 실패
+                if !collectItemAtCurrentPosition() {
+                    handleFailure(at: path, message: "여기엔 보석이 없어요 · 라인 \(path[0] + 1)")
+                    return
+                }
+
+            case .activateSwitch:
+                // 스위치 작동 — 현재 칸에 스위치가 있을 때만 성공, 아니면 벽 부딪힘과 동일하게 실패
+                if !activateSwitchAtCurrentPosition() {
+                    handleFailure(at: path, message: "여기엔 스위치가 없어요 · 라인 \(path[0] + 1)")
+                    return
+                }
             }
 
             // 각 블럭 실행 후 목표 도달 여부 확인
@@ -455,29 +469,46 @@ final class GameViewModel: ObservableObject {
         return openedGates.contains(position)
     }
 
-    /// 이동 후 도착한 칸의 기믹 효과 적용 (보석 수집 / 스위치 누름 / 포탈 이동)
-    /// 기믹 필드가 전부 nil인 스테이지는 아래 세 블록이 전부 조용히 스킵되므로 완전히 무해
+    /// 이동 후 도착한 칸의 포탈 효과 적용 (자동 통과) — 보석 획득/스위치 작동은
+    /// 자동이 아니라 전용 블럭(collectItem/activateSwitch) 실행 시에만 처리됨
+    /// portals가 nil인 스테이지는 아래 블록이 조용히 스킵되므로 완전히 무해
     private func applyTileEffects(at position: Position) {
         guard let scene else { return }
-
-        // 보석 수집 — 처음 밟았을 때만 1회 수집 (별점 계산은 handleSuccess에서)
-        if scene.mapData.items?.contains(position) == true, !collectedItems.contains(position) {
-            collectedItems.insert(position)
-            scene.collectItem(at: position)
-        }
-
-        // 스위치 — 밟으면 연결된 문을 염 (이미 열려 있으면 재실행 안 함)
-        if let gate = scene.mapData.switches?.first(where: { $0.switchAt == position })?.gateAt,
-           !openedGates.contains(gate) {
-            openedGates.insert(gate)
-            scene.openGate(at: gate)
-        }
 
         // 포탈 — 입장하면 짝으로 순간이동 (도착 칸에서는 재귀 적용 없이 1회만 이동)
         if let pair = scene.mapData.portals?.first(where: { $0.a == position || $0.b == position }) {
             let destination = pair.a == position ? pair.b : pair.a
             scene.teleportCharacter(to: destination)
         }
+    }
+
+    /// "보석 획득" 블럭 실행 — 캐릭터의 현재 위치에 아직 수집하지 않은 보석이 있을 때만 성공
+    /// (한 번 수집한 칸에서 다시 실행하면 실패 — 보석은 1회성)
+    private func collectItemAtCurrentPosition() -> Bool {
+        guard let scene else { return false }
+        let position = scene.characterPosition
+        guard scene.mapData.items?.contains(position) == true,
+              !collectedItems.contains(position) else {
+            return false
+        }
+        collectedItems.insert(position)
+        scene.collectItem(at: position)
+        return true
+    }
+
+    /// "스위치 작동" 블럭 실행 — 캐릭터의 현재 위치에 스위치가 있을 때만 성공(연결된 문을 엶)
+    /// 이미 열린 문이어도 스위치 자체는 계속 그 자리에 있으므로 재실행은 실패가 아님(무해한 재작동)
+    private func activateSwitchAtCurrentPosition() -> Bool {
+        guard let scene else { return false }
+        let position = scene.characterPosition
+        guard let gate = scene.mapData.switches?.first(where: { $0.switchAt == position })?.gateAt else {
+            return false
+        }
+        if !openedGates.contains(gate) {
+            openedGates.insert(gate)
+            scene.openGate(at: gate)
+        }
+        return true
     }
 
     // MARK: - 캐릭터 이동 (GameScene에 명령)

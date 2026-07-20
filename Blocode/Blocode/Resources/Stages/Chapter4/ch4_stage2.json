@@ -5,19 +5,16 @@
   "name": "함수와 반복",
   "mapData": {
     "grid": [
-      [1, 1, 1, 1, 1],
-      [0, 0, 0, 0, 1],
-      [0, 0, 0, 0, 1],
-      [0, 0, 0, 0, 1],
-      [0, 0, 0, 0, 0]
+      [1, 1, 1, 1, 1, 1],
+      [0, 0, 0, 0, 0, 1],
+      [0, 0, 0, 0, 0, 1],
+      [0, 0, 0, 0, 0, 1],
+      [1, 1, 1, 1, 1, 1]
     ],
-    "start": { "x": 0, "y": 0 },
+    "start": {"x": 0, "y": 0},
     "startDirection": "right",
-    "goal":  { "x": 4, "y": 3 }
+    "goal": {"x": 0, "y": 4}
   },
-  "availableBlocks": ["moveForward", "turnLeft", "turnRight", "repeat", "function"],
-  "starThresholds": {
-    "threeStar": 3,
-    "twoStar": 7
-  }
+  "availableBlocks": ["moveForward", "turnRight", "repeat", "function"],
+  "starThresholds": {"threeStar": 5, "twoStar": 13}
 }

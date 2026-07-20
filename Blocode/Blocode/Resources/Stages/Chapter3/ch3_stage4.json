@@ -2,22 +2,19 @@
   "id": "ch3_stage4",
   "chapter": 3,
   "stageNumber": 4,
-  "name": "세 벽",
+  "name": "나선 입구",
   "mapData": {
     "grid": [
-      [1, 1, 1, 1, 0],
-      [0, 0, 0, 1, 0],
-      [0, 0, 0, 1, 0],
-      [1, 1, 1, 1, 0],
-      [0, 0, 0, 0, 0]
+      [1, 0, 0, 0, 0],
+      [1, 0, 0, 0, 0],
+      [1, 0, 1, 1, 1],
+      [1, 0, 0, 0, 1],
+      [1, 1, 1, 1, 1]
     ],
-    "start": { "x": 0, "y": 0 },
+    "start": {"x": 2, "y": 2},
     "startDirection": "right",
-    "goal":  { "x": 0, "y": 3 }
+    "goal": {"x": 0, "y": 0}
   },
   "availableBlocks": ["moveForward", "turnLeft", "turnRight", "repeat", "if"],
-  "starThresholds": {
-    "threeStar": 2,
-    "twoStar": 9
-  }
+  "starThresholds": {"threeStar": 2, "twoStar": 20}
 }

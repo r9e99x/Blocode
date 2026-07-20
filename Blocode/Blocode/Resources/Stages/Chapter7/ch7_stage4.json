@@ -1,0 +1,26 @@
+{
+  "id": "ch7_stage4",
+  "chapter": 7,
+  "stageNumber": 4,
+  "name": "나선 속 문",
+  "mapData": {
+    "grid": [
+      [1, 0, 0, 0, 0],
+      [1, 0, 0, 0, 0],
+      [1, 0, 1, 1, 1],
+      [1, 0, 0, 0, 1],
+      [1, 1, 0, 1, 1]
+    ],
+    "start": {"x": 2, "y": 2},
+    "startDirection": "right",
+    "goal": {"x": 0, "y": 0},
+    "switches": [
+      {
+        "switchAt": {"x": 3, "y": 2},
+        "gateAt": {"x": 2, "y": 4}
+      }
+    ]
+  },
+  "availableBlocks": ["moveForward", "turnLeft", "turnRight", "repeat", "if", "activateSwitch"],
+  "starThresholds": {"threeStar": 5, "twoStar": 15}
+}

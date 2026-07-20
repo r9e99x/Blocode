@@ -31,6 +31,13 @@ struct PaletteView: View {
                       dark: (0.18, 0.19, 0.23))
     }
 
+    // 팔레트 세로 크기 축소(iOS 전용) — 맥은 카드가 이미 작아서 기존 패딩 그대로 유지
+    #if os(macOS)
+    private let verticalPadding: CGFloat = 12
+    #else
+    private let verticalPadding: CGFloat = 9
+    #endif
+
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 10) {
@@ -47,7 +54,7 @@ struct PaletteView: View {
                 }
             }
             .padding(.horizontal, 14)
-            .padding(.vertical, 12)
+            .padding(.vertical, verticalPadding)
         }
         .background(containerColor)
         .clipShape(RoundedRectangle(cornerRadius: 20))
@@ -81,10 +88,17 @@ struct PaletteCardView: View {
     private let topDepth:  CGFloat = 1.3
     private let botDepth:  CGFloat = 2.1
     #else
-    private let btnSize:   CGFloat = 54   // 버튼 크기
-    private let radius:    CGFloat = 16   // 모서리 반지름
-    private let topDepth:  CGFloat = 2    // 위 뒷면 두께
-    private let botDepth:  CGFloat = 3.5  // 아래 뒷면 두께
+    private let btnSize:   CGFloat = 46   // 버튼 크기 (팔레트 세로 크기 축소 — 기존 54)
+    private let radius:    CGFloat = 14   // 모서리 반지름
+    private let topDepth:  CGFloat = 1.6  // 위 뒷면 두께
+    private let botDepth:  CGFloat = 2.8  // 아래 뒷면 두께
+    #endif
+
+    // 아이콘 크기 — iOS는 버튼 축소에 맞춰 함께 축소, 맥은 기존 값 그대로 유지
+    #if os(macOS)
+    private let iconSize: CGFloat = 18
+    #else
+    private let iconSize: CGFloat = 16
     #endif
 
     var body: some View {
@@ -107,7 +121,7 @@ struct PaletteCardView: View {
             ZStack {
                 RoundedRectangle(cornerRadius: radius).fill(type.blockColor)
                 Image(systemName: type.iconName)
-                    .font(.system(size: 18, weight: .semibold))
+                    .font(.system(size: iconSize, weight: .semibold))
                     .foregroundStyle(.white)
             }
             .frame(width: btnSize, height: btnSize)

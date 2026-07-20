@@ -42,6 +42,21 @@ enum ChapterCatalog {
         ChapterInfo(id: 5, title: "심화",   stageCount: 6,
                     color: chapterColor(red: 0.88, green: 0.50, blue: 0.68),
                     requiredStarsFromPrev: 14),      // 챕터 4 최대 21개 중 14개 (67%)
+        ChapterInfo(id: 6, title: "보석",   stageCount: 7,
+                    color: chapterColor(red: 0.71, green: 0.65, blue: 0.89), // 라벤더
+                    requiredStarsFromPrev: 12),      // 챕터 5 최대 18개 중 12개 (67%)
+        ChapterInfo(id: 7, title: "스위치", stageCount: 7,
+                    color: chapterColor(red: 0.30, green: 0.69, blue: 0.67), // 틸
+                    requiredStarsFromPrev: 14),      // 챕터 6 최대 21개 중 14개 (67%)
+        ChapterInfo(id: 8, title: "포탈",   stageCount: 7,
+                    color: chapterColor(red: 0.94, green: 0.50, blue: 0.45), // 코랄
+                    requiredStarsFromPrev: 14),      // 챕터 7 최대 21개 중 14개 (67%)
+        ChapterInfo(id: 9, title: "미궁",   stageCount: 7,
+                    color: chapterColor(red: 0.38, green: 0.56, blue: 0.74), // 스틸블루
+                    requiredStarsFromPrev: 14),      // 챕터 8 최대 21개 중 14개 (67%)
+        ChapterInfo(id: 10, title: "정복",  stageCount: 6,
+                    color: chapterColor(red: 0.85, green: 0.68, blue: 0.30), // 골드
+                    requiredStarsFromPrev: 14),      // 챕터 9 최대 21개 중 14개 (67%)
     ]
 
     /// 챕터 번호로 메타데이터 조회 (없으면 nil)
