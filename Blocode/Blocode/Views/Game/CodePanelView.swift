@@ -59,10 +59,16 @@ struct CodePanelView: View {
                     codeBlockList
                     Spacer(minLength: 8)
                 } else {
-                    // ─── 최소화 상태: 가로 칩 요약 ───
-                    collapsedChipRow
-                        .transition(.opacity.combined(with: .move(edge: .bottom)))
-                        .padding(.bottom, 6)
+                    // ─── 최소화 상태: 가로 칩 요약 + 남은 공간을 흡수하는 Spacer ───
+                    // 예전엔 이 공간을 StageView의 외부 Spacer가 흡수해서 맵과 카드 사이에
+                    // 빈 배경만 보였는데, 이제 카드 내부에서 흡수하므로 카드 자체가 팔레트
+                    // 바로 위까지 자연스럽게 늘어나 보임(맵-카드 사이 빈 공간 제거)
+                    Group {
+                        collapsedChipRow
+                            .padding(.bottom, 6)
+                        Spacer(minLength: 0)
+                    }
+                    .transition(.opacity.combined(with: .move(edge: .bottom)))
                 }
             }
             .background(Color.panelBackground)

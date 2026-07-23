@@ -44,7 +44,7 @@ struct StageView: View {
     @State private var reorderPosition: CGPoint = .zero  // 드래그 현재 글로벌 좌표
     @State private var reorderTargetIndex: Int = 0       // 놓일 예상 인덱스
 
-    /// 코드 패널 확장 여부 — stageInfoBar 표시와 연동되므로 StageView에서 관리
+    /// 코드 패널 확장 여부 — 맵 크기 조절 및 하단 고정용 Spacer와 연동되므로 StageView에서 관리
     @State private var isPanelExpanded = true
 
     @Environment(\.colorScheme) private var colorScheme  // 다크/라이트 모드 감지
@@ -254,24 +254,10 @@ struct StageView: View {
             .padding(.bottom, 8)
             .animation(.spring(duration: 0.3), value: isPanelExpanded)
 
-            // MARK: 스테이지 정보 바 — 패널 축소 시에만 표시
-            if !isPanelExpanded {
-                stageInfoBar
-                    .padding(.horizontal, 16)
-                    .padding(.bottom, 10)
-                    .transition(.opacity.combined(with: .move(edge: .bottom)))
-            }
-
-            // 축소 상태일 때만 여기 배치 — 이 상태에선 CodePanelView 전체(칩 카드+팔레트+컨트롤 바)가
-            // 고정 높이라 이 Spacer가 맵/정보바와의 사이 공간을 흡수해야, 칩 카드+팔레트+컨트롤 바가
-            // 한 덩어리로 화면 맨 아래에 붙음(따로 떨어져서 칩 카드만 위에 붕 뜨지 않음).
-            // 확장 상태일 땐 CodePanelView 내부 codeBlockList가 이미 유일한 유동 요소라 이 Spacer를
-            // 아예 렌더링하지 않음 — 렌더링하면 codeBlockList와 공간을 나눠 가져서 코드 영역이 좁아짐
-            if !isPanelExpanded {
-                Spacer(minLength: 0)
-            }
-
             // MARK: 코드 영역 + 팔레트 + 컨트롤 (칩 카드+팔레트+컨트롤 바 한 덩어리)
+            // 확장/축소 두 상태 모두 CodePanelView 내부(코드 리스트 또는 칩 카드)가 남은 공간을
+            // 직접 흡수하도록 되어 있어, 여기서 별도 Spacer 없이도 팔레트+컨트롤 바가 항상 화면
+            // 맨 아래에 붙고 카드가 그 사이 공간을 자연스럽게 채움
             CodePanelView(
                 viewModel: viewModel,
                 stage: stage,
@@ -309,10 +295,6 @@ struct StageView: View {
                     .padding(.horizontal, 16)
                     .padding(.top, 4)
                     .padding(.bottom, 8)
-
-                // 스테이지 정보 바 — 와이드에선 공간이 충분해 항상 표시
-                stageInfoBar
-                    .padding(.horizontal, 16)
 
                 Spacer(minLength: 0)
             }
@@ -374,12 +356,15 @@ struct StageView: View {
 
             Spacer()
 
-            #if os(macOS)
-            // 맥 전용: 별 기준 블럭 수를 별점 옆에 배치 (스테이지 정보 바를 안 쓰므로 이름 중복도 함께 해소)
-            Text("★★★ \(stage.starThresholds.threeStar)블럭 이하 · ★★☆ \(stage.starThresholds.twoStar)블럭 이하")
-                .font(.system(size: 12))
-                .foregroundStyle(.secondary)
-            #endif
+            // 별 기준 블럭 수 — 별점 아이콘 왼쪽에 배치 (예전엔 맵 아래 별도 정보 바에 있었음)
+            // 한 줄로 붙이면 좁은 화면에서 단어 중간이 어색하게 줄바꿈되므로 기준 2개를 줄로 나눠 배치
+            VStack(alignment: .trailing, spacing: 1) {
+                Text("★★★ \(stage.starThresholds.threeStar)블럭 이하")
+                Text("★★☆ \(stage.starThresholds.twoStar)블럭 이하")
+            }
+            .font(.system(size: 10))
+            .foregroundStyle(.secondary)
+            .lineLimit(1)
 
             // 보석 수집 카운터 — 보석이 있는 스테이지에서만 표시 (기믹 없는 기존 스테이지는 items가 nil이라 렌더 안 됨)
             if let items = stage.mapData.items, !items.isEmpty {
@@ -548,25 +533,6 @@ struct StageView: View {
                     .overlay(ProgressView())
             }
         }
-    }
-
-    // MARK: - 스테이지 정보 바 (목표 + 별 기준)
-
-    /// 패널 최소화 시 보이는 스테이지 이름 + 별 기준 정보
-    private var stageInfoBar: some View {
-        VStack(spacing: 6) {
-            // 스테이지 이름 — 크고 굵게, 가운데 정렬
-            Text(stage.name)
-                .font(.system(size: 28, weight: .bold))
-                .foregroundStyle(.primary)
-
-            // 별 기준 요약 — "★★★ N블럭 이하  —  ★★☆ M블럭 이하"
-            Text("★★★ \(stage.starThresholds.threeStar)블럭 이하  —  ★★☆ \(stage.starThresholds.twoStar)블럭 이하")
-                .font(.system(size: 13, weight: .regular))
-                .foregroundStyle(.secondary)
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 12)
     }
 
     // MARK: 드래그 고스트 블럭
