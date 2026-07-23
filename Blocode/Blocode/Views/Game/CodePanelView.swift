@@ -31,10 +31,7 @@ struct CodePanelView: View {
     @Binding var reorderTargetIndex: Int
 
     @Binding var navPath: NavigationPath      // 컨트롤 바 설정 초기화 시 홈 복귀용
-    @Binding var isPanelExpanded: Bool        // 패널 확장/최소화 — StageView와 공유 (stageInfoBar 연동)
-
-    /// 와이드 레이아웃(아이패드·맥) 여부 — true면 코드 리스트가 고정 높이(160pt) 대신 남은 세로 공간을 전부 사용
-    var isWideLayout: Bool = false
+    @Binding var isPanelExpanded: Bool        // 패널 확장/최소화 — StageView와 공유 (stageInfoBar·맵 크기와 연동)
 
     // MARK: - Body
 
@@ -361,9 +358,10 @@ struct CodePanelView: View {
                 }
             }
         }
-        // 컴팩트(아이폰): 고정 160pt / 와이드(아이패드·맥): 남은 세로 공간을 전부 사용
-        .frame(height: isWideLayout ? nil : 160)
-        .frame(maxHeight: isWideLayout ? .infinity : nil)
+        // 이 뷰가 렌더링되는 시점은 항상 isPanelExpanded == true(그 외엔 collapsedChipRow가 대신 표시됨)라,
+        // 플랫폼/화면 폭 구분 없이 항상 남은 세로 공간을 전부 사용 — 아이폰은 StageView가 확장 시 맵을 줄여서
+        // 이 공간을 만들어줌(예전엔 고정 160pt라 블럭이 많아지면 좁은 창 안에서만 스크롤됐음)
+        .frame(maxHeight: .infinity)
         // 코드 리스트 글로벌 프레임 추적 (드래그 감지용)
         // size가 아닌 frame(위치+크기) 변화를 추적 — 빈 상태에선 size가 안 바뀌어
         // 좌표 갱신이 누락돼 영역 판정이 어긋났음(빈 영역 드래그 추가 불가)

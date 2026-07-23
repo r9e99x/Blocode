@@ -216,28 +216,43 @@ struct StageView: View {
         .onChange(of: colorScheme) { _, newScheme in
             scene?.updateColorScheme(isDark: newScheme == .dark)
         }
+        // 실행 시작 시 코드 패널을 자동으로 축소해 맵을 크게 보여줌(컴팩트 레이아웃 전용 —
+        // 와이드/맥은 맵 크기가 isPanelExpanded와 무관해 실질적 영향 없음)
+        .onChange(of: viewModel.gameState) { _, newState in
+            if newState == .running {
+                withAnimation(.spring(duration: 0.3)) { isPanelExpanded = false }
+            }
+        }
         .hideNavigationBar()  // iOS 전용 API 래퍼 (macOS no-op)
         }  // GeometryReader 끝
     }
 
     // MARK: - 컴팩트(아이폰) 게임 레이아웃
 
+    /// 코드 패널 확장(편집) 상태일 때 맵의 최대 너비 — 이 상태에선 코드 영역이 우선이라 맵은 참고용 크기로 축소
+    /// (축소 상태/실행 중엔 이 제한 없이 기존처럼 화면 폭 꽉 채운 정사각형)
+    private let compactMapMaxWidthWhenExpanded: CGFloat = 260
+
     /// 기존 세로 스택 레이아웃 — 내비게이션 + 정사각 맵 + (정보 바) + 코드 패널
+    /// 코드 패널이 확장(편집) 상태면 맵이 작아지고 그만큼 코드 영역이 남은 공간을 전부 가져감 —
+    /// 축소(칩 요약) 상태면 맵이 다시 커짐. 실행(▶) 시 자동으로 축소돼 캐릭터 이동을 크게 볼 수 있음
     private var compactGameLayout: some View {
         VStack(spacing: 0) {
 
             // MARK: 상단 네비게이션
             navigationBar
 
-            // MARK: 맵 영역 — GeometryReader로 너비를 읽어 정사각형 고정
+            // MARK: 맵 영역 — GeometryReader로 너비를 읽어 정사각형 고정, 확장 상태면 최대 폭 제한
             GeometryReader { geo in
                 mapView
                     .frame(width: geo.size.width, height: geo.size.width)
             }
             .aspectRatio(1.0, contentMode: .fit)  // 항상 정사각형 유지
+            .frame(maxWidth: isPanelExpanded ? compactMapMaxWidthWhenExpanded : .infinity)
             .padding(.horizontal, 16)
             .padding(.top, 4)
             .padding(.bottom, 8)
+            .animation(.spring(duration: 0.3), value: isPanelExpanded)
 
             // MARK: 스테이지 정보 바 — 패널 축소 시에만 표시
             if !isPanelExpanded {
@@ -247,9 +262,16 @@ struct StageView: View {
                     .transition(.opacity.combined(with: .move(edge: .bottom)))
             }
 
-            Spacer(minLength: 0)
+            // 축소 상태일 때만 여기 배치 — 이 상태에선 CodePanelView 전체(칩 카드+팔레트+컨트롤 바)가
+            // 고정 높이라 이 Spacer가 맵/정보바와의 사이 공간을 흡수해야, 칩 카드+팔레트+컨트롤 바가
+            // 한 덩어리로 화면 맨 아래에 붙음(따로 떨어져서 칩 카드만 위에 붕 뜨지 않음).
+            // 확장 상태일 땐 CodePanelView 내부 codeBlockList가 이미 유일한 유동 요소라 이 Spacer를
+            // 아예 렌더링하지 않음 — 렌더링하면 codeBlockList와 공간을 나눠 가져서 코드 영역이 좁아짐
+            if !isPanelExpanded {
+                Spacer(minLength: 0)
+            }
 
-            // MARK: 코드 영역 + 팔레트 + 컨트롤
+            // MARK: 코드 영역 + 팔레트 + 컨트롤 (칩 카드+팔레트+컨트롤 바 한 덩어리)
             CodePanelView(
                 viewModel: viewModel,
                 stage: stage,
@@ -309,8 +331,7 @@ struct StageView: View {
                 reorderPosition: $reorderPosition,
                 reorderTargetIndex: $reorderTargetIndex,
                 navPath: $navPath,
-                isPanelExpanded: $isPanelExpanded,
-                isWideLayout: true
+                isPanelExpanded: $isPanelExpanded
             )
             .padding(.top, 8)
         }
@@ -487,8 +508,7 @@ struct StageView: View {
                     reorderPosition: $reorderPosition,
                     reorderTargetIndex: $reorderTargetIndex,
                     navPath: $navPath,
-                    isPanelExpanded: $isPanelExpanded,
-                    isWideLayout: true
+                    isPanelExpanded: $isPanelExpanded
                 )
                 .frame(width: leftWidth)
 
