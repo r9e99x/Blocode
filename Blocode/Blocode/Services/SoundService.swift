@@ -33,6 +33,12 @@ final class SoundService {
     private var musicPlayer: AVAudioPlayer?  // 배경음악 — 효과음과 달리 루프 재생되는 단일 플레이어
 
     private init() {
+        #if os(iOS)
+        // 기본값(.soloAmbient)은 효과음 하나만 나와도 사용자가 듣던 다른 앱 음악을 끊음 →
+        // .ambient로 다른 앱 소리와 섞어 재생 (무음 스위치는 기존과 동일하게 존중됨)
+        try? AVAudioSession.sharedInstance().setCategory(.ambient)
+        #endif
+
         let allEffects: [SoundEffect] = [
             .blockAdd, .blockReorder, .buttonTap, .gameFail,
             .itemCollect, .switchActivate, .clearThreeStar, .clearLowStar,
@@ -66,7 +72,16 @@ final class SoundService {
     /// 배경음악 재생 시작 — 설정에서 배경음악이 꺼져 있으면 아무 동작 안 함 (이미 재생 중이면 그대로 이어짐)
     func startBackgroundMusic() {
         guard SettingsService.shared.musicEnabled else { return }
+        #if os(iOS)
+        // 사용자가 다른 앱 음악을 듣고 있으면 배경음악은 겹치지 않게 생략 (효과음은 그대로 재생)
+        guard !AVAudioSession.sharedInstance().secondaryAudioShouldBeSilencedHint else { return }
+        #endif
         musicPlayer?.play()
+    }
+
+    /// 배경음악 일시정지 — 앱이 백그라운드로 갈 때 사용 (위치를 유지해 돌아오면 이어서 재생)
+    func pauseBackgroundMusic() {
+        musicPlayer?.pause()
     }
 
     /// 배경음악 정지 — 다음에 다시 켜면 처음부터 재생되도록 위치 초기화

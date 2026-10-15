@@ -335,7 +335,8 @@ struct CodePanelView: View {
                                     withAnimation(.spring(duration: 0.2)) {
                                         reorderIndex = nil  // 고스트 제거 (이동했든 취소했든)
                                     }
-                                }
+                                },
+                                availableBlocks: viewModel.availableBlocks  // 중첩 미니 팔레트도 스테이지 팔레트로 제한
                             )
                             .padding(.horizontal, 12)
                             // 각 행의 중간 Y 좌표를 preference로 보고 (드래그 인덱스 계산용)

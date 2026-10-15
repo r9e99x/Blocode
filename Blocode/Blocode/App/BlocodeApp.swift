@@ -30,6 +30,9 @@ struct BlocodeApp: App {
     /// 앱 최초 설치 시 false → 온보딩 표시 후 true로 저장
     @AppStorage("hasSeenOnboarding") private var hasSeenOnboarding = false
 
+    /// 앱 활성/백그라운드 상태 — 홈 화면으로 나가면 배경음악을 멈추고, 돌아오면 다시 재생하는 데 사용
+    @Environment(\.scenePhase) private var scenePhase
+
     // MARK: - 앱 진입점
     var body: some Scene {
         WindowGroup {
@@ -56,6 +59,16 @@ struct BlocodeApp: App {
             #endif
             // 앱 실행 시 배경음악 재생 시작 (설정에서 꺼져 있으면 내부적으로 무시됨)
             .onAppear { SoundService.shared.startBackgroundMusic() }
+            // 홈 화면으로 나가면 일시정지, 돌아오면 재생 (onAppear는 최초 1회뿐이라 복귀 시 음악이 다시 안 나오던 문제)
+            // 재생 시 설정 꺼짐·다른 앱 음악 재생 중 조건은 startBackgroundMusic이 그 순간 기준으로 판단
+            // (맥은 다른 앱으로 전환해도 background가 되지 않아 기존처럼 계속 재생)
+            .onChange(of: scenePhase) { _, phase in
+                switch phase {
+                case .background: SoundService.shared.pauseBackgroundMusic()
+                case .active:     SoundService.shared.startBackgroundMusic()
+                default:          break
+                }
+            }
         }
         // ProgressService가 소유한 단일 컨테이너를 주입 (스토어 일원화)
         .modelContainer(ProgressService.shared.modelContainer)

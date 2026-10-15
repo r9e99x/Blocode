@@ -23,6 +23,8 @@ struct IPadChapterBrowsePane: View {
     @State private var selectedStage: Int?
     @State private var lockInfo: LockInfo? = nil
     @State private var pressedStageNumber: Int? = nil
+    /// 다크/라이트 모드 감지 — 잠긴 스테이지 아이콘 베벨 강도를 iOS ChapterView.stageIcon과 맞추는 데 사용
+    @Environment(\.colorScheme) private var colorScheme
 
     init(chapterNumber: Int, onBackToMap: @escaping () -> Void,
          onSelectChapter: @escaping (Int) -> Void, onStart: @escaping (Int, Int) -> Void) {
@@ -60,7 +62,10 @@ struct IPadChapterBrowsePane: View {
 
     private var chapterListColumn: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Button(action: onBackToMap) {
+            Button {
+                SoundService.shared.play(.buttonTap)  // iOS ChapterView 뒤로가기와 동일하게 탭 효과음
+                onBackToMap()
+            } label: {
                 HStack(spacing: 4) {
                     Image(systemName: "chevron.left")
                     Text("CHAPTERS").tracking(1)
@@ -176,17 +181,19 @@ struct IPadChapterBrowsePane: View {
         let radius: CGFloat = 13
         let topD: CGFloat = 1
         let botD: CGFloat = 2
+        // 잠긴 아이콘은 다크모드에서만 베벨을 완화 (iOS ChapterView.stageIcon과 동일 — 라이트는 기존 0.32/0.28 유지)
+        let lockedDark = locked && colorScheme == .dark
 
         return ThreeDSurface(topDepth: topD, bottomDepth: botD, isPressed: isPressed) {
             ZStack {
                 RoundedRectangle(cornerRadius: radius).fill(faceColor)
-                RoundedRectangle(cornerRadius: radius).fill(Color.white.opacity(isCurrent ? 0.18 : 0.32))
+                RoundedRectangle(cornerRadius: radius).fill(Color.white.opacity((isCurrent || lockedDark) ? 0.18 : 0.32))
             }
             .frame(width: iconSize, height: iconSize)
         } bottomBack: {
             ZStack {
                 RoundedRectangle(cornerRadius: radius).fill(faceColor)
-                RoundedRectangle(cornerRadius: radius).fill(Color.black.opacity(0.28))
+                RoundedRectangle(cornerRadius: radius).fill(Color.black.opacity(lockedDark ? 0.10 : 0.28))
             }
             .frame(width: iconSize, height: iconSize)
         } front: {

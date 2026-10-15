@@ -157,8 +157,8 @@ struct StageView: View {
                         if !navPath.isEmpty { navPath.removeLast() }
                     },
                     onRetry: {
-                        // 다시 도전 → 블럭 유지, 캐릭터만 리셋
-                        viewModel.fullReset()
+                        // 다시 도전 → 블럭 유지, 캐릭터·도전 횟수·걸린 시간만 새 판으로 리셋
+                        viewModel.retry()
                     },
                     onNext: {
                         // 다음 스테이지 → 현재 스테이지 pop 후 다음 스테이지 push
@@ -217,6 +217,11 @@ struct StageView: View {
         .animation(.spring(duration: 0.3), value: viewModel.gameState)
         .background(Color.appBackground.ignoresSafeArea())
         .onAppear { setupScene() }  // 씬 초기화
+        // 실행 중에 화면을 떠나면 실행을 멈춤 — 실행 중엔 설정 버튼이 비활성이라 이 조건은 화면 이탈 때만 걸림
+        // (조건 없이 리셋하면 설정 모달을 열 때도 onDisappear가 불려 캐릭터가 원위치되는 부작용이 생김)
+        .onDisappear {
+            if viewModel.gameState == .running { viewModel.reset() }
+        }
         // 색상 모드 변경 시 씬 색상 갱신
         .onChange(of: colorScheme) { _, newScheme in
             scene?.updateColorScheme(isDark: newScheme == .dark)

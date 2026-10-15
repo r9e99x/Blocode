@@ -69,7 +69,7 @@ final class HomeViewModel: ObservableObject {
 
     /// 이어서 할 다음 스테이지 (없으면 모두 완료)
     var nextStage: (chapter: Int, stage: Int)? {
-        progress.nextStage(chapters: chapters)
+        progress.nextStage()  // 챕터 잠금까지 반영 (ChapterCatalog 기준)
     }
 
     /// 진행 상황에 따라 달라지는 서브타이틀 문구

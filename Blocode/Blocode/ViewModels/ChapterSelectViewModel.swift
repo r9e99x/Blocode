@@ -41,22 +41,9 @@ final class ChapterSelectViewModel: ObservableObject {
     /// 아래 두 조건을 모두 만족해야 해금 (AND):
     ///   1. 이전 챕터 총 별점이 requiredStarsFromPrev 이상
     ///   2. 이전 챕터 마지막 스테이지(종합)를 클리어 (별 수 무관)
+    /// (계산은 ProgressService의 진행 규칙 함수가 담당 — 홈 "이어서 하기"와 같은 규칙을 공유)
     func isUnlocked(_ chapter: ChapterInfo) -> Bool {
-        if chapter.number == 1 { return true }  // 챕터 1은 항상 열림
-        guard chapter.stageCount > 0 else { return false }  // 스테이지 없으면 항상 잠김
-
-        // 이전 챕터 정보를 chapters 배열에서 조회 (stageCount 하드코딩 제거)
-        let prevChapter = chapters.first { $0.number == chapter.number - 1 }
-        let prevStageCount = prevChapter?.stageCount ?? 0
-        guard prevStageCount > 0 else { return false }
-
-        // 다음 챕터 해금 = 아래 둘을 모두 만족해야 함 (AND)
-        //   조건 1: 이전 챕터 총 별점이 기준(requiredStarsFromPrev) 이상
-        //   조건 2: 이전 챕터 마지막 스테이지(종합)를 클리어 (별 수 무관)
-        let prevStars = progress.totalStars(chapter: chapter.number - 1, stageCount: prevStageCount)
-        let lastStageId = "ch\(chapter.number - 1)_stage\(prevStageCount)"
-        let finalCleared = progress.isCleared(lastStageId)
-        return prevStars >= chapter.requiredStarsFromPrev && finalCleared
+        progress.isChapterUnlocked(chapter, chapters: chapters)
     }
 
     /// 챕터에서 획득한 총 별점 반환

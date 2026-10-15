@@ -33,6 +33,8 @@ struct IPadContentShell: View {
     @StateObject private var homeVM = HomeViewModel()
     @StateObject private var chapterSelectVM = ChapterSelectViewModel()
     @ObservedObject private var settings = SettingsService.shared
+    /// 다크/라이트 모드 감지 — 잠긴 챕터 카드 자물쇠 밝기를 iOS ChapterSelectView와 맞추는 데 사용
+    @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
         NavigationStack(path: $navPath) {
@@ -41,27 +43,21 @@ struct IPadContentShell: View {
                     // 챕터 브라우징 중 — 메인 사이드바 대신 3단 컬럼(챕터목록|스테이지목록|미리보기)
                     IPadChapterBrowsePane(
                         chapterNumber: chapter,
-                        onBackToMap: { withAnimation(.easeInOut(duration: 0.2)) { browsingChapter = nil } },
-                        onSelectChapter: { newChapter in
-                            withAnimation(.easeInOut(duration: 0.2)) { browsingChapter = newChapter }
-                        },
+                        // 지도↔브라우저 이동과 챕터끼리 전환 모두 전환 효과 없이 즉시 교체 (맥과 동일, 사용자 요청)
+                        onBackToMap: { browsingChapter = nil },
+                        onSelectChapter: { newChapter in browsingChapter = newChapter },
                         onStart: { ch, num in navPath.append(AppRoute.stage(chapter: ch, number: num)) }
                     )
                     .id(chapter)  // 챕터 전환 시 뷰 정체성 갱신 → ViewModel/선택 스테이지 초기화
-                    // 맥은 슬라이드 없이 그 자리에서 페이드만 되는 느낌이라 아이패드도 동일하게 맞춤
-                    // (.move(edge:)를 빼서 좌우로 밀려나는 느낌 없이 제자리 페이드 인/아웃만 되게)
-                    .transition(.opacity)
                 } else {
                     HStack(spacing: 0) {
                         sidebar
                         Divider()
                         contentPane
                             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-                            .transition(.opacity)
                     }
                 }
             }
-            .animation(.easeInOut(duration: 0.22), value: browsingChapter)
             .background(Color.appBackground.ignoresSafeArea())
             .navigationDestination(for: AppRoute.self) { route in
                 if case .stage(let chapter, let number) = route {
@@ -118,7 +114,10 @@ struct IPadContentShell: View {
 
     /// 사이드바 항목 — 터치 조작을 고려해 맥보다 세로 여백을 넉넉히 줘서 탭 영역을 키움
     private func sidebarItem(icon: String, title: String, isSelected: Bool, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
+        Button {
+            SoundService.shared.play(.buttonTap)  // iOS 버튼들과 동일하게 탭 효과음
+            action()
+        } label: {
             HStack(spacing: 12) {
                 Image(systemName: icon)
                     .font(.system(size: 16, weight: .semibold))
@@ -266,6 +265,7 @@ struct IPadContentShell: View {
         let isFirstTime = homeVM.isFirstTime
 
         return Button {
+            SoundService.shared.play(.buttonTap)  // iOS ContentView.continueButton과 동일하게 탭 효과음
             if let next {
                 navPath.append(AppRoute.stage(chapter: next.chapter, number: next.stage))
             } else {
@@ -318,6 +318,7 @@ struct IPadContentShell: View {
         let botBackColor = Color.dynamic(light: (196/255, 192/255, 181/255), dark: (0.13, 0.14, 0.17))
 
         return Button {
+            SoundService.shared.play(.buttonTap)  // iOS ContentView.browseButton과 동일하게 탭 효과음
             section = .chapters
         } label: {
             ThreeDSurface(topDepth: topD, bottomDepth: botD, isPressed: isBrowsePressed) {
@@ -456,9 +457,10 @@ struct IPadContentShell: View {
                             .font(.system(size: 40, weight: .bold, design: .serif)).italic()
                             .foregroundStyle(.white.opacity(0.95))
                     } else {
+                        // 자물쇠 밝기 — 라이트: 기존 0.30 유지 / 다크: iOS 챕터 지도와 동일한 0.55
                         Image(systemName: "lock.fill")
                             .font(.system(size: 24))
-                            .foregroundStyle(Color.primary.opacity(0.30))
+                            .foregroundStyle(Color.primary.opacity(colorScheme == .dark ? 0.55 : 0.30))
                     }
                 }
                 .frame(width: cardSize, height: cardSize)

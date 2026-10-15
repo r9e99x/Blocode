@@ -40,6 +40,9 @@ struct BlockRowView: View {
     var onReorderDragStart:  ((CGPoint) -> Void)? = nil
     var onReorderDragChange: ((CGPoint) -> Void)? = nil
     var onReorderDragEnd:    ((CGPoint) -> Void)? = nil
+    /// 이 스테이지 팔레트에 있는 블럭 목록 — 자식/손자/증손자 미니 팔레트가 이 안에서만 고르게 함
+    /// (기본값 전체 블럭 → 프리뷰 등 기존 호출부는 무수정)
+    var availableBlocks: [BlockType] = BlockType.allCases
 
     // 자식 블럭 추가 팔레트 펼침 여부
     @State private var showChildPalette = false
@@ -713,7 +716,7 @@ struct BlockRowView: View {
     /// 손자 블럭 선택 미니 팔레트 — repeat/if 상호 허용, 동일 타입·function 중첩 불허 (자식 팔레트와 동일 규칙)
     /// (기존엔 컨테이너를 전부 막았지만, 손자도 컨테이너가 될 수 있도록 자식 팔레트와 같은 규칙으로 완화)
     private func grandchildMiniPalette(child: Block, childIndex: Int) -> some View {
-        let types = BlockType.allCases.filter { type in
+        let types = availableBlocks.filter { type in  // 스테이지 팔레트에 있는 블럭만
             if type == .functionBlock { return false }  // function 중첩 불허
             if type == child.type    { return false }  // 동일 타입 중첩 불허
             return true
@@ -744,7 +747,7 @@ struct BlockRowView: View {
 
     /// 증손자 블럭 선택 미니 팔레트 — 기본 동작 블럭만 허용 (여기서 중첩을 끊어 4단 이상은 만들지 않음)
     private func greatGrandchildMiniPalette(grandchildId: UUID, childIndex: Int, grandchildIndex: Int) -> some View {
-        let types = BlockType.allCases.filter {
+        let types = availableBlocks.filter {  // 스테이지 팔레트에 있는 블럭만
             $0 != .repeatBlock && $0 != .ifBlock && $0 != .functionBlock
         }
         return ScrollView(.horizontal, showsIndicators: false) {
@@ -775,7 +778,7 @@ struct BlockRowView: View {
     /// 허용 규칙: 동일 타입 중첩 불허, functionBlock 중첩 불허
     /// → repeat 안에 if 가능, if 안에 repeat 가능
     private var childMiniPalette: some View {
-        let childTypes = BlockType.allCases.filter { type in
+        let childTypes = availableBlocks.filter { type in  // 스테이지 팔레트에 있는 블럭만
             if type == .functionBlock { return false }  // function 중첩 불허
             if type == block.type    { return false }  // 동일 타입 중첩 불허
             return true

@@ -168,23 +168,55 @@ final class ProgressService: ObservableObject {
         }.count
     }
 
-    /// 이어서 할 다음 스테이지 (첫 번째 미클리어 스테이지)
-    /// 잠긴 스테이지는 반환하지 않음 — 홈 "이어서 하기"가 잠금을 우회하지 못하도록
-    /// 잠겨 있으면 해당 챕터의 마지막 플레이 가능한 스테이지로 대체 (재도전으로 별 모으기 유도)
-    func nextStage(chapters: [(id: Int, stageCount: Int)]) -> (chapter: Int, stage: Int)? {
+    /// 챕터 해금 여부 — 진행 규칙(아래 static 함수)에 현재 진행도를 넘겨 계산
+    func isChapterUnlocked(_ chapter: ChapterInfo, chapters: [ChapterInfo] = ChapterCatalog.all) -> Bool {
+        Self.isChapterUnlocked(chapter, chapters: chapters, results: results)
+    }
+
+    /// 홈 "이어서 하기"가 보낼 스테이지 — 진행 규칙(아래 static 함수)에 현재 진행도를 넘겨 계산
+    func nextStage(chapters: [ChapterInfo] = ChapterCatalog.all) -> (chapter: Int, stage: Int)? {
+        Self.nextStage(chapters: chapters, results: results)
+    }
+
+    // MARK: - 진행 규칙 (순수 함수)
+    // 저장소(SwiftData) 없이 진행도 딕셔너리만으로 계산 → 실제 진행도를 건드리지 않고 테스트 가능
+
+    /// 챕터 해금 조건 (B안) — 아래 두 조건을 모두 만족해야 해금 (AND)
+    ///   1. 이전 챕터 총 별점이 requiredStarsFromPrev 이상
+    ///   2. 이전 챕터 마지막 스테이지(종합)를 클리어 (별 수 무관)
+    static func isChapterUnlocked(_ chapter: ChapterInfo, chapters: [ChapterInfo],
+                                  results: [String: StageResult]) -> Bool {
+        if chapter.number == 1 { return true }               // 챕터 1은 항상 열림
+        guard chapter.stageCount > 0 else { return false }   // 스테이지 없으면 항상 잠김
+        guard let prev = chapters.first(where: { $0.number == chapter.number - 1 }),
+              prev.stageCount > 0 else { return false }
+        let prevStars = (1...prev.stageCount).reduce(0) { total, stageNum in
+            total + (results["ch\(prev.number)_stage\(stageNum)"]?.stars ?? 0)
+        }
+        let finalCleared = results["ch\(prev.number)_stage\(prev.stageCount)"]?.isCleared ?? false
+        return prevStars >= chapter.requiredStarsFromPrev && finalCleared
+    }
+
+    /// 이어서 할 다음 스테이지 — 첫 번째 미클리어 스테이지 (모두 완료면 nil)
+    /// 다음 챕터가 잠겨 있으면(이전 챕터는 다 깼지만 별이 부족) 그 챕터로 보내지 않고,
+    /// 이전 챕터에서 별 3개 미만인 첫 스테이지로 보내 별 모으기를 유도 — 홈 버튼이 챕터 잠금을 우회하지 못하게 함
+    static func nextStage(chapters: [ChapterInfo],
+                          results: [String: StageResult]) -> (chapter: Int, stage: Int)? {
         for ch in chapters {
             guard ch.stageCount > 0 else { continue }  // 빈 챕터는 건너뜀 (존재하지 않는 스테이지 반환 방지)
-            for stageNum in 1...ch.stageCount {
-                if !isCleared("ch\(ch.id)_stage\(stageNum)") {
-                    // 잠겨 있지 않으면 그대로 반환 (플레이 가능)
-                    if !isLocked(chapter: ch.id, stageNumber: stageNum) {
-                        return (ch.id, stageNum)
-                    }
-                    // 첫 미클리어 스테이지가 잠긴 경우는 종합 스테이지(별점 부족)뿐 —
-                    // 직전 스테이지까지는 전부 클리어된 상태라 항상 열려 있으므로
-                    // 직전 스테이지로 대체 (1스테이지는 항상 개방이라 최솟값 1 보장)
-                    return (ch.id, max(stageNum - 1, 1))
+
+            if !isChapterUnlocked(ch, chapters: chapters, results: results) {
+                // 여기까지 왔다면 이전 챕터는 전부 클리어된 상태 → 잠긴 이유는 별 부족
+                guard let prev = chapters.first(where: { $0.number == ch.number - 1 }) else { return nil }
+                let lowStar = (1...prev.stageCount).first { stageNum in
+                    (results["ch\(prev.number)_stage\(stageNum)"]?.stars ?? 0) < 3
                 }
+                return (prev.number, lowStar ?? prev.stageCount)
+            }
+
+            // 해금된 챕터의 첫 미클리어 스테이지 — 앞 스테이지가 전부 클리어라 항상 플레이 가능
+            if let stageNum = (1...ch.stageCount).first(where: { results["ch\(ch.number)_stage\($0)"]?.isCleared != true }) {
+                return (ch.number, stageNum)
             }
         }
         return nil

@@ -48,7 +48,7 @@ final class GameViewModel: ObservableObject {
     /// 클리어 시 획득한 별 수 — ClearOverlayView에 전달
     @Published var clearedStars: Int = 0
 
-    /// 클리어 시 걸린 시간 (초) — 타이머로 측정
+    /// 클리어 시 걸린 시간 (초) — 스테이지 진입(또는 재도전)부터 클리어까지, 클리어 순간에 한 번 계산
     @Published var elapsedTime: TimeInterval = 0
 
     /// 도전 횟수 — run() 호출 시마다 증가
@@ -79,10 +79,9 @@ final class GameViewModel: ObservableObject {
     /// 실행 속도 배율 — SettingsService에서 실시간으로 읽어옴
     private var executionSpeed: Double { SettingsService.shared.executionSpeed }
 
-    /// 실행 시간 측정 타이머
-    private var timer: Timer?
-    /// 타이머 시작 시각
-    private var startTime: Date?
+    /// 걸린 시간 측정 시작 시각 — VM 생성(스테이지 화면 진입) 시 기록, retry()/fullReset()에서 다시 기록
+    /// (생각하는 시간까지 포함해야 "걸린 시간"이라는 이름과 맞음 — 실행 시간만 재던 기존 방식 수정)
+    private var startTime = Date()
 
     // MARK: - 초기화
 
@@ -114,9 +113,15 @@ final class GameViewModel: ObservableObject {
 
     // MARK: - 블럭 관리
 
+    /// 이 스테이지 팔레트에 있는 블럭인지 — 중첩 미니 팔레트를 포함해 어떤 경로로도 허용 밖 블럭이 추가되지 않게 막음
+    /// (예: 2챕터 반복 블럭 안에 "만약에"를 넣어 3챕터 벽따라가기 기법으로 별을 쉽게 얻던 문제 차단)
+    private func isAllowed(_ type: BlockType) -> Bool {
+        stage.paletteBlocks.contains(type)
+    }
+
     /// 팔레트에서 블럭 추가 — idle 상태일 때만 허용
     func addBlock(_ type: BlockType) {
-        guard gameState == .idle else { return }
+        guard gameState == .idle, isAllowed(type) else { return }
         let block = Block(type: type)
         codeBlocks.append(block)
         SoundService.shared.play(.blockAdd)
@@ -138,7 +143,7 @@ final class GameViewModel: ObservableObject {
 
     /// 컨테이너 블럭(repeat / if / function)에 자식 블럭 추가
     func addChildBlock(_ type: BlockType, to parentIndex: Int) {
-        guard gameState == .idle,
+        guard gameState == .idle, isAllowed(type),
               codeBlocks.indices.contains(parentIndex),
               codeBlocks[parentIndex].hasChildren else { return }  // repeat·if·function 모두 허용
         let child = Block(type: type)
@@ -167,7 +172,7 @@ final class GameViewModel: ObservableObject {
 
     /// 자식 컨테이너(repeat/if)에 손자 블럭 추가
     func addGrandchildBlock(_ type: BlockType, parentIndex: Int, childIndex: Int) {
-        guard gameState == .idle,
+        guard gameState == .idle, isAllowed(type),
               codeBlocks.indices.contains(parentIndex),
               let children = codeBlocks[parentIndex].children,
               children.indices.contains(childIndex),
@@ -210,7 +215,7 @@ final class GameViewModel: ObservableObject {
 
     /// 손자 컨테이너(repeat/if)에 증손자 블럭 추가
     func addGreatGrandchildBlock(_ type: BlockType, parentIndex: Int, childIndex: Int, grandchildIndex: Int) {
-        guard gameState == .idle,
+        guard gameState == .idle, isAllowed(type),
               codeBlocks.indices.contains(parentIndex),
               let children = codeBlocks[parentIndex].children,
               children.indices.contains(childIndex),
@@ -259,7 +264,7 @@ final class GameViewModel: ObservableObject {
 
     /// 특정 위치에 블럭 삽입 (팔레트 드래그-앤-드롭 위치 지정 삽입)
     func insertBlock(_ type: BlockType, at index: Int) {
-        guard gameState == .idle else { return }
+        guard gameState == .idle, isAllowed(type) else { return }
         let block = Block(type: type)
         // 인덱스가 범위를 벗어나지 않도록 클램핑
         let safeIndex = min(max(0, index), codeBlocks.count)
@@ -290,7 +295,6 @@ final class GameViewModel: ObservableObject {
         failureMessage = ""
         characterMoved = true   // 실행 시작 = 캐릭터 이동 시작
         attemptCount += 1       // 도전 횟수 증가
-        startTimer()            // 클리어 시간 측정 시작
 
         // 블럭 순서대로 비동기 실행 → 완료 시 idle 복귀
         // (@MainActor 클래스라 Task도 메인에서 실행됨)
@@ -300,7 +304,6 @@ final class GameViewModel: ObservableObject {
             if gameState == .running {
                 gameState = .idle
                 currentBlockPath = nil
-                stopTimer()
             }
         }
     }
@@ -308,7 +311,6 @@ final class GameViewModel: ObservableObject {
     /// 캐릭터만 리셋 — 블럭 목록은 유지
     func reset() {
         gameState = .idle
-        stopTimer()
         currentBlockPath = nil
         failedBlockPath = nil
         failureMessage = ""
@@ -325,6 +327,15 @@ final class GameViewModel: ObservableObject {
         reset()
         codeBlocks = []    // 블럭 목록 초기화
         attemptCount = 0   // 도전 횟수 초기화
+        startTime = Date() // 걸린 시간도 처음부터 다시 측정
+    }
+
+    /// 클리어 화면 "다시 도전" — 블럭은 유지한 채 캐릭터·도전 횟수·걸린 시간만 새 판으로 초기화
+    /// (reset()만 쓰면 도전 횟수·시간이 이전 판에서 이어져 다음 클리어 화면의 TRIES/TIME이 부풀어짐)
+    func retry() {
+        reset()
+        attemptCount = 0
+        startTime = Date()
     }
 
     // MARK: - 블럭 실행 로직
@@ -593,7 +604,8 @@ final class GameViewModel: ObservableObject {
 
     /// 클리어 성공 처리 — 별점 계산 후 ProgressService에 기록 저장 (@MainActor라 동기 처리)
     private func handleSuccess() {
-        stopTimer()
+        // 걸린 시간 확정 — 스테이지 진입(또는 재도전)부터 지금까지
+        elapsedTime = Date().timeIntervalSince(startTime)
         // 사용한 블럭 수 기준으로 별점 계산
         var stars = stage.starThresholds.stars(for: totalBlockCount)
         // 보석이 있는 스테이지인데 전부 수집하지 못했으면 별 3개는 주지 않음 (최대 2개)
@@ -616,33 +628,13 @@ final class GameViewModel: ObservableObject {
 
     /// 실패 처리 (벽 충돌 등) — 실패 블럭 경로와 메시지 설정 (@MainActor라 동기 처리)
     private func handleFailure(at path: [Int], message: String) {
-        stopTimer()
+        // await(이동 애니메이션 대기) 사이에 reset·화면 이탈로 실행이 끝났으면 실패로 처리하지 않음
+        // (예: 실행 중 뒤로가기 → 씬이 사라져 다음 이동이 "벽 충돌"로 오인되고 챕터 화면에서 실패음이 나던 문제)
+        guard gameState == .running else { return }
         failedBlockPath = path    // 실패한 블럭 빨간 하이라이트 (경로 기반)
         failureMessage = message  // 토스트 배너 메시지
         gameState = .failure
         SoundService.shared.play(.gameFail)
-    }
-
-    // MARK: - 타이머
-
-    /// 클리어 시간 측정 타이머 시작 (0.1초 간격으로 elapsedTime 갱신)
-    private func startTimer() {
-        startTime = Date()
-        elapsedTime = 0
-        timer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] _ in
-            // Timer 콜백은 등록된 런루프(메인)에서 호출되므로 MainActor로 안전하게 단언
-            // (동작 동일 — 기존에도 메인 스레드에서 elapsedTime을 갱신했음)
-            MainActor.assumeIsolated {
-                guard let self = self, let start = self.startTime else { return }
-                self.elapsedTime = Date().timeIntervalSince(start)
-            }
-        }
-    }
-
-    /// 타이머 중지 — 타이머 인스턴스 무효화 및 nil 처리
-    private func stopTimer() {
-        timer?.invalidate()
-        timer = nil
     }
 }
 
