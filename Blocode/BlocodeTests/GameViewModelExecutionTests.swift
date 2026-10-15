@@ -10,11 +10,13 @@
 //  실제 챕터 진행도와 절대 충돌하지 않도록 stage id는 전부 "unittest_"로 시작하는
 //  가짜 식별자만 사용한다(ChapterCatalog/실제 스테이지는 "ch{N}_stage{M}" 형식만 조회하므로 무해).
 
-import XCTest
+import Testing
+import Foundation
 @testable import Blocode
 
 @MainActor
-final class GameViewModelExecutionTests: XCTestCase {
+@Suite("GameViewModel 실행 엔진")
+struct GameViewModelExecutionTests {
 
     // MARK: - 테스트 픽스처 생성
 
@@ -59,7 +61,7 @@ final class GameViewModelExecutionTests: XCTestCase {
         let deadline = Date().addingTimeInterval(timeout)
         while viewModel.gameState == .running {
             if Date() > deadline {
-                XCTFail("실행이 \(timeout)초 안에 끝나지 않음 (gameState=\(viewModel.gameState))")
+                Issue.record("실행이 \(timeout)초 안에 끝나지 않음 (gameState=\(viewModel.gameState))")
                 return
             }
             try await Task.sleep(nanoseconds: 20_000_000)  // 20ms
@@ -68,7 +70,8 @@ final class GameViewModelExecutionTests: XCTestCase {
 
     // MARK: - 기본 이동/회전
 
-    func test_moveForward_reachesGoalDirectly() async throws {
+    @Test("moveForward 두 번으로 목표에 바로 도달")
+    func moveForward_reachesGoalDirectly() async throws {
         // 3x3, 가운데 세로줄만 바닥. (1,2)에서 위로 두 칸 가면 (1,0) 골인
         let grid = [[0, 1, 0], [0, 1, 0], [0, 1, 0]]
         let (vm, scene) = makeFixture(grid: grid, start: Position(x: 1, y: 2), goal: Position(x: 1, y: 0))
@@ -77,10 +80,12 @@ final class GameViewModelExecutionTests: XCTestCase {
         vm.run()
         try await waitUntilFinished(vm)
 
-        XCTAssertEqual(vm.gameState, .success)
+        #expect(vm.gameState == .success)
+        _ = scene
     }
 
-    func test_moveForward_intoWall_fails() async throws {
+    @Test("벽으로 이동하면 실패 처리됨")
+    func moveForward_intoWall_fails() async throws {
         let grid = [[0, 1, 0], [0, 1, 0], [0, 1, 0]]
         let (vm, scene) = makeFixture(grid: grid, start: Position(x: 1, y: 2), goal: Position(x: 1, y: 0))
         // 오른쪽으로 돌면 (2,2)는 벽 — 충돌 실패해야 함
@@ -89,11 +94,13 @@ final class GameViewModelExecutionTests: XCTestCase {
         vm.run()
         try await waitUntilFinished(vm)
 
-        XCTAssertEqual(vm.gameState, .failure)
-        XCTAssertEqual(vm.failedBlockPath, [1])  // 두 번째(인덱스 1) 블럭에서 실패
+        #expect(vm.gameState == .failure)
+        #expect(vm.failedBlockPath == [1])  // 두 번째(인덱스 1) 블럭에서 실패
+        _ = scene
     }
 
-    func test_moveBackward_movesOppositeOfFacingDirection() async throws {
+    @Test("moveBackward는 바라보는 반대 방향으로 이동")
+    func moveBackward_movesOppositeOfFacingDirection() async throws {
         let grid = [[0, 1, 0], [0, 1, 0], [0, 1, 0]]
         // 아래(down)를 보고 있으면 뒤로 이동 = 위로 이동
         let (vm, scene) = makeFixture(grid: grid, start: Position(x: 1, y: 2), startDirection: .down, goal: Position(x: 1, y: 0))
@@ -102,12 +109,14 @@ final class GameViewModelExecutionTests: XCTestCase {
         vm.run()
         try await waitUntilFinished(vm)
 
-        XCTAssertEqual(vm.gameState, .success)
+        #expect(vm.gameState == .success)
+        _ = scene
     }
 
     // MARK: - repeat 블럭
 
-    func test_repeatBlock_movesMultipleTilesWithSingleChild() async throws {
+    @Test("repeat(4)[moveForward]로 정확히 4칸 이동해 골인")
+    func repeatBlock_movesMultipleTilesWithSingleChild() async throws {
         // 세로 5칸 복도, repeat(4)[moveForward]로 정확히 4칸 이동해 골인
         let grid = [[0, 1, 0], [0, 1, 0], [0, 1, 0], [0, 1, 0], [0, 1, 0]]
         let (vm, scene) = makeFixture(grid: grid, start: Position(x: 1, y: 4), goal: Position(x: 1, y: 0))
@@ -116,11 +125,13 @@ final class GameViewModelExecutionTests: XCTestCase {
         vm.run()
         try await waitUntilFinished(vm)
 
-        XCTAssertEqual(vm.gameState, .success)
-        XCTAssertEqual(vm.totalBlockCount, 1)  // flatCount — repeat 횟수와 무관하게 자식 1개만 카운트
+        #expect(vm.gameState == .success)
+        #expect(vm.totalBlockCount == 1)  // flatCount — repeat 횟수와 무관하게 자식 1개만 카운트
+        _ = scene
     }
 
-    func test_repeatBlock_stopsEarlyOnceGoalReached() async throws {
+    @Test("목표 도달 즉시 성공 처리되고 남은 반복은 스킵됨")
+    func repeatBlock_stopsEarlyOnceGoalReached() async throws {
         // repeat 횟수가 필요 이상으로 커도(예: 10) 목표 도달 즉시 성공 처리되고 남은 반복은 실행 안 됨
         let grid = [[0, 1, 0], [0, 1, 0], [0, 1, 0]]
         let (vm, scene) = makeFixture(grid: grid, start: Position(x: 1, y: 2), goal: Position(x: 1, y: 0))
@@ -129,12 +140,14 @@ final class GameViewModelExecutionTests: XCTestCase {
         vm.run()
         try await waitUntilFinished(vm)
 
-        XCTAssertEqual(vm.gameState, .success)  // 2칸만에 골인, 나머지 8회 반복은 벽에 부딪히지 않고 조용히 스킵됨
+        #expect(vm.gameState == .success)  // 2칸만에 골인, 나머지 8회 반복은 벽에 부딪히지 않고 조용히 스킵됨
+        _ = scene
     }
 
     // MARK: - if 블럭 (벽따라가기 패턴)
 
-    func test_ifBlock_wallFollowPattern_navigatesCorner() async throws {
+    @Test("if(pathBlocked){turnRight} 벽따라가기 패턴으로 코너 통과")
+    func ifBlock_wallFollowPattern_navigatesCorner() async throws {
         // ㄴ자 경로: (0,3)→(0,2)→(0,1)에서 막히면 우회전→(1,1)→(2,1)=골
         let grid = [
             [0, 0, 0],  // y=0
@@ -152,11 +165,13 @@ final class GameViewModelExecutionTests: XCTestCase {
         vm.run()
         try await waitUntilFinished(vm)
 
-        XCTAssertEqual(vm.gameState, .success)
-        XCTAssertEqual(vm.totalBlockCount, 2)  // if(자식 turnRight 1개) + moveForward 1개 = 2
+        #expect(vm.gameState == .success)
+        #expect(vm.totalBlockCount == 2)  // if(자식 turnRight 1개) + moveForward 1개 = 2
+        _ = scene
     }
 
-    func test_ifBlock_pathClearCondition_onlyRunsWhenNotBlocked() async throws {
+    @Test("if(pathClear) 조건은 뚫려 있을 때만 실행됨")
+    func ifBlock_pathClearCondition_onlyRunsWhenNotBlocked() async throws {
         let grid = [[0, 1, 0], [0, 1, 0], [0, 1, 0]]
         let (vm, scene) = makeFixture(grid: grid, start: Position(x: 1, y: 2), goal: Position(x: 1, y: 0))
         // 앞이 뚫려 있을 때만 moveForward 실행 — 뚫려 있으므로 실행되어 한 칸 전진
@@ -166,10 +181,12 @@ final class GameViewModelExecutionTests: XCTestCase {
         vm.run()
         try await waitUntilFinished(vm)
 
-        XCTAssertEqual(vm.gameState, .success)
+        #expect(vm.gameState == .success)
+        _ = scene
     }
 
-    func test_ifBlock_conditionFalse_skipsChildren() async throws {
+    @Test("조건이 거짓이면 자식 블럭을 건너뜀")
+    func ifBlock_conditionFalse_skipsChildren() async throws {
         let grid = [[0, 1, 0], [0, 1, 0], [0, 1, 0]]
         let (vm, scene) = makeFixture(grid: grid, start: Position(x: 1, y: 2), goal: Position(x: 1, y: 0))
         // 앞이 막혀 있을 때만 실행되는 if인데 실제로는 뚫려 있으므로 turnRight는 건너뛰고
@@ -180,12 +197,14 @@ final class GameViewModelExecutionTests: XCTestCase {
         vm.run()
         try await waitUntilFinished(vm)
 
-        XCTAssertEqual(vm.gameState, .success)
+        #expect(vm.gameState == .success)
+        _ = scene
     }
 
     // MARK: - function 블럭
 
-    func test_functionBlock_actsAsTransparentWrapper() async throws {
+    @Test("function 블럭은 투명한 래퍼로 동작(호출 비용 없음)")
+    func functionBlock_actsAsTransparentWrapper() async throws {
         let grid = [[0, 1, 0], [0, 1, 0], [0, 1, 0]]
         let (vm, scene) = makeFixture(grid: grid, start: Position(x: 1, y: 2), goal: Position(x: 1, y: 0))
         let function = Block(type: .functionBlock, children: [Block(type: .moveForward), Block(type: .moveForward)])
@@ -194,13 +213,15 @@ final class GameViewModelExecutionTests: XCTestCase {
         vm.run()
         try await waitUntilFinished(vm)
 
-        XCTAssertEqual(vm.gameState, .success)
-        XCTAssertEqual(vm.totalBlockCount, 2)  // function 자체는 0, 자식 2개만 카운트 — 호출 비용 없음
+        #expect(vm.gameState == .success)
+        #expect(vm.totalBlockCount == 2)  // function 자체는 0, 자식 2개만 카운트 — 호출 비용 없음
+        _ = scene
     }
 
     // MARK: - 보석 획득 (collectItem)
 
-    func test_collectItem_succeedsOnItemTile() async throws {
+    @Test("보석 칸에서 collectItem은 성공")
+    func collectItem_succeedsOnItemTile() async throws {
         let grid = [[1, 1, 1]]  // 가로 1행 3칸
         let (vm, scene) = makeFixture(
             grid: grid, start: Position(x: 0, y: 0), startDirection: .right, goal: Position(x: 2, y: 0),
@@ -211,11 +232,13 @@ final class GameViewModelExecutionTests: XCTestCase {
         vm.run()
         try await waitUntilFinished(vm)
 
-        XCTAssertEqual(vm.gameState, .success)
-        XCTAssertEqual(vm.collectedItems, [Position(x: 1, y: 0)])
+        #expect(vm.gameState == .success)
+        #expect(vm.collectedItems == [Position(x: 1, y: 0)])
+        _ = scene
     }
 
-    func test_collectItem_failsWhenNoItemOnCurrentTile() async throws {
+    @Test("보석이 없는 칸에서 collectItem은 실패")
+    func collectItem_failsWhenNoItemOnCurrentTile() async throws {
         let grid = [[1, 1, 1]]
         let (vm, scene) = makeFixture(
             grid: grid, start: Position(x: 0, y: 0), startDirection: .right, goal: Position(x: 2, y: 0),
@@ -227,10 +250,12 @@ final class GameViewModelExecutionTests: XCTestCase {
         vm.run()
         try await waitUntilFinished(vm)
 
-        XCTAssertEqual(vm.gameState, .failure)
+        #expect(vm.gameState == .failure)
+        _ = scene
     }
 
-    func test_collectItem_cannotBeCollectedTwice() async throws {
+    @Test("같은 보석을 두 번 수집할 수 없음")
+    func collectItem_cannotBeCollectedTwice() async throws {
         let grid = [[1, 1, 1]]
         let (vm, scene) = makeFixture(
             grid: grid, start: Position(x: 0, y: 0), startDirection: .right, goal: Position(x: 2, y: 0),
@@ -242,13 +267,15 @@ final class GameViewModelExecutionTests: XCTestCase {
         vm.run()
         try await waitUntilFinished(vm)
 
-        XCTAssertEqual(vm.gameState, .failure)
-        XCTAssertEqual(vm.failedBlockPath, [2])
+        #expect(vm.gameState == .failure)
+        #expect(vm.failedBlockPath == [2])
+        _ = scene
     }
 
     // MARK: - 스위치/문 (activateSwitch)
 
-    func test_activateSwitch_opensGateForPassage() async throws {
+    @Test("스위치 작동으로 문이 열려 통과 가능")
+    func activateSwitch_opensGateForPassage() async throws {
         // (2,0)은 원본 grid에서 벽(0) — 스위치로 열기 전까지 통행 불가
         let grid = [[1, 1, 0]]
         let (vm, scene) = makeFixture(
@@ -260,10 +287,12 @@ final class GameViewModelExecutionTests: XCTestCase {
         vm.run()
         try await waitUntilFinished(vm)
 
-        XCTAssertEqual(vm.gameState, .success)
+        #expect(vm.gameState == .success)
+        _ = scene
     }
 
-    func test_activateSwitch_failsWhenNotOnSwitchTile() async throws {
+    @Test("스위치가 없는 칸에서 activateSwitch는 실패")
+    func activateSwitch_failsWhenNotOnSwitchTile() async throws {
         let grid = [[1, 1, 0]]
         let (vm, scene) = makeFixture(
             grid: grid, start: Position(x: 0, y: 0), startDirection: .right, goal: Position(x: 2, y: 0),
@@ -275,10 +304,12 @@ final class GameViewModelExecutionTests: XCTestCase {
         vm.run()
         try await waitUntilFinished(vm)
 
-        XCTAssertEqual(vm.gameState, .failure)
+        #expect(vm.gameState == .failure)
+        _ = scene
     }
 
-    func test_activateSwitch_reactivatingAlreadyOpenGate_stillSucceeds() async throws {
+    @Test("이미 열린 문을 다시 작동시켜도 실패가 아님")
+    func activateSwitch_reactivatingAlreadyOpenGate_stillSucceeds() async throws {
         // 문은 한 번 열리면 계속 열려 있으므로, 스위치를 두 번 눌러도 실패가 아니어야 함(무해한 재작동)
         let grid = [[1, 1, 0]]
         let (vm, scene) = makeFixture(
@@ -295,12 +326,14 @@ final class GameViewModelExecutionTests: XCTestCase {
         vm.run()
         try await waitUntilFinished(vm)
 
-        XCTAssertEqual(vm.gameState, .success)
+        #expect(vm.gameState == .success)
+        _ = scene
     }
 
     // MARK: - 포탈
 
-    func test_portal_teleportsToDestinationAutomatically() async throws {
+    @Test("포탈 진입 시 자동으로 목적지까지 순간이동")
+    func portal_teleportsToDestinationAutomatically() async throws {
         // (1,0) 입장 시 포탈로 (3,0)=골로 자동 순간이동 — 블럭 1개(moveForward)만으로 클리어
         let grid = [[1, 1, 1, 1]]
         let (vm, scene) = makeFixture(
@@ -312,12 +345,14 @@ final class GameViewModelExecutionTests: XCTestCase {
         vm.run()
         try await waitUntilFinished(vm)
 
-        XCTAssertEqual(vm.gameState, .success)
+        #expect(vm.gameState == .success)
+        _ = scene
     }
 
     // MARK: - 별점 계산
 
-    func test_starCount_threeStarsWhenAtOrBelowThreshold() async throws {
+    @Test("기준 이하 블럭 수면 별 3개")
+    func starCount_threeStarsWhenAtOrBelowThreshold() async throws {
         let grid = [[0, 1, 0], [0, 1, 0], [0, 1, 0]]
         let (vm, scene) = makeFixture(
             grid: grid, start: Position(x: 1, y: 2), goal: Position(x: 1, y: 0),
@@ -328,11 +363,13 @@ final class GameViewModelExecutionTests: XCTestCase {
         vm.run()
         try await waitUntilFinished(vm)
 
-        XCTAssertEqual(vm.gameState, .success)
-        XCTAssertEqual(vm.clearedStars, 3)
+        #expect(vm.gameState == .success)
+        #expect(vm.clearedStars == 3)
+        _ = scene
     }
 
-    func test_starCount_cappedAtTwoWhenItemsNotFullyCollected() async throws {
+    @Test("보석을 다 못 모으면 별 최대 2개로 제한")
+    func starCount_cappedAtTwoWhenItemsNotFullyCollected() async throws {
         // 블럭 수는 별 3개 기준을 만족해도, 보석이 있는데 하나도 안 모으면 최대 별 2개
         let grid = [[1, 1, 1]]
         let (vm, scene) = makeFixture(
@@ -345,13 +382,15 @@ final class GameViewModelExecutionTests: XCTestCase {
         vm.run()
         try await waitUntilFinished(vm)
 
-        XCTAssertEqual(vm.gameState, .success)
-        XCTAssertLessThanOrEqual(vm.clearedStars, 2)
+        #expect(vm.gameState == .success)
+        #expect(vm.clearedStars <= 2)
+        _ = scene
     }
 
     // MARK: - 리셋
 
-    func test_reset_clearsGimmickStateButKeepsCodeBlocks() async throws {
+    @Test("reset()은 기믹 상태만 초기화하고 코드 블럭은 유지")
+    func reset_clearsGimmickStateButKeepsCodeBlocks() async throws {
         let grid = [[1, 1, 1]]
         let (vm, scene) = makeFixture(
             grid: grid, start: Position(x: 0, y: 0), startDirection: .right, goal: Position(x: 2, y: 0),
@@ -361,27 +400,30 @@ final class GameViewModelExecutionTests: XCTestCase {
 
         vm.run()
         try await waitUntilFinished(vm)
-        XCTAssertEqual(vm.collectedItems, [Position(x: 1, y: 0)])
+        #expect(vm.collectedItems == [Position(x: 1, y: 0)])
 
         vm.reset()
 
-        XCTAssertEqual(vm.gameState, .idle)
-        XCTAssertTrue(vm.collectedItems.isEmpty)          // 기믹 상태는 초기화됨
-        XCTAssertEqual(vm.codeBlocks.count, 3)             // 코드 블럭은 그대로 유지
+        #expect(vm.gameState == .idle)
+        #expect(vm.collectedItems.isEmpty)   // 기믹 상태는 초기화됨
+        #expect(vm.codeBlocks.count == 3)    // 코드 블럭은 그대로 유지
+        _ = scene
     }
 
-    func test_fullReset_alsoClearsCodeBlocksAndAttemptCount() async throws {
+    @Test("fullReset()은 코드 블럭과 도전 횟수까지 초기화")
+    func fullReset_alsoClearsCodeBlocksAndAttemptCount() async throws {
         let grid = [[0, 1, 0], [0, 1, 0], [0, 1, 0]]
         let (vm, scene) = makeFixture(grid: grid, start: Position(x: 1, y: 2), goal: Position(x: 1, y: 0))
         vm.codeBlocks = [Block(type: .moveForward), Block(type: .moveForward)]
 
         vm.run()
         try await waitUntilFinished(vm)
-        XCTAssertEqual(vm.attemptCount, 1)
+        #expect(vm.attemptCount == 1)
 
         vm.fullReset()
 
-        XCTAssertTrue(vm.codeBlocks.isEmpty)
-        XCTAssertEqual(vm.attemptCount, 0)
+        #expect(vm.codeBlocks.isEmpty)
+        #expect(vm.attemptCount == 0)
+        _ = scene
     }
 }

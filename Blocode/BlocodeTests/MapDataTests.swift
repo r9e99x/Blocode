@@ -3,47 +3,51 @@
 //  BlocodeTests
 //
 
-import XCTest
+import Testing
 @testable import Blocode
 
-final class MapDataTests: XCTestCase {
+@Suite("MapData — 방향·좌표·타일 판정")
+struct MapDataTests {
 
     // MARK: - Direction 회전
 
-    func test_turnedRight_cyclesClockwise() {
-        XCTAssertEqual(Direction.up.turnedRight, .right)
-        XCTAssertEqual(Direction.right.turnedRight, .down)
-        XCTAssertEqual(Direction.down.turnedRight, .left)
-        XCTAssertEqual(Direction.left.turnedRight, .up)
+    @Test("turnedRight는 시계방향으로 순환")
+    func turnedRight_cyclesClockwise() {
+        #expect(Direction.up.turnedRight == .right)
+        #expect(Direction.right.turnedRight == .down)
+        #expect(Direction.down.turnedRight == .left)
+        #expect(Direction.left.turnedRight == .up)
     }
 
-    func test_turnedLeft_cyclesCounterClockwise() {
-        XCTAssertEqual(Direction.up.turnedLeft, .left)
-        XCTAssertEqual(Direction.left.turnedLeft, .down)
-        XCTAssertEqual(Direction.down.turnedLeft, .right)
-        XCTAssertEqual(Direction.right.turnedLeft, .up)
+    @Test("turnedLeft는 반시계방향으로 순환")
+    func turnedLeft_cyclesCounterClockwise() {
+        #expect(Direction.up.turnedLeft == .left)
+        #expect(Direction.left.turnedLeft == .down)
+        #expect(Direction.down.turnedLeft == .right)
+        #expect(Direction.right.turnedLeft == .up)
     }
 
-    func test_turnedRightThenLeft_returnsToOriginal() {
-        for direction: Direction in [.up, .down, .left, .right] {
-            XCTAssertEqual(direction.turnedRight.turnedLeft, direction)
-        }
+    @Test("오른쪽 돈 뒤 왼쪽으로 돌면 원래 방향으로 복귀", arguments: [Direction.up, .down, .left, .right])
+    func turnedRightThenLeft_returnsToOriginal(direction: Direction) {
+        #expect(direction.turnedRight.turnedLeft == direction)
     }
 
     // MARK: - Position 이동
 
-    func test_next_movesOneTileInFacingDirection() {
+    @Test("next는 바라보는 방향으로 한 칸 이동")
+    func next_movesOneTileInFacingDirection() {
         let pos = Position(x: 2, y: 2)
-        XCTAssertEqual(pos.next(direction: .up),    Position(x: 2, y: 1))
-        XCTAssertEqual(pos.next(direction: .down),  Position(x: 2, y: 3))
-        XCTAssertEqual(pos.next(direction: .left),  Position(x: 1, y: 2))
-        XCTAssertEqual(pos.next(direction: .right), Position(x: 3, y: 2))
+        #expect(pos.next(direction: .up)    == Position(x: 2, y: 1))
+        #expect(pos.next(direction: .down)  == Position(x: 2, y: 3))
+        #expect(pos.next(direction: .left)  == Position(x: 1, y: 2))
+        #expect(pos.next(direction: .right) == Position(x: 3, y: 2))
     }
 
-    func test_previous_movesOppositeOfFacingDirection() {
+    @Test("previous는 바라보는 반대 방향으로 이동")
+    func previous_movesOppositeOfFacingDirection() {
         let pos = Position(x: 2, y: 2)
-        XCTAssertEqual(pos.previous(direction: .up),    pos.next(direction: .down))
-        XCTAssertEqual(pos.previous(direction: .right), pos.next(direction: .left))
+        #expect(pos.previous(direction: .up)    == pos.next(direction: .down))
+        #expect(pos.previous(direction: .right) == pos.next(direction: .left))
     }
 
     // MARK: - MapData 경계/타일 판정
@@ -52,36 +56,41 @@ final class MapDataTests: XCTestCase {
         MapData(grid: grid, start: start, startDirection: .up, goal: goal)
     }
 
-    func test_isInBounds_trueInsideGridFalseOutside() {
+    @Test("격자 안이면 true, 밖이면 false")
+    func isInBounds_trueInsideGridFalseOutside() {
         let map = makeMap(grid: [[1, 1], [1, 1]])
-        XCTAssertTrue(map.isInBounds(Position(x: 0, y: 0)))
-        XCTAssertTrue(map.isInBounds(Position(x: 1, y: 1)))
-        XCTAssertFalse(map.isInBounds(Position(x: 2, y: 0)))
-        XCTAssertFalse(map.isInBounds(Position(x: 0, y: -1)))
+        #expect(map.isInBounds(Position(x: 0, y: 0)))
+        #expect(map.isInBounds(Position(x: 1, y: 1)))
+        #expect(!map.isInBounds(Position(x: 2, y: 0)))
+        #expect(!map.isInBounds(Position(x: 0, y: -1)))
     }
 
-    func test_isFloor_matchesGridValue() {
+    @Test("isFloor는 grid 값과 일치")
+    func isFloor_matchesGridValue() {
         let map = makeMap(grid: [[0, 1], [1, 0]])
-        XCTAssertFalse(map.isFloor(Position(x: 0, y: 0)))  // 벽
-        XCTAssertTrue(map.isFloor(Position(x: 1, y: 0)))   // 바닥
-        XCTAssertTrue(map.isFloor(Position(x: 0, y: 1)))   // 바닥
-        XCTAssertFalse(map.isFloor(Position(x: 1, y: 1)))  // 벽
+        #expect(!map.isFloor(Position(x: 0, y: 0)))  // 벽
+        #expect(map.isFloor(Position(x: 1, y: 0)))   // 바닥
+        #expect(map.isFloor(Position(x: 0, y: 1)))   // 바닥
+        #expect(!map.isFloor(Position(x: 1, y: 1)))  // 벽
     }
 
-    func test_isFloor_outOfBoundsIsFalse() {
+    @Test("범위 밖은 항상 isFloor false")
+    func isFloor_outOfBoundsIsFalse() {
         let map = makeMap(grid: [[1, 1], [1, 1]])
-        XCTAssertFalse(map.isFloor(Position(x: 5, y: 5)))
+        #expect(!map.isFloor(Position(x: 5, y: 5)))
     }
 
-    func test_isGoal_matchesGoalPositionOnly() {
+    @Test("isGoal은 목표 위치에서만 true")
+    func isGoal_matchesGoalPositionOnly() {
         let map = makeMap(grid: [[1, 1], [1, 1]], goal: Position(x: 1, y: 1))
-        XCTAssertTrue(map.isGoal(Position(x: 1, y: 1)))
-        XCTAssertFalse(map.isGoal(Position(x: 0, y: 0)))
+        #expect(map.isGoal(Position(x: 1, y: 1)))
+        #expect(!map.isGoal(Position(x: 0, y: 0)))
     }
 
-    func test_widthAndHeight_matchGridDimensions() {
+    @Test("width/height는 grid 차원과 일치")
+    func widthAndHeight_matchGridDimensions() {
         let map = makeMap(grid: [[1, 1, 1], [1, 1, 1]])
-        XCTAssertEqual(map.width, 3)
-        XCTAssertEqual(map.height, 2)
+        #expect(map.width == 3)
+        #expect(map.height == 2)
     }
 }
