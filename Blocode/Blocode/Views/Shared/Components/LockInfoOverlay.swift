@@ -24,83 +24,10 @@ struct LockInfoOverlay: View {
     let info: LockInfo       // 표시할 잠금 안내 내용
     let onClose: () -> Void  // 닫기 콜백
 
-    @State private var isConfirmPressed = false  // 확인 버튼 눌림 상태 (3D 효과)
-    private let confirmTopDepth: CGFloat = 0.8   // 확인 버튼 위 뒷면 두께
-    private let confirmBotDepth: CGFloat = 2.5   // 확인 버튼 아래 뒷면 두께 (그림자)
-
     var body: some View {
-        ZStack {
-            // 배경 딤 — 탭하면 닫힘
-            Color.black.opacity(0.45)
-                .ignoresSafeArea()
-                .onTapGesture { onClose() }
-
-            // 안내 카드
-            VStack(spacing: 18) {
-                // 자물쇠 아이콘 (원형 배경 + 강조 색)
-                ZStack {
-                    Circle()
-                        .fill(info.accentColor.opacity(0.18))
-                        .frame(width: 64, height: 64)
-                    Image(systemName: "lock.fill")
-                        .font(.system(size: 26, weight: .semibold))
-                        .foregroundStyle(info.accentColor)
-                }
-                .padding(.top, 4)
-
-                // 제목
-                Text(info.title)
-                    .font(.system(size: 19, weight: .bold))
-                    .foregroundStyle(.primary)
-
-                // 해금 조건 문구
-                Text(info.message)
-                    .font(.system(size: 15))
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
-                    .lineSpacing(3)
-
-                // 확인 버튼 (3D + 눌림 효과)
-                // 색상: 라이트는 기존 darkInk+탄색 베벨 그대로 / 다크는 슬레이트 톤 (slateButton* 다이나믹 컬러)
-                Button {
-                    SoundService.shared.play(.buttonTap)
-                    onClose()
-                } label: {
-                    ThreeDSurface(topDepth: confirmTopDepth, bottomDepth: confirmBotDepth, isPressed: isConfirmPressed) {
-                        // ① 위 뒷면 — 라이트 #807869 / 다크 밝은 슬레이트
-                        RoundedRectangle(cornerRadius: 25).fill(Color.slateButtonTopBack)
-                            .frame(maxWidth: .infinity).frame(height: 50)
-                    } bottomBack: {
-                        // ② 아래 뒷면 (그림자) — 라이트 #beb59f / 다크 더 밝은 슬레이트
-                        RoundedRectangle(cornerRadius: 25).fill(Color.slateButtonBottomBack)
-                            .frame(maxWidth: .infinity).frame(height: 50)
-                    } front: {
-                        // ③ 앞면 — (라이트 darkInk / 다크 슬레이트) + (눌림 시 그림자) + 텍스트
-                        ZStack {
-                            RoundedRectangle(cornerRadius: 25).fill(Color.slateButtonFace)
-                            if isConfirmPressed {
-                                RoundedRectangle(cornerRadius: 25).fill(Color.black.opacity(0.10))
-                            }
-                            Text("확인")
-                                .font(.system(size: 16, weight: .bold))
-                                .foregroundStyle(.white)
-                        }
-                        .frame(maxWidth: .infinity).frame(height: 50)
-                    }
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 50 + confirmTopDepth + confirmBotDepth)
-                }
-                .buttonStyle(.plain)
-                .onPressState(isPressed: $isConfirmPressed)
-                .padding(.top, 2)
-            }
-            .padding(24)
-            .frame(maxWidth: 300)
-            .background(Color.cardBackground)
-            .clipShape(RoundedRectangle(cornerRadius: 24))
-            .shadow(color: Color.black.opacity(0.15), radius: 20, x: 0, y: 8)
-            .padding(.horizontal, 40)
-        }
+        ConfirmCardOverlay(icon: "lock.fill", title: info.title, message: info.message,
+                           accentColor: info.accentColor, primaryTitle: "확인",
+                           onPrimary: onClose, onDismiss: onClose)
     }
 }
 
@@ -116,84 +43,91 @@ struct RetryConfirmInfo: Identifiable {
 
 // MARK: - RetryConfirmOverlay
 /// 이미 클리어한 스테이지를 탭했을 때 재도전 여부를 물어보는 커스텀 팝업
-/// LockInfoOverlay와 동일한 카드 스타일 — 시스템 기본 Alert 대신 앱 톤에 맞춘 UI로 통일
+/// LockInfoOverlay와 같은 카드 — 시스템 기본 Alert 대신 앱 톤에 맞춘 UI로 통일
 struct RetryConfirmOverlay: View {
 
     let info: RetryConfirmInfo
     let onCancel: () -> Void  // "취소" 또는 배경 탭 시 닫기 콜백
 
-    @State private var isRetryPressed = false  // "다시 하기" 버튼 눌림 상태 (3D 효과)
-    private let retryTopDepth: CGFloat = 0.8
-    private let retryBotDepth: CGFloat = 2.5
+    var body: some View {
+        // 체크 아이콘 — 이미 클리어했음을 시각화 / "다시 하기"는 잠금 팝업 확인 버튼과 같은 3D 버튼(탭 효과음 포함)
+        ConfirmCardOverlay(icon: "checkmark", title: info.title, message: info.message,
+                           accentColor: info.accentColor, primaryTitle: "다시 하기",
+                           onPrimary: info.onRetry, onDismiss: onCancel, showsCancel: true)
+    }
+}
+
+// MARK: - ConfirmCardOverlay
+/// 잠금 안내·재도전 확인 팝업이 함께 쓰는 카드 — 딤 배경 + 아이콘 원 + 제목 + 안내 문구 + 3D 주 버튼 (+ 선택적 "취소")
+/// (예전엔 두 팝업에 같은 카드 코드가 따로 있었고, 재도전 "다시 하기"에만 탭 효과음이 빠져 있었음)
+struct ConfirmCardOverlay: View {
+    let icon: String               // 원 안 아이콘 (SF Symbol)
+    let title: String              // 제목
+    let message: String            // 안내 문구
+    let accentColor: Color         // 강조 색 (챕터 색)
+    let primaryTitle: String       // 주 버튼 글자
+    let onPrimary: () -> Void      // 주 버튼 동작
+    let onDismiss: () -> Void      // 배경 탭(과 "취소") 동작
+    var showsCancel: Bool = false  // 주 버튼 아래 "취소" 텍스트 버튼 표시 여부
+
+    @State private var isPrimaryPressed = false  // 주 버튼 눌림 상태 (3D 효과)
 
     var body: some View {
         ZStack {
-            // 배경 딤 — 탭하면 취소
+            // 배경 딤 — 탭하면 닫힘
             Color.black.opacity(0.45)
                 .ignoresSafeArea()
-                .onTapGesture { onCancel() }
+                .onTapGesture { onDismiss() }
 
             // 안내 카드
             VStack(spacing: 18) {
-                // 체크 아이콘 (원형 배경 + 강조 색) — 이미 클리어했음을 시각화
+                // 아이콘 (원형 배경 + 강조 색)
                 ZStack {
                     Circle()
-                        .fill(info.accentColor.opacity(0.18))
+                        .fill(accentColor.opacity(0.18))
                         .frame(width: 64, height: 64)
-                    Image(systemName: "checkmark")
+                    Image(systemName: icon)
                         .font(.system(size: 26, weight: .semibold))
-                        .foregroundStyle(info.accentColor)
+                        .foregroundStyle(accentColor)
                 }
                 .padding(.top, 4)
 
                 // 제목
-                Text(info.title)
+                Text(title)
                     .font(.system(size: 19, weight: .bold))
                     .foregroundStyle(.primary)
 
                 // 안내 문구
-                Text(info.message)
+                Text(message)
                     .font(.system(size: 15))
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
                     .lineSpacing(3)
 
-                // "다시 하기" 버튼 (3D + 눌림 효과) — LockInfoOverlay의 확인 버튼과 동일 스타일
+                // 주 버튼 (슬레이트 3D + 눌림 효과) — 라이트: darkInk+탄색 베벨 / 다크: 슬레이트 톤
                 Button {
-                    info.onRetry()
+                    SoundService.shared.play(.buttonTap)
+                    onPrimary()
                 } label: {
-                    ThreeDSurface(topDepth: retryTopDepth, bottomDepth: retryBotDepth, isPressed: isRetryPressed) {
-                        RoundedRectangle(cornerRadius: 25).fill(Color.slateButtonTopBack)
-                            .frame(maxWidth: .infinity).frame(height: 50)
-                    } bottomBack: {
-                        RoundedRectangle(cornerRadius: 25).fill(Color.slateButtonBottomBack)
-                            .frame(maxWidth: .infinity).frame(height: 50)
-                    } front: {
-                        ZStack {
-                            RoundedRectangle(cornerRadius: 25).fill(Color.slateButtonFace)
-                            if isRetryPressed {
-                                RoundedRectangle(cornerRadius: 25).fill(Color.black.opacity(0.10))
-                            }
-                            Text("다시 하기")
-                                .font(.system(size: 16, weight: .bold))
-                                .foregroundStyle(.white)
-                        }
-                        .frame(maxWidth: .infinity).frame(height: 50)
+                    SolidThreeDButton(height: 50, cornerRadius: 25, isPressed: isPrimaryPressed) {
+                        Text(primaryTitle)
+                            .font(.system(size: 16, weight: .bold))
+                            .foregroundStyle(.white)
                     }
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 50 + retryTopDepth + retryBotDepth)
                 }
                 .buttonStyle(.plain)
-                .onPressState(isPressed: $isRetryPressed)
+                .onPressState(isPressed: $isPrimaryPressed)
                 .padding(.top, 2)
 
-                // "취소" 버튼 — 보조 액션이라 3D 없이 텍스트로만 (다시 하기와 위계 구분)
-                Button(action: onCancel) {
-                    Text("취소")
-                        .font(.system(size: 15, weight: .medium))
-                        .foregroundStyle(.secondary)
+                // "취소" — 보조 액션이라 3D 없이 텍스트로만 (주 버튼과 위계 구분)
+                if showsCancel {
+                    Button(action: onDismiss) {
+                        Text("취소")
+                            .font(.system(size: 15, weight: .medium))
+                            .foregroundStyle(.secondary)
+                    }
+                    .buttonStyle(.plain)
                 }
-                .buttonStyle(.plain)
             }
             .padding(24)
             .frame(maxWidth: 300)
@@ -264,5 +198,17 @@ extension View {
             accentColor: Color(red: 0.58, green: 0.76, blue: 0.88)
         ),
         onClose: {}
+    )
+}
+
+#Preview("재도전 확인") {
+    RetryConfirmOverlay(
+        info: RetryConfirmInfo(
+            title: "이미 클리어한 스테이지예요",
+            message: "첫 반복 — 다시 도전하겠습니까?",
+            accentColor: Color(red: 0.58, green: 0.76, blue: 0.88),
+            onRetry: {}
+        ),
+        onCancel: {}
     )
 }

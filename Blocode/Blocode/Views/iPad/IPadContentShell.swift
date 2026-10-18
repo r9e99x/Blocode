@@ -225,8 +225,15 @@ struct IPadContentShell: View {
 
             // 버튼 영역 — 스크롤 밖, 화면 맨 아래 중앙에 고정
             VStack(spacing: 12) {
-                continueButton
-                browseButton
+                // 홈 버튼 2개 — 아이폰 홈과 공용 부품 (모두 완료면 챕터 지도로)
+                HomeContinueButton(next: homeVM.nextStage, isFirstTime: homeVM.isFirstTime) {
+                    if let next = homeVM.nextStage {
+                        navPath.append(AppRoute.stage(chapter: next.chapter, number: next.stage))
+                    } else {
+                        section = .chapters
+                    }
+                }
+                HomeBrowseButton { section = .chapters }
             }
             .frame(maxWidth: 480)
             .frame(maxWidth: .infinity)
@@ -247,102 +254,6 @@ struct IPadContentShell: View {
         .background(Color.statCardBackground)
         .clipShape(RoundedRectangle(cornerRadius: 16))
         .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 2)
-    }
-
-    // MARK: - 홈 버튼 (iOS ContentView.continueButton/browseButton과 동일한 3D + 눌림 효과)
-
-    @State private var isContinuePressed = false
-    @State private var isBrowsePressed = false
-
-    private var continueButton: some View {
-        let frontH: CGFloat = 58
-        let topD: CGFloat = 0.8
-        let botD: CGFloat = 2.5
-        let cr: CGFloat = 18
-        let frontColor = Color.dynamic(light: (0.165, 0.145, 0.125), dark: (72/255, 78/255, 96/255))
-        let pressedFrontColor = Color.dynamic(light: (86/255, 80/255, 72/255), dark: (88/255, 95/255, 116/255))
-        let next = homeVM.nextStage
-        let isFirstTime = homeVM.isFirstTime
-
-        return Button {
-            SoundService.shared.play(.buttonTap)  // iOS ContentView.continueButton과 동일하게 탭 효과음
-            if let next {
-                navPath.append(AppRoute.stage(chapter: next.chapter, number: next.stage))
-            } else {
-                section = .chapters
-            }
-        } label: {
-            ThreeDSurface(topDepth: topD, bottomDepth: botD, isPressed: isContinuePressed) {
-                RoundedRectangle(cornerRadius: cr).fill(Color.slateButtonTopBack)
-                    .frame(maxWidth: .infinity).frame(height: frontH)
-            } bottomBack: {
-                RoundedRectangle(cornerRadius: cr).fill(Color.slateButtonBottomBack)
-                    .frame(maxWidth: .infinity).frame(height: frontH)
-            } front: {
-                ZStack {
-                    RoundedRectangle(cornerRadius: cr)
-                        .fill(isContinuePressed ? pressedFrontColor : frontColor)
-                    HStack {
-                        HStack(spacing: 8) {
-                            Image(systemName: isFirstTime ? "sparkles" : "play.fill")
-                                .font(.system(size: 13, weight: .bold))
-                                .foregroundStyle(.white.opacity(0.9))
-                            Text(isFirstTime ? "시작하기" : "이어서 하기")
-                                .font(.system(size: 17, weight: .semibold))
-                                .foregroundStyle(.white)
-                        }
-                        Spacer()
-                        if !isFirstTime, let next {
-                            Text("\(next.chapter)-\(next.stage)")
-                                .font(.system(size: 13, weight: .medium, design: .rounded))
-                                .foregroundStyle(.white.opacity(0.55))
-                        }
-                    }
-                    .padding(.horizontal, 20)
-                }
-                .frame(maxWidth: .infinity).frame(height: frontH)
-            }
-            .frame(maxWidth: .infinity).frame(height: frontH + topD + botD)
-        }
-        .buttonStyle(.plain)
-        .onPressState(isPressed: $isContinuePressed)
-    }
-
-    private var browseButton: some View {
-        let frontH: CGFloat = 52
-        let topD: CGFloat = 0.8
-        let botD: CGFloat = 2.5
-        let cr: CGFloat = 18
-        let frontColor = Color.dynamic(light: (252/255, 249/255, 238/255), dark: (0.22, 0.23, 0.27))
-        let topBackColor = Color.dynamic(light: (252/255, 249/255, 238/255), dark: (0.18, 0.19, 0.22))
-        let botBackColor = Color.dynamic(light: (196/255, 192/255, 181/255), dark: (0.13, 0.14, 0.17))
-
-        return Button {
-            SoundService.shared.play(.buttonTap)  // iOS ContentView.browseButton과 동일하게 탭 효과음
-            section = .chapters
-        } label: {
-            ThreeDSurface(topDepth: topD, bottomDepth: botD, isPressed: isBrowsePressed) {
-                RoundedRectangle(cornerRadius: cr).fill(topBackColor)
-                    .frame(maxWidth: .infinity).frame(height: frontH)
-            } bottomBack: {
-                RoundedRectangle(cornerRadius: cr).fill(botBackColor)
-                    .frame(maxWidth: .infinity).frame(height: frontH)
-            } front: {
-                ZStack {
-                    RoundedRectangle(cornerRadius: cr).fill(frontColor)
-                    if isBrowsePressed {
-                        RoundedRectangle(cornerRadius: cr).fill(Color.black.opacity(0.06))
-                    }
-                    Text("챕터 둘러보기")
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundStyle(.primary)
-                }
-                .frame(maxWidth: .infinity).frame(height: frontH)
-            }
-            .frame(maxWidth: .infinity).frame(height: frontH + topD + botD)
-        }
-        .buttonStyle(.plain)
-        .onPressState(isPressed: $isBrowsePressed)
     }
 
     // MARK: - 챕터 지도 (지그재그 + 3D + 눌림 + 잠금 팝업)
@@ -494,5 +405,11 @@ struct IPadContentShell: View {
         }
         .frame(width: cardSize + 20)
     }
+}
+
+// MARK: - Preview
+
+#Preview("아이패드 셸 홈", traits: .landscapeLeft) {
+    IPadContentShell()
 }
 #endif

@@ -250,34 +250,21 @@ struct ChapterBrowsePane: View {
 
                 Spacer(minLength: 0)
 
-                // 시작하기 버튼 — iOS 3D 버튼과 동일한 ThreeDSurface + 눌림 효과
+                // 시작하기 버튼 — 공용 SolidThreeDButton + 눌림 효과
                 Button {
                     SoundService.shared.play(.buttonTap)
                     onStart(chapterNumber, stageNumber)
                 } label: {
-                    let frontH: CGFloat = 54
-                    let topD: CGFloat = 0.8
-                    let botD: CGFloat = 2.5
-                    let cr: CGFloat = 16
-                    ThreeDSurface(topDepth: topD, bottomDepth: botD, isPressed: isStartPressed) {
-                        RoundedRectangle(cornerRadius: cr).fill(Color.slateButtonTopBack)
-                            .frame(maxWidth: .infinity).frame(height: frontH)
-                    } bottomBack: {
-                        RoundedRectangle(cornerRadius: cr).fill(Color.slateButtonBottomBack)
-                            .frame(maxWidth: .infinity).frame(height: frontH)
-                    } front: {
-                        ZStack {
-                            RoundedRectangle(cornerRadius: cr)
-                                .fill(locked ? Color.systemGray3Color : Color.slateButtonFace)
-                            HStack {
-                                Image(systemName: "play.fill")
-                                Text(vm.isCleared(stage) ? "다시 도전" : "시작하기").fontWeight(.semibold)
-                            }
-                            .foregroundStyle(.white)
+                    // 슬레이트 3D 버튼 (공용 부품) — 잠긴 스테이지면 회색 앞면, 눌림은 내려앉기만(검정 오버레이 없음 — 기존 그대로)
+                    SolidThreeDButton(height: 54, cornerRadius: 16,
+                                      face: locked ? Color.systemGray3Color : Color.slateButtonFace,
+                                      pressedOverlayOpacity: 0, isPressed: isStartPressed) {
+                        HStack {
+                            Image(systemName: "play.fill")
+                            Text(vm.isCleared(stage) ? "다시 도전" : "시작하기").fontWeight(.semibold)
                         }
-                        .frame(maxWidth: .infinity).frame(height: frontH)
+                        .foregroundStyle(.white)
                     }
-                    .frame(maxWidth: .infinity).frame(height: frontH + topD + botD)
                 }
                 .buttonStyle(.plain)
                 .onPressState(isPressed: $isStartPressed)

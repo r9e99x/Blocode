@@ -237,47 +237,19 @@ struct OnboardingView: View {
         let isLast   = currentPage == pages.count - 1
         let label    = isLast ? "시작하기" : "다음  ›"
 
-        // 어두운 다크 버튼 색상 — 라이트: darkInk/bevel*과 동일 값 / 다크: 슬레이트 톤으로 전환
-        // (darkInk/bevelTopBack/bevelBottomBack은 라이트·다크 무관 고정값이라 다크모드 배경과
-        // 충돌했음 — 다른 다크 버튼들과 동일하게 slateButton* 다이나믹 컬러로 교체)
-        let frontColor   = Color.slateButtonFace
-        let topBackColor = Color.slateButtonTopBack
-        let botBackColor = Color.slateButtonBottomBack
-
         return Button {
             withAnimation(.easeInOut(duration: 0.3)) {
                 if isLast { finish() }
                 else { currentPage += 1 }
             }
         } label: {
-            ThreeDSurface(topDepth: topD, bottomDepth: botD, isPressed: isNextPressed) {
-                // ① 위 뒷면
-                RoundedRectangle(cornerRadius: cr)
-                    .fill(topBackColor)
-                    .frame(maxWidth: .infinity)
-                    .frame(height: frontH)
-            } bottomBack: {
-                // ② 아래 뒷면
-                RoundedRectangle(cornerRadius: cr)
-                    .fill(botBackColor)
-                    .frame(maxWidth: .infinity)
-                    .frame(height: frontH)
-            } front: {
-                // ③ 앞면 + 텍스트
-                ZStack {
-                    RoundedRectangle(cornerRadius: cr).fill(frontColor)
-                    if isNextPressed {
-                        RoundedRectangle(cornerRadius: cr).fill(Color.black.opacity(0.10))
-                    }
-                    Text(label)
-                        .font(.system(size: fontSize, weight: .semibold))
-                        .foregroundStyle(.white)
-                }
-                .frame(maxWidth: .infinity)
-                .frame(height: frontH)
+            // 슬레이트 3D 버튼 (공용 부품 — 라이트 다크 잉크 / 다크 슬레이트, 눌림 시 검정 0.10)
+            SolidThreeDButton(height: frontH, cornerRadius: cr, topDepth: topD, bottomDepth: botD,
+                              isPressed: isNextPressed) {
+                Text(label)
+                    .font(.system(size: fontSize, weight: .semibold))
+                    .foregroundStyle(.white)
             }
-            .frame(maxWidth: .infinity)
-            .frame(height: frontH + topD + botD)
         }
         .buttonStyle(.plain)
         .onPressState(isPressed: $isNextPressed)  // 공용 눌림 추적 (다른 3D 버튼과 동일 방식)
