@@ -6,36 +6,59 @@
 //
 
 import SpriteKit
-import SwiftUI
 
 // MARK: - GameScene
 /// SpriteKit 기반 2D 탑뷰 맵 렌더링 씬
 /// 타일, 캐릭터, 목표 지점을 그리고 캐릭터 이동 애니메이션을 담당
 class GameScene: SKScene {
 
-    // MARK: - 색상 (다크모드 대응 — updateColorScheme으로 갱신)
-    // 길(경로): 연한 색 / 벽: 짙은 색
-    private var floorColor  = SKColor(red: 232/255, green: 221/255, blue: 194/255, alpha: 1.0) // 라이트: #e8ddc2 — 걸을 수 있는 길
-    private var wallColor   = SKColor(red: 187/255, green: 167/255, blue: 126/255, alpha: 1.0) // 라이트: #bba77e — 벽
-    private var characterColor = SKColor.darkInk // #2a2520
-    private let goalColor   = SKColor(red: 0.93, green: 0.67, blue: 0.24, alpha: 1.0) // 골드 (공통)
+    // MARK: - 색상
 
-    // 기믹 색상 (챕터 6+ 전용 — goalColor와 동일하게 라이트/다크 구분 없는 고정값)
-    private let itemColor       = SKColor(red: 0.42, green: 0.82, blue: 0.68, alpha: 1.0) // 민트 보석
-    private let switchColor     = SKColor(red: 0.93, green: 0.62, blue: 0.28, alpha: 1.0) // 주황 스위치
-    private let gateMarkerColor = SKColor(red: 0.93, green: 0.62, blue: 0.28, alpha: 1.0) // 문 표시(스위치와 동일 톤)
-    private let portalColor     = SKColor(red: 0.62, green: 0.45, blue: 0.85, alpha: 1.0) // 보라 포탈
+    /// 라이트/다크별 맵 색 묶음 — 각 색을 한 곳에서만 정의 (예전엔 라이트 값이 초기값과 updateColorScheme 두 군데에 있었음)
+    private struct Palette {
+        let floor: SKColor           // 길(경로) — 연한 색
+        let wall: SKColor            // 벽 — 짙은 색
+        let floorStroke: SKColor     // 바닥 타일 테두리
+        let wallTop: SKColor         // 벽 3D 위 베벨
+        let wallBottom: SKColor      // 벽 3D 아래 베벨
+        let character: SKColor       // 캐릭터 몸체
+        let charTopBack: SKColor     // 캐릭터 3D 위 베벨
+        let charBottomBack: SKColor  // 캐릭터 3D 아래 베벨
+        let charArrow: SKColor       // 캐릭터 방향 화살표
 
-    // 바닥 타일 테두리 — 라이트: #d2c6ac (기존 고정값) / 다크: 바닥 채우기보다 살짝 밝은 쿨톤
-    private var floorStrokeColor = SKColor(red: 210/255, green: 198/255, blue: 172/255, alpha: 1.0)
-    // 벽 3D 베벨 — 라이트: #c7b694 / #9f8b65 (기존 고정값) / 다크: 벽 채우기와 어울리는 쿨톤
-    private var wallTopColor = SKColor(red: 199/255, green: 182/255, blue: 148/255, alpha: 1.0)
-    private var wallBotColor = SKColor(red: 159/255, green: 139/255, blue: 101/255, alpha: 1.0)
-    // 캐릭터 3D 베벨/화살표 — 라이트: 기존 탄색 베벨 + 크림 화살표 / 다크: 쿨 그레이 베벨 + 다크 화살표
-    // (다크에선 캐릭터 몸체가 밝은 회백색이라 탄색 베벨·크림 화살표가 뭉개지는 문제 수정)
-    private var charTopBackColor    = SKColor.bevelTopBack
-    private var charBottomBackColor = SKColor.bevelBottomBack
-    private var charArrowColor      = SKColor.arrowCream
+        /// 라이트 — 기존 고정값 그대로 (절대 변경 금지)
+        static let light = Palette(
+            floor:          SKColor(red: 232/255, green: 221/255, blue: 194/255, alpha: 1.0), // #e8ddc2
+            wall:           SKColor(red: 187/255, green: 167/255, blue: 126/255, alpha: 1.0), // #bba77e
+            floorStroke:    SKColor(red: 210/255, green: 198/255, blue: 172/255, alpha: 1.0), // #d2c6ac
+            wallTop:        SKColor(red: 199/255, green: 182/255, blue: 148/255, alpha: 1.0), // #c7b694
+            wallBottom:     SKColor(red: 159/255, green: 139/255, blue: 101/255, alpha: 1.0), // #9f8b65
+            character:      .darkInk,         // #2a2520
+            charTopBack:    .bevelTopBack,    // #807869
+            charBottomBack: .bevelBottomBack, // #beb59f
+            charArrow:      .arrowCream       // #f4ecd7
+        )
+
+        /// 다크 — 바닥은 밝은 블루그레이, 벽은 짙은 네이비, 캐릭터는 밝은 회백색 몸체 + 쿨 그레이 베벨 + 다크 잉크 화살표
+        /// (캐릭터 값은 홈 화면 미니 아이콘의 characterTopBack/BottomBack/Arrow 다크 값과 동일)
+        static let dark = Palette(
+            floor:          SKColor(red: 0.24, green: 0.27, blue: 0.36, alpha: 1.0),
+            wall:           SKColor(red: 0.11, green: 0.12, blue: 0.16, alpha: 1.0),
+            floorStroke:    SKColor(red: 0.33, green: 0.37, blue: 0.47, alpha: 1.0),
+            wallTop:        SKColor(red: 0.165, green: 0.18, blue: 0.235, alpha: 1.0),
+            wallBottom:     SKColor(red: 0.065, green: 0.07, blue: 0.095, alpha: 1.0),
+            character:      SKColor(red: 0.88, green: 0.88, blue: 0.90, alpha: 1.0),
+            charTopBack:    SKColor(red: 0.70, green: 0.71, blue: 0.75, alpha: 1.0),
+            charBottomBack: SKColor(red: 0.52, green: 0.53, blue: 0.60, alpha: 1.0),
+            charArrow:      SKColor(red: 42/255, green: 37/255, blue: 32/255, alpha: 1.0)
+        )
+    }
+
+    /// 현재 색 묶음 — updateColorScheme으로 전환
+    private var palette = Palette.light
+
+    /// 목표 지점 골드 (라이트/다크 공통 고정값)
+    private let goalColor = SKColor(red: 0.93, green: 0.67, blue: 0.24, alpha: 1.0)
 
     // MARK: - 맵 데이터
     // 외부 읽기 가능, 내부에서만 쓰기 가능
@@ -78,40 +101,7 @@ class GameScene: SKScene {
 
     /// 다크/라이트 모드에 따라 타일 색상을 변경하고 맵을 다시 그림
     func updateColorScheme(isDark: Bool) {
-        floorColor = isDark
-            ? SKColor(red: 0.24, green: 0.27, blue: 0.36, alpha: 1.0) // 다크: 밝은 블루그레이 — 길
-            : SKColor(red: 232/255, green: 221/255, blue: 194/255, alpha: 1.0) // 라이트: #e8ddc2 — 길
-        wallColor = isDark
-            ? SKColor(red: 0.11, green: 0.12, blue: 0.16, alpha: 1.0) // 다크: 매우 어두운 네이비 — 벽
-            : SKColor(red: 187/255, green: 167/255, blue: 126/255, alpha: 1.0) // 라이트: #bba77e — 벽
-        characterColor = isDark
-            ? SKColor(red: 0.88, green: 0.88, blue: 0.90, alpha: 1.0)
-            : SKColor.darkInk // #2a2520
-
-        // 바닥 타일 테두리 — 다크에선 바닥 채우기(블루그레이)보다 살짝 밝은 쿨톤으로
-        floorStrokeColor = isDark
-            ? SKColor(red: 0.33, green: 0.37, blue: 0.47, alpha: 1.0)
-            : SKColor(red: 210/255, green: 198/255, blue: 172/255, alpha: 1.0) // 라이트: 기존 탄색 유지
-
-        // 벽 3D 베벨 — 다크에선 벽 채우기(짙은 네이비) 기준으로 위는 살짝 밝게, 아래는 살짝 어둡게
-        wallTopColor = isDark
-            ? SKColor(red: 0.165, green: 0.18, blue: 0.235, alpha: 1.0)
-            : SKColor(red: 199/255, green: 182/255, blue: 148/255, alpha: 1.0)  // 라이트: #c7b694 유지
-        wallBotColor = isDark
-            ? SKColor(red: 0.065, green: 0.07, blue: 0.095, alpha: 1.0)
-            : SKColor(red: 159/255, green: 139/255, blue: 101/255, alpha: 1.0)  // 라이트: #9f8b65 유지
-
-        // 캐릭터 베벨/화살표 — 다크에선 밝은 몸체에 맞춰 쿨 그레이 베벨 + 다크 잉크 화살표
-        // (홈 화면 미니 아이콘의 characterTopBack/BottomBack/Arrow 다크 값과 동일)
-        charTopBackColor = isDark
-            ? SKColor(red: 0.70, green: 0.71, blue: 0.75, alpha: 1.0)
-            : SKColor.bevelTopBack      // 라이트: #807869 유지
-        charBottomBackColor = isDark
-            ? SKColor(red: 0.52, green: 0.53, blue: 0.60, alpha: 1.0)
-            : SKColor.bevelBottomBack   // 라이트: #beb59f 유지
-        charArrowColor = isDark
-            ? SKColor(red: 42/255, green: 37/255, blue: 32/255, alpha: 1.0)     // 다크: 다크 잉크 화살표
-            : SKColor.arrowCream        // 라이트: #f4ecd7 유지
+        palette = isDark ? .dark : .light
 
         // 색상 변경 후 맵 전체 다시 그리기
         setupMap()
@@ -274,9 +264,9 @@ class GameScene: SKScene {
             // 바닥 타일 — 평면 + 테두리로 표현
             let node = SKShapeNode(rectOf: CGSize(width: size, height: size), cornerRadius: radius)
             node.position    = position
-            node.fillColor   = floorColor
+            node.fillColor   = palette.floor
             // 연한 테두리로 바닥 타일 구분 (라이트: 탄색 / 다크: 쿨톤 — updateColorScheme에서 결정)
-            node.strokeColor = floorStrokeColor
+            node.strokeColor = palette.floorStroke
             node.lineWidth   = 1.5
             node.zPosition   = 0  // 맨 아래 레이어
             return node
@@ -287,12 +277,12 @@ class GameScene: SKScene {
                 at: position,
                 size: size,
                 radius: radius,
-                color: wallColor,
+                color: palette.wall,
                 topDepth: 0.8,  // 위 뒷면 두께
                 botDepth: 3.0,  // 아래 뒷면 두께 (그림자 효과)
                 baseZ: 0,
-                topColor: wallTopColor,
-                botColor: wallBotColor
+                topColor: palette.wallTop,
+                botColor: palette.wallBottom
             )
             return node
         }
@@ -390,7 +380,7 @@ class GameScene: SKScene {
         path.addLine(to: CGPoint(x: -s, y: 0))
         path.closeSubpath()
         let node = SKShapeNode(path: path)
-        node.fillColor = itemColor
+        node.fillColor = .gemMint
         node.strokeColor = .clear
         return node
     }
@@ -398,7 +388,7 @@ class GameScene: SKScene {
     /// 스위치 노드 — 주황 원형 버튼
     private func makeSwitchNode(size: CGFloat) -> SKShapeNode {
         let node = SKShapeNode(circleOfRadius: size * 0.24)
-        node.fillColor = switchColor
+        node.fillColor = .switchOrange
         node.strokeColor = .clear
         return node
     }
@@ -407,7 +397,7 @@ class GameScene: SKScene {
     private func makeGateMarkerNode(size: CGFloat, isOpen: Bool) -> SKShapeNode {
         let ring = SKShapeNode(circleOfRadius: size * 0.22)
         ring.fillColor = .clear
-        ring.strokeColor = gateMarkerColor.withAlphaComponent(isOpen ? 0.35 : 0.9)
+        ring.strokeColor = SKColor.switchOrange.withAlphaComponent(isOpen ? 0.35 : 0.9)
         ring.lineWidth = isOpen ? 2 : 3
         return ring
     }
@@ -417,10 +407,10 @@ class GameScene: SKScene {
         let container = SKNode()
         let outer = SKShapeNode(circleOfRadius: size * 0.32)
         outer.fillColor = .clear
-        outer.strokeColor = portalColor
+        outer.strokeColor = .portalPurple
         outer.lineWidth = 3
         let inner = SKShapeNode(circleOfRadius: size * 0.16)
-        inner.fillColor = portalColor.withAlphaComponent(0.5)
+        inner.fillColor = SKColor.portalPurple.withAlphaComponent(0.5)
         inner.strokeColor = .clear
         container.addChild(outer)
         container.addChild(inner)
@@ -442,12 +432,12 @@ class GameScene: SKScene {
             at: .zero,
             size: bodySize,
             radius: bodyRadius,
-            color: characterColor,
+            color: palette.character,
             topDepth: 0.5,
             botDepth: 2.0,
             baseZ: 0,
-            topColor: charTopBackColor,
-            botColor: charBottomBackColor
+            topColor: palette.charTopBack,
+            botColor: palette.charBottomBack
         )
         container.addChild(body3D)
 
@@ -481,7 +471,7 @@ class GameScene: SKScene {
         path.closeSubpath()
 
         let node = SKShapeNode(path: path)
-        node.fillColor   = charArrowColor // 라이트: 크림 #f4ecd7 / 다크: 다크 잉크 (몸체 밝음에 맞춘 반전)
+        node.fillColor   = palette.charArrow // 라이트: 크림 #f4ecd7 / 다크: 다크 잉크 (몸체 밝음에 맞춘 반전)
         node.strokeColor = .clear
         return node
     }

@@ -34,7 +34,7 @@ struct CodePanelView: View {
     @Binding var isPanelExpanded: Bool        // 패널 확장/최소화 — StageView와 공유 (stageInfoBar·맵 크기와 연동)
 
     /// true면 확장/축소 토글 자체를 없애고 코드 리스트를 항상 펼친 상태로 고정
-    /// (아이폰 가로모드 wideGameLayout 전용 — 이미 좌우 분할로 공간이 넉넉해 축소 기능이 필요 없음)
+    /// (아이폰 가로모드 wideGameLayout·아이패드 iPadGameLayout 전용 — 이미 좌우 분할로 공간이 넉넉해 축소 기능이 필요 없음)
     var alwaysExpanded: Bool = false
 
     // MARK: - Body

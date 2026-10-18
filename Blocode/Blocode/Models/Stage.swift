@@ -36,7 +36,7 @@ struct Stage: Codable, Identifiable {
     /// 고유 식별자 (예: "ch1_stage1") — ProgressService 키로도 사용
     var id: String
 
-    /// 챕터 번호 (1~5)
+    /// 챕터 번호 (1~10, ChapterCatalog 기준)
     var chapter: Int
 
     /// 스테이지 번호 (챕터 내 순서)

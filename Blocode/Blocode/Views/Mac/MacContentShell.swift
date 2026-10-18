@@ -9,7 +9,7 @@
 // (ContentView/ChapterSelectView/ChapterView 등 기존 iOS 화면은 이 파일에서 전혀 참조하지 않음)
 // 색상·3D 효과·눌림 효과는 전부 iOS와 동일한 공용 컴포넌트(ThreeDSurface/AppColors/onPressState/
 // LockInfoOverlay/StarRatingView)를 그대로 재사용해 라이트·다크 모드 모두 iOS와 동일하게 유지한다.
-// 챕터 브라우저(ChapterBrowsePane)와 미리보기 맵(StagePreviewMapView)은 별도 파일로 분리됨 (Views/Mac/)
+// 챕터 브라우저(ChapterBrowsePane, Views/Mac/)와 미리보기 맵(StagePreviewMapView, Views/Shared/Components/)은 별도 파일로 분리됨
 #if os(macOS)
 import SwiftUI
 

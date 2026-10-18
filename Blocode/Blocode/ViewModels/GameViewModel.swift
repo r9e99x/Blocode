@@ -106,9 +106,9 @@ final class GameViewModel: ObservableObject {
     }
 
     /// 다음 스테이지 존재 여부 — 챕터 마지막 스테이지이면 false
-    /// (데이터 접근은 StageLoader(Service)에 위임)
+    /// (ChapterCatalog의 스테이지 수로 판단 — 예전엔 화면을 그릴 때마다 다음 스테이지 JSON을 읽어 디코딩했음)
     var hasNextStage: Bool {
-        StageLoader.load(chapter: stage.chapter, stage: stage.stageNumber + 1) != nil
+        stage.stageNumber < (ChapterCatalog.chapter(stage.chapter)?.stageCount ?? 0)
     }
 
     // MARK: - 블럭 관리
@@ -405,8 +405,7 @@ final class GameViewModel: ObservableObject {
                 }
 
             case .functionBlock:
-                // function 블럭: 자식 블럭들을 서브루틴으로 실행
-                // 추후 챕터4 UI에서 함수 정의-호출 분리 구조로 확장 예정
+                // function 블럭: 자식 블럭들을 서브루틴으로 한 번 실행 (블럭 수 계산에서는 자식만 셈 — 묶음 역할)
                 let children = block.children ?? []
                 await executeBlocks(children, parentPath: path)
 

@@ -78,10 +78,7 @@ struct ClearOverlayView: View {
                 .font(.system(size: 13, weight: .bold))
                 .foregroundStyle(Color.secondary)
                 .frame(width: 40, height: 40)
-                .background(
-                    Color.dynamic(light: (1.0, 1.0, 1.0),
-                                  dark: (0.18, 0.19, 0.23))
-                )
+                .background(Color.closeButtonBackground)
                 .clipShape(RoundedRectangle(cornerRadius: 12))
                 .shadow(color: Color.black.opacity(0.08), radius: 8, x: 0, y: 2)
         }
@@ -207,11 +204,7 @@ struct ClearOverlayView: View {
                         .font(.system(size: 13, weight: .bold))
                         .foregroundStyle(Color.secondary)  // UIColor.secondaryLabel과 동일 톤 (크로스플랫폼)
                         .frame(width: 40, height: 40)
-                        .background(
-                            // Color.dynamic 크로스플랫폼 헬퍼 (값은 기존과 동일)
-                            Color.dynamic(light: (1.0, 1.0, 1.0),
-                                          dark: (0.18, 0.19, 0.23))
-                        )
+                        .background(Color.closeButtonBackground)
                         .clipShape(RoundedRectangle(cornerRadius: 12))
                         .shadow(color: Color.black.opacity(0.08), radius: 8, x: 0, y: 2)
                 }
@@ -289,11 +282,7 @@ struct ClearOverlayView: View {
                         .foregroundStyle(.primary)
                         .frame(maxWidth: .infinity)
                         .frame(height: 54)
-                        .background(
-                            // Color.dynamic 크로스플랫폼 헬퍼 (값은 기존과 동일)
-                            Color.dynamic(light: (251/255, 246/255, 232/255),
-                                          dark: (0.18, 0.19, 0.23))
-                        )
+                        .background(Color.statCardBackground)  // 라이트 #fbf6e8 / 다크 미드 남색 (기존 값과 동일)
                         .clipShape(RoundedRectangle(cornerRadius: 27))
                         .shadow(color: Color.black.opacity(0.06), radius: 8, x: 0, y: 2)
                 }
@@ -342,11 +331,7 @@ struct ClearOverlayView: View {
                 valueColor: .secondary
             )
         }
-        .background(
-            // Color.dynamic 크로스플랫폼 헬퍼 (값은 기존과 동일)
-            Color.dynamic(light: (251/255, 246/255, 232/255),  // 라이트: #fbf6e8
-                          dark: (0.14, 0.15, 0.18))
-        )
+        .background(Color.cardBackground)  // 라이트 #fbf6e8 / 다크 짙은 남색 (기존 값과 동일)
         .clipShape(RoundedRectangle(cornerRadius: 20))
         .shadow(color: Color.black.opacity(0.06), radius: 12, x: 0, y: 3)
     }
@@ -381,11 +366,7 @@ struct ClearOverlayView: View {
                     .font(.system(size: 13, weight: .bold))
                     .foregroundStyle(Color.secondary)  // UIColor.secondaryLabel과 동일 톤 (크로스플랫폼)
                     .frame(width: 40, height: 40)
-                    .background(
-                        // Color.dynamic 크로스플랫폼 헬퍼 (값은 기존과 동일)
-                        Color.dynamic(light: (1.0, 1.0, 1.0),
-                                      dark: (0.18, 0.19, 0.23))
-                    )
+                    .background(Color.closeButtonBackground)
                     .clipShape(RoundedRectangle(cornerRadius: 12))
                     .shadow(color: Color.black.opacity(0.08), radius: 8, x: 0, y: 2)
             }
@@ -518,11 +499,7 @@ struct ClearOverlayView: View {
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 14)
-        .background(
-            // Color.dynamic 크로스플랫폼 헬퍼 (값은 기존과 동일)
-            Color.dynamic(light: (251/255, 246/255, 232/255),
-                          dark: (0.14, 0.15, 0.18))
-        )
+        .background(Color.cardBackground)  // 라이트 #fbf6e8 / 다크 짙은 남색 (기존 값과 동일)
         .clipShape(RoundedRectangle(cornerRadius: 16))
         .shadow(color: Color.black.opacity(0.06), radius: 8, x: 0, y: 2)
     }

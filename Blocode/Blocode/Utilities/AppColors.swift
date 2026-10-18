@@ -117,16 +117,30 @@ extension Color {
 
     /// 다크 잉크 #2a2520 — 캐릭터 본체 / 다크 버튼 앞면
     static let darkInk = Color(red: 42/255, green: 37/255, blue: 32/255)
-    /// 3D 위 뒷면 #807869
-    static let bevelTopBack = Color(red: 128/255, green: 120/255, blue: 105/255)
     /// 3D 아래 뒷면 #beb59f (그림자 효과)
     static let bevelBottomBack = Color(red: 190/255, green: 181/255, blue: 159/255)
-    /// 방향 화살표 크림 #f4ecd7
-    static let arrowCream = Color(red: 244/255, green: 236/255, blue: 215/255)
     /// 강조 민트그린 #27b894 — 실행 버튼 / 클리어 강조
     static let accentMint = Color(red: 0.27, green: 0.72, blue: 0.58)
     /// 실행 버튼 비활성/실행 중 색 — 따뜻한 회색 (라이트/다크 동일 고정값, iOS 컨트롤 바·맥 상단바 공용)
     static let runButtonInactiveGray = Color(red: 0.72, green: 0.70, blue: 0.67)
+    /// 실패 표시 빨강 — 실패한 블럭 행의 빨간 막대/테두리 (라이트/다크 동일 고정값)
+    static let failureRed = Color(red: 0.95, green: 0.25, blue: 0.20)
+
+    /// 클리어 화면 X(닫기) 버튼 배경 — 라이트: 흰색 / 다크: 미드 남색
+    static var closeButtonBackground: Color {
+        Color.dynamic(light: (1.0, 1.0, 1.0),
+                      dark: (0.18, 0.19, 0.23))
+    }
+
+    // MARK: - 기믹 색상 (맵의 보석/스위치/포탈 — 라이트/다크 동일 고정값)
+    // 맵(SpriteKit)과 온보딩 일러스트가 같은 색을 쓰도록 아래 SKColor와 값을 나란히 관리
+
+    /// 보석 민트
+    static let gemMint = Color(red: 0.42, green: 0.82, blue: 0.68)
+    /// 스위치(문 표시 포함) 주황
+    static let switchOrange = Color(red: 0.93, green: 0.62, blue: 0.28)
+    /// 포탈 보라
+    static let portalPurple = Color(red: 0.62, green: 0.45, blue: 0.85)
 
     // MARK: - 다크모드 전용 파생 색상
     // 다크 배경(네이비)과 따뜻한 탄색 트림이 충돌하는 화면에서만 쓰는 다이나믹 컬러 모음.
@@ -190,13 +204,6 @@ extension Color {
         Color.dynamic(light: (0.984, 0.965, 0.910),
                       dark: (0.16, 0.17, 0.22))
     }
-
-    /// UIColor.systemGray2 대응 (설정 화면 비활성 아이콘 배지 등)
-    /// 라이트/다크 값 모두 iOS systemGray2 공식 값과 동일 — macOS에서도 같은 톤 유지
-    static var systemGray2Color: Color {
-        Color.dynamic(light: (174/255, 174/255, 178/255),
-                      dark: (99/255, 99/255, 102/255))
-    }
 }
 
 // MARK: - SpriteKit 색상 (GameScene 전용 — 위 Color와 동일 RGB 공유)
@@ -212,4 +219,9 @@ extension SKColor {
     static let bevelBottomBack = SKColor(red: 190/255, green: 181/255, blue: 159/255, alpha: 1.0)
     /// 방향 화살표 크림 #f4ecd7
     static let arrowCream = SKColor(red: 244/255, green: 236/255, blue: 215/255, alpha: 1.0)
+
+    // 기믹 색상 — 위 Color.gemMint/switchOrange/portalPurple과 같은 값
+    static let gemMint      = SKColor(red: 0.42, green: 0.82, blue: 0.68, alpha: 1.0)
+    static let switchOrange = SKColor(red: 0.93, green: 0.62, blue: 0.28, alpha: 1.0)
+    static let portalPurple = SKColor(red: 0.62, green: 0.45, blue: 0.85, alpha: 1.0)
 }

@@ -102,8 +102,8 @@ enum BlockType: String, Codable, CaseIterable {
         case .repeatBlock:    return Self.pastel(168/255, 141/255, 192/255) // 라벤더
         case .ifBlock:        return Self.pastel(240/255, 196/255, 100/255) // 골든 옐로우
         case .functionBlock:  return Self.pastel(94/255,  198/255, 208/255) // 틸
-        case .collectItem:    return Self.pastel(0.42, 0.82, 0.68)          // 민트 보석 — GameScene.itemColor와 동일 톤
-        case .activateSwitch: return Self.pastel(0.93, 0.62, 0.28)          // 주황 스위치 — GameScene.switchColor와 동일 톤
+        case .collectItem:    return Self.pastel(0.42, 0.82, 0.68)          // 민트 보석 — AppColors.gemMint와 동일 톤
+        case .activateSwitch: return Self.pastel(0.93, 0.62, 0.28)          // 주황 스위치 — AppColors.switchOrange와 동일 톤
         }
     }
 

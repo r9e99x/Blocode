@@ -25,12 +25,6 @@ struct PaletteView: View {
     /// 드래그 종료 콜백 — 최종 위치 전달
     var onDragEnd:    ((BlockType, CGPoint) -> Void)? = nil
 
-    /// 팔레트 카드 컨테이너 배경 — 다크/라이트 모드 대응 (Color.dynamic 크로스플랫폼 헬퍼 사용)
-    private var containerColor: Color {
-        Color.dynamic(light: (251/255, 246/255, 232/255),  // 라이트: #fbf6e8
-                      dark: (0.18, 0.19, 0.23))
-    }
-
     // 팔레트 세로 크기 축소(iOS 전용) — 맥은 카드가 이미 작아서 기존 패딩 그대로 유지
     #if os(macOS)
     private let verticalPadding: CGFloat = 12
@@ -56,7 +50,7 @@ struct PaletteView: View {
             .padding(.horizontal, 14)
             .padding(.vertical, verticalPadding)
         }
-        .background(containerColor)
+        .background(Color.statCardBackground)  // 팔레트 컨테이너 — 홈 통계 카드와 같은 크림/미드 남색
         .clipShape(RoundedRectangle(cornerRadius: 20))
         .shadow(color: Color.black.opacity(0.06), radius: 10, x: 0, y: 2)
         .padding(.horizontal, 16)

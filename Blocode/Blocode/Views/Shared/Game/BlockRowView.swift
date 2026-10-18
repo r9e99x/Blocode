@@ -217,7 +217,7 @@ struct BlockRowView: View {
             // 실패 — 3D 블럭 오른쪽 바깥에 세로 빨간 막대 표시
             if isFailed {
                 RoundedRectangle(cornerRadius: 2)
-                    .fill(Color(red: 0.95, green: 0.25, blue: 0.20))
+                    .fill(Color.failureRed)
                     .frame(width: 4, height: frontH * 0.6)
                     .transition(.opacity.combined(with: .scale))
             }
@@ -456,7 +456,7 @@ struct BlockRowView: View {
                         .strokeBorder(child.type.blockColor.opacity(0.9), lineWidth: 2)
                 } else if isChildFailed {
                     RoundedRectangle(cornerRadius: 8)
-                        .strokeBorder(Color(red: 0.95, green: 0.25, blue: 0.20), lineWidth: 2)
+                        .strokeBorder(Color.failureRed, lineWidth: 2)
                 }
             }
             .animation(.easeInOut(duration: 0.15), value: isChildActive)
@@ -615,7 +615,7 @@ struct BlockRowView: View {
                             .strokeBorder(gc.type.blockColor.opacity(0.9), lineWidth: 2)
                     } else if isGcFailed {
                         RoundedRectangle(cornerRadius: 6)
-                            .strokeBorder(Color(red: 0.95, green: 0.25, blue: 0.20), lineWidth: 2)
+                            .strokeBorder(Color.failureRed, lineWidth: 2)
                     }
                 }
                 .animation(.easeInOut(duration: 0.15), value: isGcActive)
@@ -670,7 +670,7 @@ struct BlockRowView: View {
                                     .strokeBorder(ggc.type.blockColor.opacity(0.9), lineWidth: 2)
                             } else if isFailed {
                                 RoundedRectangle(cornerRadius: 5)
-                                    .strokeBorder(Color(red: 0.95, green: 0.25, blue: 0.20), lineWidth: 2)
+                                    .strokeBorder(Color.failureRed, lineWidth: 2)
                             }
                         }
                         .animation(.easeInOut(duration: 0.15), value: isActive)

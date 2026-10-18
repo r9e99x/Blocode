@@ -9,7 +9,7 @@ import AVFoundation
 
 // MARK: - SoundEffect
 /// 재생 가능한 효과음 종류 — Resources/Sounds의 파일명(.m4a)과 1:1 대응
-enum SoundEffect: String {
+enum SoundEffect: String, CaseIterable {
     case blockAdd          // 코드블럭 추가
     case blockReorder      // 코드블럭 순서 변경
     case buttonTap         // 일반 버튼 클릭
@@ -39,12 +39,8 @@ final class SoundService {
         try? AVAudioSession.sharedInstance().setCategory(.ambient)
         #endif
 
-        let allEffects: [SoundEffect] = [
-            .blockAdd, .blockReorder, .buttonTap, .gameFail,
-            .itemCollect, .switchActivate, .clearThreeStar, .clearLowStar,
-            .lockButton, .portal
-        ]
-        for effect in allEffects {
+        // 모든 효과음 미리 로드 — case를 추가하면 자동 포함 (파일명이 rawValue와 같아야 함)
+        for effect in SoundEffect.allCases {
             guard let url = Bundle.main.url(forResource: effect.rawValue, withExtension: "m4a") else {
                 continue
             }

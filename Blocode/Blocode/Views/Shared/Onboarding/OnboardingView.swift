@@ -17,7 +17,7 @@ private struct OnboardingPage {
 
 // MARK: - OnboardingView
 /// 앱 첫 실행 시 표시되는 온보딩 화면
-/// UserDefaults의 "hasSeenOnboarding" 키로 표시 여부를 관리
+/// 표시 여부는 BlocodeApp이 @AppStorage(SettingsService.hasSeenOnboardingKey)로 관리
 struct OnboardingView: View {
 
     /// 온보딩 완료 콜백 — BlocodeApp에서 ContentView로 전환하는 데 사용
@@ -288,9 +288,8 @@ struct OnboardingView: View {
 
     // MARK: - 온보딩 완료 처리
 
-    /// UserDefaults에 완료 기록 후 콜백 호출
+    /// 완료 콜백 호출 — 완료 기록 저장은 콜백을 받은 BlocodeApp의 @AppStorage가 담당 (예전엔 여기서도 같은 값을 한 번 더 저장했음)
     private func finish() {
-        UserDefaults.standard.set(true, forKey: "hasSeenOnboarding")
         onFinish()
     }
 
@@ -438,20 +437,20 @@ struct OnboardingView: View {
             gimmickIcon(label: "보석") {
                 Image(systemName: "diamond.fill")
                     .font(.system(size: 30))
-                    .foregroundStyle(Color(red: 0.42, green: 0.82, blue: 0.68))  // GameScene.itemColor와 동일
+                    .foregroundStyle(Color.gemMint)  // 맵의 보석과 같은 색 (AppColors)
             }
             gimmickIcon(label: "스위치") {
                 Circle()
-                    .fill(Color(red: 0.93, green: 0.62, blue: 0.28))  // GameScene.switchColor와 동일
+                    .fill(Color.switchOrange)  // 맵의 스위치와 같은 색 (AppColors)
                     .frame(width: 32, height: 32)
             }
             gimmickIcon(label: "포탈") {
                 ZStack {
                     Circle()
-                        .stroke(Color(red: 0.62, green: 0.45, blue: 0.85), lineWidth: 3)  // GameScene.portalColor와 동일
+                        .stroke(Color.portalPurple, lineWidth: 3)  // 맵의 포탈과 같은 색 (AppColors)
                         .frame(width: 38, height: 38)
                     Circle()
-                        .fill(Color(red: 0.62, green: 0.45, blue: 0.85).opacity(0.5))
+                        .fill(Color.portalPurple.opacity(0.5))
                         .frame(width: 18, height: 18)
                 }
             }

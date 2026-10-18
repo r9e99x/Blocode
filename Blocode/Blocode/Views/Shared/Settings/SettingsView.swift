@@ -86,9 +86,9 @@ struct SettingsView: View {
                 ScrollView {
                     VStack(spacing: 28) {
                         themeSection      // 테마 선택 섹션
-                        feedbackSection   // 햅틱/효과음 섹션
-                        gameSection       // 실행 속도/힌트 섹션
-                        dataSection       // iCloud/초기화 섹션
+                        feedbackSection   // 효과음/배경음악 섹션
+                        gameSection       // 실행 속도 섹션
+                        dataSection       // 진행도 초기화 섹션
                         developerSection  // 챕터 강제 해금(테스트 편의) — 임시, 정식 배포 전 제거 예정
                         footerView        // 버전 정보
                     }
@@ -343,28 +343,13 @@ struct SettingsView: View {
 
     // MARK: - 데이터 섹션
 
-    /// iCloud 동기화(준비 중)와 진행도 초기화
+    /// 진행도 초기화
+    /// (iCloud 동기화 자리표시자 행은 동작하지 않는 기능이라 심사 지적 위험 때문에 제거 — 실제 구현 시 다시 추가)
     private var dataSection: some View {
         VStack(alignment: .leading, spacing: 10) {
             sectionLabel("데이터")
             settingsCard {
                 VStack(spacing: 0) {
-
-                    // iCloud 동기화 (비활성 — 향후 구현 예정)
-                    settingsRow(
-                        icon: "icloud.fill",
-                        iconColor: Color.systemGray2Color,  // UIColor.systemGray2와 동일 값 (크로스플랫폼)
-                        title: "iCloud 동기화",
-                        subtitle: "모든 기기에서 진행도"
-                    ) {
-                        Toggle("", isOn: .constant(false))
-                            .labelsHidden()
-                            .disabled(true)  // 비활성화
-                    }
-                    .opacity(0.45)         // 흐리게 표시 (준비 중)
-                    .allowsHitTesting(false) // 터치 차단
-
-                    rowDivider
 
                     // 진행도 초기화 — 탭 시 확인 알럿 표시
                     settingsRow(

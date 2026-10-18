@@ -11,7 +11,7 @@ import SwiftUI
 /// 챕터 한 개의 메타데이터 — ChapterCatalog가 보유하는 단일 원본 데이터 모델
 /// 챕터 카드 렌더링, 챕터 해금, 종합 스테이지 잠금 판단 등에 두루 사용
 struct ChapterInfo: Identifiable {
-    let id: Int                     // 챕터 번호 (1~5)
+    let id: Int                     // 챕터 번호 (1~10)
     var number: Int { id }          // id의 alias — 가독성을 위한 computed property
     let title: String               // 챕터 이름 (예: "기본기")
     let description: String         // 챕터를 한 줄로 소개하는 짧은 설명

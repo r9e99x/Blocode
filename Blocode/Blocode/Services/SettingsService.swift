@@ -90,6 +90,9 @@ final class SettingsService: ObservableObject {
     /// 여기서 UserDefaults 값만 바꿔도 앱 진입점이 자동으로 온보딩 화면으로 전환됨
     func resetProgress() {
         ProgressService.shared.resetAll()
-        UserDefaults.standard.set(false, forKey: "hasSeenOnboarding")
+        UserDefaults.standard.set(false, forKey: Self.hasSeenOnboardingKey)
     }
+
+    /// 온보딩을 봤는지 저장하는 UserDefaults 키 — BlocodeApp의 @AppStorage와 진행도 초기화가 같은 키를 쓰도록 한 곳에서 정의
+    static let hasSeenOnboardingKey = "hasSeenOnboarding"
 }

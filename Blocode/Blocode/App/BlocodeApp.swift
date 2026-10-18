@@ -20,7 +20,7 @@ struct BlocodeApp: App {
     ///
     /// iCloud 동기화: 현재 비활성. Apple Developer 등록이 필요한 기능이라
     /// 등록 완료 후 ProgressService의 ModelConfiguration에 CloudKit을
-    /// 연결하면 활성화됨 (UI의 "iCloud 동기화" 토글도 그때 잠금 해제 예정).
+    /// 연결하면 활성화됨 (설정 화면의 "iCloud 동기화" 행도 그때 다시 추가할 것).
     ///
     /// 커스텀 맵/블럭(유저 제작): 추후 구현 예정. 기본 스테이지는 계속
     /// JSON(Resources/Stages)으로 관리하고, 유저가 만든 커스텀 맵만
@@ -28,7 +28,7 @@ struct BlocodeApp: App {
 
     // MARK: - 온보딩 표시 여부
     /// 앱 최초 설치 시 false → 온보딩 표시 후 true로 저장
-    @AppStorage("hasSeenOnboarding") private var hasSeenOnboarding = false
+    @AppStorage(SettingsService.hasSeenOnboardingKey) private var hasSeenOnboarding = false
 
     /// 앱 활성/백그라운드 상태 — 홈 화면으로 나가면 배경음악을 멈추고, 돌아오면 다시 재생하는 데 사용
     @Environment(\.scenePhase) private var scenePhase

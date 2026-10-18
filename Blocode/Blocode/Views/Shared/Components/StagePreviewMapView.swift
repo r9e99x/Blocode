@@ -5,7 +5,7 @@
 //  Created by 조준희 on 7/16/26.
 //
 
-// 맥 챕터 브라우저 + 아이패드 챕터 브라우저가 공용으로 쓰는 스테이지 미리보기 맵
+// 맥 챕터 브라우저 + 아이패드 챕터 브라우저가 공용으로 쓰는 스테이지 미리보기 맵 (두 플랫폼 공용이라 Shared/Components에 둠)
 // (코드 자체가 플랫폼 무관 SwiftUI+SpriteKit이라 iOS/macOS 둘 다 컴파일, 아이폰은 이 타입을 아무도 호출하지 않음)
 #if os(macOS) || os(iOS)
 import SwiftUI
