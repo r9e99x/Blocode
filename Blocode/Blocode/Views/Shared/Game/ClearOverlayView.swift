@@ -52,11 +52,11 @@ struct ClearOverlayView: View {
 
             #if os(macOS)
             // 맥 전용: 콘텐츠가 창 가운데 560pt로 좁혀지므로, X버튼만 창 전체 기준 우상단에 별도 고정
-            // (레이아웃 내부의 X버튼은 숨김 처리해 중복 방지 — closeButton/embeddedCloseButton 참고)
+            // (레이아웃 내부의 X버튼은 숨김 처리해 중복 방지 — 세 곳 모두 공용 xButton 사용)
             VStack {
                 HStack {
                     Spacer()
-                    macTopRightCloseButton
+                    xButton
                 }
                 Spacer()
             }
@@ -67,32 +67,13 @@ struct ClearOverlayView: View {
         .onAppear { animateIn() }  // 화면 등장 시 순차 애니메이션 시작
     }
 
-    #if os(macOS)
-    /// 맥 전용 — 창 우상단 절대 위치에 고정되는 닫기 버튼 (스타일은 기존 X버튼과 동일)
-    private var macTopRightCloseButton: some View {
-        Button {
-            SoundService.shared.play(.buttonTap)
-            onClose()
-        } label: {
-            Image(systemName: "xmark")
-                .font(.system(size: 13, weight: .bold))
-                .foregroundStyle(Color.secondary)
-                .frame(width: 40, height: 40)
-                .background(Color.closeButtonBackground)
-                .clipShape(RoundedRectangle(cornerRadius: 12))
-                .shadow(color: Color.black.opacity(0.08), radius: 8, x: 0, y: 2)
-        }
-        .buttonStyle(.plain)
-    }
-    #endif
-
     // MARK: - 별 3개 레이아웃
 
     private var threeStarLayout: some View {
         VStack(spacing: 0) {
             // 닫기 버튼 (오른쪽 상단) — 맥은 창 우상단에 별도 고정되므로 여기선 숨김(중복 방지)
             #if !os(macOS)
-            closeButton
+            HStack { Spacer(); xButton }
                 .padding(.horizontal, 24)
                 .padding(.top, 16)
             #endif
@@ -196,19 +177,7 @@ struct ClearOverlayView: View {
                 Spacer()
                 // x 버튼으로 닫기 — 맥은 창 우상단에 별도 고정되므로 여기선 숨김(중복 방지)
                 #if !os(macOS)
-                Button {
-                    SoundService.shared.play(.buttonTap)
-                    onClose()
-                } label: {
-                    Image(systemName: "xmark")
-                        .font(.system(size: 13, weight: .bold))
-                        .foregroundStyle(Color.secondary)  // UIColor.secondaryLabel과 동일 톤 (크로스플랫폼)
-                        .frame(width: 40, height: 40)
-                        .background(Color.closeButtonBackground)
-                        .clipShape(RoundedRectangle(cornerRadius: 12))
-                        .shadow(color: Color.black.opacity(0.08), radius: 8, x: 0, y: 2)
-                }
-                .buttonStyle(.plain)
+                xButton
                 #endif
             }
             .padding(.horizontal, 24)
@@ -353,27 +322,22 @@ struct ClearOverlayView: View {
 
     // MARK: - 공통 서브뷰
 
-    #if !os(macOS)
-    /// 오른쪽 상단 닫기 버튼 (x 아이콘) — 맥은 macTopRightCloseButton으로 대체
-    private var closeButton: some View {
-        HStack {
-            Spacer()
-            Button {
-                SoundService.shared.play(.buttonTap)
-                onClose()
-            } label: {
-                Image(systemName: "xmark")
-                    .font(.system(size: 13, weight: .bold))
-                    .foregroundStyle(Color.secondary)  // UIColor.secondaryLabel과 동일 톤 (크로스플랫폼)
-                    .frame(width: 40, height: 40)
-                    .background(Color.closeButtonBackground)
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
-                    .shadow(color: Color.black.opacity(0.08), radius: 8, x: 0, y: 2)
-            }
-            .buttonStyle(.plain)
+    /// 닫기(X) 버튼 — 별 3개 레이아웃 우상단·별 1~2개 레이아웃 제목 줄·맥 창 우상단이 함께 사용 (예전엔 세 벌 복사본)
+    private var xButton: some View {
+        Button {
+            SoundService.shared.play(.buttonTap)
+            onClose()
+        } label: {
+            Image(systemName: "xmark")
+                .font(.system(size: 13, weight: .bold))
+                .foregroundStyle(Color.secondary)  // UIColor.secondaryLabel과 동일 톤 (크로스플랫폼)
+                .frame(width: 40, height: 40)
+                .background(Color.closeButtonBackground)
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+                .shadow(color: Color.black.opacity(0.08), radius: 8, x: 0, y: 2)
         }
+        .buttonStyle(.plain)
     }
-    #endif
 
     /// 캐릭터 아이콘 — 3D 다크 블럭 + 화살표 (별 3개 레이아웃 중앙에 표시)
     private var characterIcon: some View {

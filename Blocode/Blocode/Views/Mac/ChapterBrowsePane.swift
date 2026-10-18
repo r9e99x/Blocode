@@ -129,7 +129,10 @@ struct ChapterBrowsePane: View {
     private var stageListColumn: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
-                chapterColorHeader
+                // 챕터 색 헤더 카드 (iOS 가로 챕터 화면·아이패드 브라우저와 공용 부품)
+                ChapterHeaderCard(chapterNumber: chapterNumber, title: vm.chapterTitle, color: chapterColor,
+                                  earned: vm.totalStars(), maxStars: vm.stages.count * 3)
+                    .padding(16)
 
                 ForEach(vm.stages) { stage in
                     let locked = vm.isLocked(stage)
@@ -209,65 +212,6 @@ struct ChapterBrowsePane: View {
             .frame(width: iconSize, height: iconSize)
         }
         .frame(width: iconSize, height: iconSize + topD + botD)
-    }
-
-    /// 챕터 색상 헤더 — iOS ChapterView.chapterHeader와 동일한 앞/뒤 2겹 depth 기법
-    /// (별 아이콘 행 + "N / M stars" 숫자 텍스트까지 iOS의 starProgressBar와 동일하게 표시)
-    private var chapterColorHeader: some View {
-        let depth: CGFloat = 5
-        let total = vm.totalStars()
-        let maxStar = vm.stages.count * 3
-
-        return VStack(alignment: .leading, spacing: 6) {
-            Text("CHAPTER \(String(format: "%02d", chapterNumber))")
-                .font(.system(size: 11, weight: .bold)).foregroundStyle(.white.opacity(0.7)).tracking(1)
-            Text(vm.chapterTitle).font(.system(size: 24, weight: .bold)).foregroundStyle(.white)
-
-            HStack(alignment: .top, spacing: 8) {
-                // 별이 많은 챕터는 한 줄에 다 안 들어가므로 자동으로 다음 줄로 감싸는 레이아웃 사용
-                // (헤더 가로 폭은 그대로, 넘치는 별만 두 번째 줄로 — StarRatingView는 단일 줄이라 여기선 미사용)
-                macWrappingStarRow(earned: total, total: maxStar, size: 9, spacing: 2, lineSpacing: 4)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                VStack(alignment: .trailing, spacing: 0) {
-                    Text("\(total) / \(maxStar)")
-                        .font(.system(size: 12, weight: .semibold))
-                        .foregroundStyle(.white)
-                    Text("stars")
-                        .font(.system(size: 10))
-                        .foregroundStyle(.white.opacity(0.7))
-                }
-                .fixedSize()
-            }
-            .padding(.top, 4)
-        }
-        .padding(.horizontal, 16)
-        .padding(.top, 16)
-        .padding(.bottom, 16 + depth)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background {
-            ZStack(alignment: .top) {
-                // 뒷면 — 어둡게, depth만큼 아래로 (3D 효과, iOS와 동일 기법)
-                RoundedRectangle(cornerRadius: 16).fill(chapterColor)
-                    .overlay(RoundedRectangle(cornerRadius: 16).fill(Color.black.opacity(0.28)))
-                    .padding(.top, depth)
-                // 앞면 — depth만큼 짧게 (뒷면이 아래로 보이게)
-                RoundedRectangle(cornerRadius: 16).fill(chapterColor)
-                    .padding(.bottom, depth)
-            }
-        }
-        .padding(16)
-    }
-
-    /// 챕터 헤더용 별 행 — WrapLayout으로 감싸서 폭을 넘으면 다음 줄로 자동 배치
-    /// (별 색상/아이콘 로직은 StarRatingView와 동일하게 유지, 컨테이너만 wrap 가능하도록 교체)
-    private func macWrappingStarRow(earned: Int, total: Int, size: CGFloat, spacing: CGFloat, lineSpacing: CGFloat) -> some View {
-        WrapLayout(spacing: spacing, lineSpacing: lineSpacing) {
-            ForEach(0..<total, id: \.self) { i in
-                Image(systemName: i < earned ? "star.fill" : "star")
-                    .font(.system(size: size))
-                    .foregroundStyle(i < earned ? Color.starGold : Color.primary.opacity(0.20))
-            }
-        }
     }
 
     // MARK: 3열 — 스테이지 미리보기
@@ -365,43 +309,10 @@ struct ChapterBrowsePane: View {
     }
 }
 
-// MARK: - WrapLayout
-/// 자식 뷰를 가로로 채우다가 폭을 넘으면 다음 줄로 감싸는 간단한 flow 레이아웃
-/// 챕터 헤더의 별 아이콘 행 전용 — 별이 많은 챕터에서 헤더 밖으로 넘치는 문제 방지
-private struct WrapLayout: Layout {
-    var spacing: CGFloat = 4
-    var lineSpacing: CGFloat = 4
+// MARK: - Preview
 
-    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
-        let maxWidth = proposal.width ?? .infinity
-        var x: CGFloat = 0, y: CGFloat = 0, lineHeight: CGFloat = 0
-        for subview in subviews {
-            let size = subview.sizeThatFits(.unspecified)
-            if x > 0, x + size.width > maxWidth {
-                x = 0
-                y += lineHeight + lineSpacing
-                lineHeight = 0
-            }
-            x += size.width + spacing
-            lineHeight = max(lineHeight, size.height)
-        }
-        y += lineHeight
-        return CGSize(width: maxWidth.isFinite ? maxWidth : x, height: y)
-    }
-
-    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
-        var x = bounds.minX, y = bounds.minY, lineHeight: CGFloat = 0
-        for subview in subviews {
-            let size = subview.sizeThatFits(.unspecified)
-            if x > bounds.minX, x + size.width > bounds.maxX {
-                x = bounds.minX
-                y += lineHeight + lineSpacing
-                lineHeight = 0
-            }
-            subview.place(at: CGPoint(x: x, y: y), proposal: .unspecified)
-            x += size.width + spacing
-            lineHeight = max(lineHeight, size.height)
-        }
-    }
+#Preview("챕터 2 브라우저") {
+    ChapterBrowsePane(chapterNumber: 2, onBackToMap: {}, onSelectChapter: { _ in }, onStart: { _, _ in })
+        .frame(width: 1280, height: 860)
 }
 #endif

@@ -280,10 +280,7 @@ struct OnboardingView: View {
             .frame(height: frontH + topD + botD)
         }
         .buttonStyle(.plain)
-        .simultaneousGesture(DragGesture(minimumDistance: 0)
-            .onChanged { _ in withAnimation(.easeInOut(duration: 0.08)) { isNextPressed = true } }
-            .onEnded   { _ in withAnimation(.easeInOut(duration: 0.08)) { isNextPressed = false } }
-        )
+        .onPressState(isPressed: $isNextPressed)  // 공용 눌림 추적 (다른 3D 버튼과 동일 방식)
     }
 
     // MARK: - 온보딩 완료 처리
@@ -305,7 +302,7 @@ struct OnboardingView: View {
 
             VStack(spacing: 16) {
                 // 미니 3D 블럭 아이콘 (홈 화면과 동일)
-                miniBlockIcon(size: 72, topD: 1.5, botD: 2.5, cr: 18)
+                MiniLogoIcon(size: 72, topDepth: 1.5, bottomDepth: 2.5, cornerRadius: 18, arrowSize: 72 * 0.35)
 
                 Text("Blocode")
                     .font(.system(size: 28, weight: .bold, design: .rounded))
@@ -500,35 +497,6 @@ struct OnboardingView: View {
                 .clipShape(Capsule())
         }
         .frame(maxWidth: .infinity)
-    }
-
-    // MARK: - 미니 블럭 아이콘 (환영 슬라이드용)
-
-    /// 홈 화면과 동일한 3D 블럭 아이콘
-    /// 캐릭터/앱 로고와 동일한 다이나믹 컬러 세트 사용(라이트: darkInk/bevel*/arrowCream과 동일 값,
-    /// 다크: 밝은 몸체 — nextButton과 같은 이유로 고정 라이트색 대신 다크모드 대응 색상으로 교체)
-    private func miniBlockIcon(size: CGFloat, topD: CGFloat, botD: CGFloat, cr: CGFloat) -> some View {
-        let frontColor   = Color.characterBody
-        let topBackColor = Color.characterTopBack
-        let botBackColor = Color.characterBottomBack
-        let arrowColor   = Color.characterArrow
-
-        return ThreeDSurface(topDepth: topD, bottomDepth: botD) {
-            RoundedRectangle(cornerRadius: cr).fill(topBackColor)
-                .frame(width: size, height: size)
-        } bottomBack: {
-            RoundedRectangle(cornerRadius: cr).fill(botBackColor)
-                .frame(width: size, height: size)
-        } front: {
-            ZStack {
-                RoundedRectangle(cornerRadius: cr).fill(frontColor)
-                Image(systemName: "arrow.up")
-                    .font(.system(size: size * 0.35, weight: .bold))
-                    .foregroundStyle(arrowColor)
-            }
-            .frame(width: size, height: size)
-        }
-        .frame(width: size, height: size + topD + botD)
     }
 }
 

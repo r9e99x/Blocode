@@ -96,31 +96,15 @@ struct PaletteCardView: View {
     #endif
 
     var body: some View {
-        ThreeDSurface(topDepth: topDepth, bottomDepth: botDepth) {
-            // ① 위 뒷면 — blockColor + white 0.28 (앞면보다 위에 살짝 보임)
-            ZStack {
-                RoundedRectangle(cornerRadius: radius).fill(type.blockColor)
-                RoundedRectangle(cornerRadius: radius).fill(Color.white.opacity(0.28))
-            }
-            .frame(width: btnSize, height: btnSize)
-        } bottomBack: {
-            // ② 아래 뒷면 — blockColor + black 0.25 (그림자 효과)
-            ZStack {
-                RoundedRectangle(cornerRadius: radius).fill(type.blockColor)
-                RoundedRectangle(cornerRadius: radius).fill(Color.black.opacity(0.25))
-            }
-            .frame(width: btnSize, height: btnSize)
-        } front: {
-            // ③ 앞면 — blockColor + 아이콘
-            ZStack {
-                RoundedRectangle(cornerRadius: radius).fill(type.blockColor)
-                Image(systemName: type.iconName)
-                    .font(.system(size: iconSize, weight: .semibold))
-                    .foregroundStyle(.white)
-            }
-            .frame(width: btnSize, height: btnSize)
+        // 3D 카드 — 공용 Bevel3DButtonLabel (위 뒷면 blockColor + white 0.28 / 아래 뒷면 blockColor + black 0.25 / 앞면 + 아이콘)
+        // 눌림은 3D 내려앉기 대신 아래 scaleEffect로 표현하므로 isPressed는 넘기지 않음
+        Bevel3DButtonLabel(color: type.blockColor, width: btnSize, height: btnSize, cornerRadius: radius,
+                           topDepth: topDepth, botDepth: botDepth,
+                           topOverlayOpacity: 0.28, bottomOverlayOpacity: 0.25) {
+            Image(systemName: type.iconName)
+                .font(.system(size: iconSize, weight: .semibold))
+                .foregroundStyle(.white)
         }
-        .frame(width: btnSize, height: btnSize + topDepth + botDepth)
         // 드래그 중: 0.88배 축소 + 반투명 / 눌린 상태: 0.93배 축소
         .scaleEffect(isDragging ? 0.88 : (isPressed ? 0.93 : 1.0))
         .opacity(isDragging ? 0.5 : 1.0)

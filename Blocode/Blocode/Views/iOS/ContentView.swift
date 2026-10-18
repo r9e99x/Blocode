@@ -132,8 +132,8 @@ struct ContentView: View {
     /// 로고 + 앱 이름 행 — 컴팩트 헤더와 와이드 레이아웃 왼쪽 열에서 공용 사용
     private var brandRow: some View {
         HStack(spacing: 10) {
-            // 미니 3D 블럭 아이콘 — 어두운 색상의 작은 3D 사각형
-            miniBlockIcon
+            // 앱 로고와 같은 3D 미니 아이콘 (온보딩과 공용 부품)
+            MiniLogoIcon(size: 36, topDepth: 1.0, bottomDepth: 2.0, cornerRadius: 10, arrowSize: 14)
             // 앱 이름
             Text("Blocode")
                 .font(.system(size: 22, weight: .bold, design: .rounded))
@@ -195,46 +195,6 @@ struct ContentView: View {
         }
         .background(Color.appBackground.ignoresSafeArea())
         .hideNavigationBar()  // iOS 전용 API 래퍼 (macOS no-op)
-    }
-
-    // MARK: - 미니 3D 블럭 아이콘 (헤더 왼쪽)
-
-    private var miniBlockIcon: some View {
-        // 3D 효과: 위 뒷면 → 아래 뒷면 → 앞면+내용 (앞면이 마지막 = 최상단)
-        let iconSize: CGFloat = 36
-        let topD:     CGFloat = 1.0
-        let botD:     CGFloat = 2.0
-        let cr:       CGFloat = 10
-
-        // 미니 아이콘 색상 — 게임 캐릭터와 동일한 다이나믹 컬러 세트
-        // (라이트: 기존 darkInk/베벨/크림 그대로, 다크: 밝은 몸체 + 쿨 그레이 베벨 + 다크 화살표)
-        let frontColor   = Color.characterBody        // 라이트 #2a2520 / 다크 회백색 앞면
-        let topBackColor = Color.characterTopBack     // 라이트 #807869 / 다크 쿨 그레이 위 뒷면
-        let botBackColor = Color.characterBottomBack  // 라이트 #beb59f / 다크 쿨 그레이 아래 뒷면
-        let arrowColor   = Color.characterArrow       // 라이트 #f4ecd7 / 다크 다크잉크 화살표
-
-        return ThreeDSurface(topDepth: topD, bottomDepth: botD) {
-            // ① 위 뒷면
-            RoundedRectangle(cornerRadius: cr)
-                .fill(topBackColor)
-                .frame(width: iconSize, height: iconSize)
-        } bottomBack: {
-            // ② 아래 뒷면
-            RoundedRectangle(cornerRadius: cr)
-                .fill(botBackColor)
-                .frame(width: iconSize, height: iconSize)
-        } front: {
-            // ③ 앞면 + 화살표 — #2a2520 앞면, #f4ecd7 화살표
-            ZStack {
-                RoundedRectangle(cornerRadius: cr)
-                    .fill(frontColor)
-                Image(systemName: "arrow.up")
-                    .font(.system(size: 14, weight: .bold))
-                    .foregroundStyle(arrowColor)
-            }
-            .frame(width: iconSize, height: iconSize)
-        }
-        .frame(width: iconSize, height: iconSize + topD + botD)
     }
 
     // MARK: - 인용구 섹션
