@@ -57,9 +57,9 @@ struct BlockEditingTests {
     func removeBlock_ignoresInvalidIndex() {
         let vm = makeViewModel()
         vm.addBlock(.moveForward)
-        vm.removeBlock(at: 5)
+        vm.removeBlock(at: [5])
         #expect(vm.codeBlocks.count == 1)
-        vm.removeBlock(at: 0)
+        vm.removeBlock(at: [0])
         #expect(vm.codeBlocks.isEmpty)
     }
 
@@ -80,8 +80,8 @@ struct BlockEditingTests {
         let vm = makeViewModel()
         vm.addBlock(.repeatBlock)
         vm.addBlock(.moveForward)
-        vm.addChildBlock(.turnLeft, to: 0)
-        vm.addChildBlock(.turnLeft, to: 1)  // 일반 블럭 — 무시
+        vm.addChildBlock(.turnLeft, at: [0])
+        vm.addChildBlock(.turnLeft, at: [1])  // 일반 블럭 — 무시
         #expect(types(vm.codeBlocks[0].children) == [.turnLeft])
         #expect(vm.codeBlocks[1].children == nil)
     }
@@ -90,16 +90,16 @@ struct BlockEditingTests {
     func nestedAddAndRemove() {
         let vm = makeViewModel()
         vm.addBlock(.functionBlock)
-        vm.addChildBlock(.repeatBlock, to: 0)
-        vm.addGrandchildBlock(.ifBlock, parentIndex: 0, childIndex: 0)
-        vm.addGreatGrandchildBlock(.moveForward, parentIndex: 0, childIndex: 0, grandchildIndex: 0)
+        vm.addChildBlock(.repeatBlock, at: [0])
+        vm.addChildBlock(.ifBlock, at: [0, 0])
+        vm.addChildBlock(.moveForward, at: [0, 0, 0])
         #expect(vm.totalBlockCount == 1)  // 컨테이너는 0, 맨 안쪽 앞으로만 1
 
-        vm.removeGreatGrandchildBlock(greatGrandchildIndex: 0, parentIndex: 0, childIndex: 0, grandchildIndex: 0)
+        vm.removeBlock(at: [0, 0, 0, 0])
         #expect(vm.codeBlocks[0].children?[0].children?[0].children?.isEmpty == true)
-        vm.removeGrandchildBlock(grandchildIndex: 0, parentIndex: 0, childIndex: 0)
+        vm.removeBlock(at: [0, 0, 0])
         #expect(vm.codeBlocks[0].children?[0].children?.isEmpty == true)
-        vm.removeChildBlock(at: 0, from: 0)
+        vm.removeBlock(at: [0, 0])
         #expect(vm.codeBlocks[0].children?.isEmpty == true)
     }
 
@@ -107,18 +107,65 @@ struct BlockEditingTests {
     func repeatCount_clampedAtEveryDepth() {
         let vm = makeViewModel()
         vm.addBlock(.repeatBlock)
-        vm.setRepeatCount(0, at: 0)
+        vm.setRepeatCount(0, at: [0])
         #expect(vm.codeBlocks[0].repeatCount == 1)
 
         vm.addBlock(.functionBlock)
-        vm.addChildBlock(.repeatBlock, to: 1)
-        vm.setChildRepeatCount(99, parentIndex: 1, childIndex: 0)
+        vm.addChildBlock(.repeatBlock, at: [1])
+        vm.setRepeatCount(99, at: [1, 0])
         #expect(vm.codeBlocks[1].children?[0].repeatCount == 10)
 
-        vm.addChildBlock(.ifBlock, to: 1)
-        vm.addGrandchildBlock(.repeatBlock, parentIndex: 1, childIndex: 1)
-        vm.setGrandchildRepeatCount(-3, parentIndex: 1, childIndex: 1, grandchildIndex: 0)
+        vm.addChildBlock(.ifBlock, at: [1])
+        vm.addChildBlock(.repeatBlock, at: [1, 1])
+        vm.setRepeatCount(-3, at: [1, 1, 0])
         #expect(vm.codeBlocks[1].children?[1].children?[0].repeatCount == 1)
+    }
+
+    @Test("중첩 규칙 — function·동일 타입 금지, 증손자는 기본 동작 블럭만")
+    func nestingRules() {
+        let vm = makeViewModel()
+        vm.addBlock(.repeatBlock)
+        vm.addChildBlock(.functionBlock, at: [0])  // function 중첩 금지
+        vm.addChildBlock(.repeatBlock, at: [0])    // 동일 타입 금지
+        #expect(types(vm.codeBlocks[0].children) == [])
+
+        vm.addChildBlock(.ifBlock, at: [0])         // 반복 → 만약에 → 반복까지는 허용
+        vm.addChildBlock(.repeatBlock, at: [0, 0])
+        vm.addChildBlock(.ifBlock, at: [0, 0, 0])   // 4단째 컨테이너는 금지
+        vm.addChildBlock(.moveForward, at: [0, 0, 0])
+        #expect(types(vm.block(at: [0, 0, 0])?.children) == [.moveForward])
+        #expect(vm.allowedChildTypes(at: [0, 0, 0, 0]).isEmpty)  // 기본 동작 블럭은 컨테이너가 아님
+    }
+
+    @Test("잘못된 경로는 아무 일도 하지 않음")
+    func invalidPaths_areIgnored() {
+        let vm = makeViewModel()
+        vm.addBlock(.repeatBlock)
+        vm.addChildBlock(.moveForward, at: [0])
+        vm.addChildBlock(.turnLeft, at: [])
+        vm.addChildBlock(.turnLeft, at: [3])
+        vm.removeBlock(at: [])
+        vm.removeBlock(at: [0, 5])
+        vm.removeBlock(at: [0, 0, 0])
+        vm.setRepeatCount(5, at: [0, 0])  // 반복 블럭이 아님
+        #expect(vm.block(at: []) == nil)
+        #expect(types(vm.codeBlocks) == [.repeatBlock])
+        #expect(types(vm.codeBlocks[0].children) == [.moveForward])
+        #expect(vm.codeBlocks[0].repeatCount == 2)
+    }
+
+    @Test("실행 중에는 중첩 블럭도 편집할 수 없음")
+    func nestedEditingBlockedWhileRunning() {
+        let vm = makeViewModel()
+        vm.addBlock(.functionBlock)
+        vm.addChildBlock(.repeatBlock, at: [0])
+        vm.run()
+        vm.addChildBlock(.moveForward, at: [0, 0])
+        vm.setRepeatCount(7, at: [0, 0])
+        vm.removeBlock(at: [0, 0])
+        #expect(types(vm.codeBlocks[0].children) == [.repeatBlock])
+        #expect(vm.codeBlocks[0].children?[0].repeatCount == 2)
+        #expect(vm.codeBlocks[0].children?[0].children?.isEmpty == true)
     }
 
     @Test("실행 중에는 블럭을 편집할 수 없음")
@@ -127,7 +174,7 @@ struct BlockEditingTests {
         vm.addBlock(.moveForward)
         vm.run()  // 동기적으로 running 진입 (실제 실행 Task는 이후에 돎)
         vm.addBlock(.turnLeft)
-        vm.removeBlock(at: 0)
+        vm.removeBlock(at: [0])
         #expect(types(vm.codeBlocks) == [.moveForward])
     }
 
@@ -137,7 +184,7 @@ struct BlockEditingTests {
         vm.addBlock(.repeatBlock)
         let original = vm.codeBlocks[0].repeatCount
         vm.run()
-        vm.setRepeatCount(5, at: 0)
+        vm.setRepeatCount(5, at: [0])
         #expect(vm.codeBlocks[0].repeatCount == original)
     }
 
@@ -152,8 +199,8 @@ struct BlockEditingTests {
         #expect(vm.codeBlocks.isEmpty)
 
         vm.addBlock(.repeatBlock)
-        vm.addChildBlock(.ifBlock, to: 0)        // 반복 안에 만약에 — 차단 (예전엔 3챕터 기법을 쓸 수 있었음)
-        vm.addChildBlock(.moveForward, to: 0)    // 팔레트에 있는 블럭은 정상 추가
+        vm.addChildBlock(.ifBlock, at: [0])        // 반복 안에 만약에 — 차단 (예전엔 3챕터 기법을 쓸 수 있었음)
+        vm.addChildBlock(.moveForward, at: [0])    // 팔레트에 있는 블럭은 정상 추가
         #expect(types(vm.codeBlocks[0].children) == [.moveForward])
     }
 }

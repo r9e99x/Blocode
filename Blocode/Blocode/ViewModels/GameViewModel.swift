@@ -133,13 +133,6 @@ final class GameViewModel: ObservableObject {
         SoundService.shared.play(.blockAdd)
     }
 
-    /// 특정 인덱스의 블럭 삭제 — idle 상태이고 유효한 인덱스일 때만 허용
-    func removeBlock(at index: Int) {
-        guard gameState == .idle,
-              codeBlocks.indices.contains(index) else { return }
-        codeBlocks.remove(at: index)
-    }
-
     /// 블럭 순서 변경 (드래그 앤 드롭) — idle 상태일 때만 허용
     func moveBlock(from source: IndexSet, to destination: Int) {
         guard gameState == .idle else { return }
@@ -147,125 +140,74 @@ final class GameViewModel: ObservableObject {
         SoundService.shared.play(.blockReorder)
     }
 
-    /// 컨테이너 블럭(repeat / if / function)에 자식 블럭 추가
-    func addChildBlock(_ type: BlockType, to parentIndex: Int) {
-        guard gameState == .idle, isAllowed(type),
-              codeBlocks.indices.contains(parentIndex),
-              codeBlocks[parentIndex].hasChildren else { return }  // repeat·if·function 모두 허용
-        let child = Block(type: type)
-        codeBlocks[parentIndex].children?.append(child)
+    // MARK: - 경로 기반 블럭 편집
+    // 경로 형식은 currentBlockPath와 같음 — [최상위], [최상위, 자식], [최상위, 자식, 손자], ...
+
+    /// 경로에 있는 블럭 — 경로가 잘못됐으면 nil
+    func block(at path: [Int]) -> Block? {
+        var siblings = codeBlocks
+        var found: Block? = nil
+        for index in path {
+            guard siblings.indices.contains(index) else { return nil }
+            found = siblings[index]
+            siblings = siblings[index].children ?? []
+        }
+        return found
     }
 
-    /// 컨테이너 블럭(repeat / if / function)의 자식 블럭 삭제
-    func removeChildBlock(at childIndex: Int, from parentIndex: Int) {
-        guard gameState == .idle,
-              codeBlocks.indices.contains(parentIndex),
-              codeBlocks[parentIndex].hasChildren,  // repeat·if·function 모두 허용
-              let children = codeBlocks[parentIndex].children,
-              children.indices.contains(childIndex) else { return }
-        codeBlocks[parentIndex].children?.remove(at: childIndex)
+    /// 경로의 컨테이너에 넣을 수 있는 블럭 — 스테이지 팔레트 안에서 중첩 규칙을 적용
+    /// 규칙: function 중첩 불허, 동일 타입 중첩 불허, 증손자는 기본 동작 블럭만(4단 이상 중첩 방지)
+    func allowedChildTypes(at path: [Int]) -> [BlockType] {
+        guard let parent = block(at: path), parent.hasChildren else { return [] }
+        let isDeepestContainer = path.count >= 3
+        return stage.paletteBlocks.filter { type in
+            if type == .functionBlock || type == parent.type { return false }
+            if isDeepestContainer && (type == .repeatBlock || type == .ifBlock) { return false }
+            return true
+        }
     }
 
-    /// if 블럭의 조건(pathClear / pathBlocked) 변경
-    func setIfCondition(_ condition: IfCondition, at index: Int) {
-        guard gameState == .idle,
-              codeBlocks.indices.contains(index),
-              codeBlocks[index].type == .ifBlock else { return }
-        codeBlocks[index].ifCondition = condition
+    /// 경로의 블럭 수정 — idle 상태이고 경로가 유효할 때만
+    private func editBlock(at path: [Int], _ edit: (inout Block) -> Void) {
+        guard gameState == .idle, let first = path.first, block(at: path) != nil else { return }
+        Self.editBlock(&codeBlocks[first], remainingPath: path.dropFirst(), edit)
     }
 
-    // MARK: - 중첩 블럭 관리 (컨테이너 블럭의 자식 컨테이너 조작)
-
-    /// 자식 컨테이너(repeat/if)에 손자 블럭 추가
-    func addGrandchildBlock(_ type: BlockType, parentIndex: Int, childIndex: Int) {
-        guard gameState == .idle, isAllowed(type),
-              codeBlocks.indices.contains(parentIndex),
-              let children = codeBlocks[parentIndex].children,
-              children.indices.contains(childIndex),
-              children[childIndex].hasChildren else { return }
-        codeBlocks[parentIndex].children?[childIndex].children?.append(Block(type: type))
+    /// 트리를 따라 내려가 값 타입 블럭을 제자리에서 수정 (경로는 호출부에서 검증됨)
+    private static func editBlock(_ block: inout Block, remainingPath: ArraySlice<Int>, _ edit: (inout Block) -> Void) {
+        guard let next = remainingPath.first else {
+            edit(&block)
+            return
+        }
+        editBlock(&block.children![next], remainingPath: remainingPath.dropFirst(), edit)
     }
 
-    /// 자식 컨테이너(repeat/if)에서 손자 블럭 삭제
-    func removeGrandchildBlock(grandchildIndex: Int, parentIndex: Int, childIndex: Int) {
-        guard gameState == .idle,
-              codeBlocks.indices.contains(parentIndex),
-              let children = codeBlocks[parentIndex].children,
-              children.indices.contains(childIndex),
-              let grandchildren = children[childIndex].children,
-              grandchildren.indices.contains(grandchildIndex) else { return }
-        codeBlocks[parentIndex].children?[childIndex].children?.remove(at: grandchildIndex)
+    /// 경로의 컨테이너에 자식 블럭 추가 — 허용되지 않는 블럭은 무시
+    func addChildBlock(_ type: BlockType, at path: [Int]) {
+        guard allowedChildTypes(at: path).contains(type) else { return }
+        editBlock(at: path) { $0.children?.append(Block(type: type)) }
     }
 
-    /// 자식 if 블럭의 조건 변경
-    func setChildIfCondition(_ condition: IfCondition, parentIndex: Int, childIndex: Int) {
-        guard gameState == .idle,
-              codeBlocks.indices.contains(parentIndex),
-              let children = codeBlocks[parentIndex].children,
-              children.indices.contains(childIndex),
-              children[childIndex].type == .ifBlock else { return }
-        codeBlocks[parentIndex].children?[childIndex].ifCondition = condition
+    /// 경로의 블럭 삭제 (최상위·중첩 공용)
+    func removeBlock(at path: [Int]) {
+        guard gameState == .idle, block(at: path) != nil, let index = path.last else { return }
+        if path.count == 1 {
+            codeBlocks.remove(at: index)
+        } else {
+            editBlock(at: Array(path.dropLast())) { $0.children?.remove(at: index) }
+        }
     }
 
-    /// 자식 repeat 블럭의 반복 횟수 변경
-    func setChildRepeatCount(_ count: Int, parentIndex: Int, childIndex: Int) {
-        guard gameState == .idle,
-              codeBlocks.indices.contains(parentIndex),
-              let children = codeBlocks[parentIndex].children,
-              children.indices.contains(childIndex),
-              children[childIndex].type == .repeatBlock else { return }
-        codeBlocks[parentIndex].children?[childIndex].repeatCount = max(1, min(10, count))
+    /// 경로의 if 블럭 조건 변경
+    func setIfCondition(_ condition: IfCondition, at path: [Int]) {
+        guard block(at: path)?.type == .ifBlock else { return }
+        editBlock(at: path) { $0.ifCondition = condition }
     }
 
-    // MARK: - 3단 중첩 블럭 관리 (손자 컨테이너의 자식 = 증손자 조작)
-
-    /// 손자 컨테이너(repeat/if)에 증손자 블럭 추가
-    func addGreatGrandchildBlock(_ type: BlockType, parentIndex: Int, childIndex: Int, grandchildIndex: Int) {
-        guard gameState == .idle, isAllowed(type),
-              codeBlocks.indices.contains(parentIndex),
-              let children = codeBlocks[parentIndex].children,
-              children.indices.contains(childIndex),
-              let grandchildren = children[childIndex].children,
-              grandchildren.indices.contains(grandchildIndex),
-              grandchildren[grandchildIndex].hasChildren else { return }
-        codeBlocks[parentIndex].children?[childIndex].children?[grandchildIndex].children?.append(Block(type: type))
-    }
-
-    /// 손자 컨테이너(repeat/if)에서 증손자 블럭 삭제
-    func removeGreatGrandchildBlock(greatGrandchildIndex: Int, parentIndex: Int, childIndex: Int, grandchildIndex: Int) {
-        guard gameState == .idle,
-              codeBlocks.indices.contains(parentIndex),
-              let children = codeBlocks[parentIndex].children,
-              children.indices.contains(childIndex),
-              let grandchildren = children[childIndex].children,
-              grandchildren.indices.contains(grandchildIndex),
-              let greatGrandchildren = grandchildren[grandchildIndex].children,
-              greatGrandchildren.indices.contains(greatGrandchildIndex) else { return }
-        codeBlocks[parentIndex].children?[childIndex].children?[grandchildIndex].children?.remove(at: greatGrandchildIndex)
-    }
-
-    /// 손자 if 블럭의 조건 변경
-    func setGrandchildIfCondition(_ condition: IfCondition, parentIndex: Int, childIndex: Int, grandchildIndex: Int) {
-        guard gameState == .idle,
-              codeBlocks.indices.contains(parentIndex),
-              let children = codeBlocks[parentIndex].children,
-              children.indices.contains(childIndex),
-              let grandchildren = children[childIndex].children,
-              grandchildren.indices.contains(grandchildIndex),
-              grandchildren[grandchildIndex].type == .ifBlock else { return }
-        codeBlocks[parentIndex].children?[childIndex].children?[grandchildIndex].ifCondition = condition
-    }
-
-    /// 손자 repeat 블럭의 반복 횟수 변경
-    func setGrandchildRepeatCount(_ count: Int, parentIndex: Int, childIndex: Int, grandchildIndex: Int) {
-        guard gameState == .idle,
-              codeBlocks.indices.contains(parentIndex),
-              let children = codeBlocks[parentIndex].children,
-              children.indices.contains(childIndex),
-              let grandchildren = children[childIndex].children,
-              grandchildren.indices.contains(grandchildIndex),
-              grandchildren[grandchildIndex].type == .repeatBlock else { return }
-        codeBlocks[parentIndex].children?[childIndex].children?[grandchildIndex].repeatCount = max(1, min(10, count))
+    /// 경로의 repeat 블럭 반복 횟수 변경 (1~10회로 제한)
+    func setRepeatCount(_ count: Int, at path: [Int]) {
+        guard block(at: path)?.isRepeatBlock == true else { return }
+        editBlock(at: path) { $0.repeatCount = max(1, min(10, count)) }
     }
 
     /// 특정 위치에 블럭 삽입 (팔레트 드래그-앤-드롭 위치 지정 삽입)
@@ -276,14 +218,6 @@ final class GameViewModel: ObservableObject {
         let safeIndex = min(max(0, index), codeBlocks.count)
         codeBlocks.insert(block, at: safeIndex)
         SoundService.shared.play(.blockAdd)
-    }
-
-    /// repeat 블럭의 반복 횟수 변경 (1~10회로 제한 — 자식/손자 조작 함수와 동일 규칙)
-    func setRepeatCount(_ count: Int, at index: Int) {
-        guard gameState == .idle,
-              codeBlocks.indices.contains(index),
-              codeBlocks[index].isRepeatBlock else { return }
-        codeBlocks[index].repeatCount = max(1, min(10, count))
     }
 
     /// 현재 사용된 총 블럭 수 (별점 계산용) — flatCount로 repeat 내부 블럭 포함

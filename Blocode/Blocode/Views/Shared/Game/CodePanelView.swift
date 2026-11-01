@@ -287,42 +287,42 @@ struct CodePanelView: View {
                                 // 이 행 내부에서 실패한 자식의 상대 경로 (형식 동일)
                                 failedChildPath: viewModel.failedBlockPath?.first == offset
                                     ? Array((viewModel.failedBlockPath ?? []).dropFirst()) : [],
-                                onDelete: { viewModel.removeBlock(at: offset) },
+                                onDelete: { viewModel.removeBlock(at: [offset]) },
                                 onAddChild: { childType in
-                                    viewModel.addChildBlock(childType, to: offset)
+                                    viewModel.addChildBlock(childType, at: [offset])
                                 },
                                 onRemoveChild: { childIndex in
-                                    viewModel.removeChildBlock(at: childIndex, from: offset)
+                                    viewModel.removeBlock(at: [offset, childIndex])
                                 },
                                 onRepeatCountChange: { count in
-                                    viewModel.setRepeatCount(count, at: offset)
+                                    viewModel.setRepeatCount(count, at: [offset])
                                 },
                                 onIfConditionChange: { condition in
-                                    viewModel.setIfCondition(condition, at: offset)
+                                    viewModel.setIfCondition(condition, at: [offset])
                                 },
                                 onAddGrandchild: { type, childIndex in
-                                    viewModel.addGrandchildBlock(type, parentIndex: offset, childIndex: childIndex)
+                                    viewModel.addChildBlock(type, at: [offset, childIndex])
                                 },
                                 onRemoveGrandchild: { gcIdx, childIndex in
-                                    viewModel.removeGrandchildBlock(grandchildIndex: gcIdx, parentIndex: offset, childIndex: childIndex)
+                                    viewModel.removeBlock(at: [offset, childIndex, gcIdx])
                                 },
                                 onSetChildIfCondition: { condition, childIndex in
-                                    viewModel.setChildIfCondition(condition, parentIndex: offset, childIndex: childIndex)
+                                    viewModel.setIfCondition(condition, at: [offset, childIndex])
                                 },
                                 onSetChildRepeatCount: { count, childIndex in
-                                    viewModel.setChildRepeatCount(count, parentIndex: offset, childIndex: childIndex)
+                                    viewModel.setRepeatCount(count, at: [offset, childIndex])
                                 },
                                 onAddGreatGrandchild: { type, childIndex, gcIdx in
-                                    viewModel.addGreatGrandchildBlock(type, parentIndex: offset, childIndex: childIndex, grandchildIndex: gcIdx)
+                                    viewModel.addChildBlock(type, at: [offset, childIndex, gcIdx])
                                 },
                                 onRemoveGreatGrandchild: { ggcIdx, childIndex, gcIdx in
-                                    viewModel.removeGreatGrandchildBlock(greatGrandchildIndex: ggcIdx, parentIndex: offset, childIndex: childIndex, grandchildIndex: gcIdx)
+                                    viewModel.removeBlock(at: [offset, childIndex, gcIdx, ggcIdx])
                                 },
                                 onSetGrandchildIfCondition: { condition, childIndex, gcIdx in
-                                    viewModel.setGrandchildIfCondition(condition, parentIndex: offset, childIndex: childIndex, grandchildIndex: gcIdx)
+                                    viewModel.setIfCondition(condition, at: [offset, childIndex, gcIdx])
                                 },
                                 onSetGrandchildRepeatCount: { count, childIndex, gcIdx in
-                                    viewModel.setGrandchildRepeatCount(count, parentIndex: offset, childIndex: childIndex, grandchildIndex: gcIdx)
+                                    viewModel.setRepeatCount(count, at: [offset, childIndex, gcIdx])
                                 },
                                 onReorderDragStart: { pt in
                                     guard viewModel.gameState == .idle else { return }
