@@ -117,14 +117,14 @@ struct StageView: View {
     private var loadedBody: some View {
         GeometryReader { geo in
         ZStack(alignment: .top) {
-            // 화면 폭에 따라 레이아웃 분기 — 아이폰: 세로 스택 / 아이패드: 맥과 동일한 좌우 분할(코드-좌/맵-우) / 맥: 전용 배치
+            // 화면 폭에 따라 레이아웃 분기 — 아이폰: 세로 스택(가로모드는 좌-맵/우-코드) / 아이패드·맥: 좌-코드/우-맵 분할
             // (아이패드는 폭 조건이 아니라 isPadIdiom으로 정확히 걸러서, 아이폰 가로모드는 절대 이 분기를 안 탐)
             if geo.size.width >= LayoutBreakpoint.wide {
                 #if os(macOS)
-                macGameLayout(totalWidth: geo.size.width)
+                splitGameLayout(totalWidth: geo.size.width)
                 #else
                 if isPadIdiom {
-                    iPadGameLayout(totalWidth: geo.size.width)
+                    splitGameLayout(totalWidth: geo.size.width)
                 } else {
                     wideGameLayout(totalWidth: geo.size.width)
                 }
@@ -175,26 +175,14 @@ struct StageView: View {
                                 // 마지막(종합) 스테이지를 별 3개로 클리어 → "챕터 목록으로"
                                 // 진입 경로(홈 바로 시작 / 챕터 둘러보기)와 무관하게
                                 // 항상 챕터 선택 화면으로 결정적 이동 (pop 횟수 의존 제거)
-                                // onReturnToChapterList가 주입되면(맥 사이드바 셸) 그쪽 동작 사용
-                                if let onReturnToChapterList {
-                                    onReturnToChapterList()
-                                } else {
-                                    navPath = NavigationPath()
-                                    navPath.append(AppRoute.chapterSelect)
-                                }
+                                returnToChapterList()
                             }
                         }
                     },
                     onFinish: {
                         // 마무리 버튼 (별 1~2개 + 마지막/종합 스테이지):
                         // 진입 경로와 무관하게 항상 챕터 선택 화면으로 결정적 이동
-                        // onReturnToChapterList가 주입되면(맥 사이드바 셸) 그쪽 동작 사용
-                        if let onReturnToChapterList {
-                            onReturnToChapterList()
-                        } else {
-                            navPath = NavigationPath()
-                            navPath.append(AppRoute.chapterSelect)
-                        }
+                        returnToChapterList()
                     }
                 )
                 .transition(.opacity)
@@ -268,25 +256,11 @@ struct StageView: View {
             // 확장/축소 두 상태 모두 CodePanelView 내부(코드 리스트 또는 칩 카드)가 남은 공간을
             // 직접 흡수하도록 되어 있어, 여기서 별도 Spacer 없이도 팔레트+컨트롤 바가 항상 화면
             // 맨 아래에 붙고 카드가 그 사이 공간을 자연스럽게 채움
-            CodePanelView(
-                viewModel: viewModel,
-                stage: stage,
-                dragType: $dragType,
-                dragPosition: $dragPosition,
-                dragInsertIndex: $dragInsertIndex,
-                codeListFrame: $codeListFrame,
-                rowMidYs: $rowMidYs,
-                reorderIndex: $reorderIndex,
-                reorderPosition: $reorderPosition,
-                reorderTargetIndex: $reorderTargetIndex,
-                navPath: $navPath,
-                isPanelExpanded: $isPanelExpanded
-            )
+            codePanel()
         }
     }
 
     // MARK: - 와이드(아이폰 가로모드) 게임 레이아웃
-    // 아이패드·맥은 각각 iPadGameLayout·macGameLayout을 따로 쓰므로 이 함수는 실질적으로 아이폰 가로모드 전용
 
     /// 좌측(내비게이션+맵+스테이지 정보) / 우측(코드 패널) 분할 레이아웃
     /// - Parameter totalWidth: 전체 화면 폭 — 좌측 열 너비 계산에 사용
@@ -313,55 +287,29 @@ struct StageView: View {
 
             // ── 우측: 코드 패널 (확장/축소 토글 없이 항상 펼쳐서 코드 리스트가 남은 높이를 전부 사용) ──
             // 가로모드는 이미 좌우 분할로 공간이 넉넉해서 세로모드용 축소 기능이 필요 없음
-            CodePanelView(
-                viewModel: viewModel,
-                stage: stage,
-                dragType: $dragType,
-                dragPosition: $dragPosition,
-                dragInsertIndex: $dragInsertIndex,
-                codeListFrame: $codeListFrame,
-                rowMidYs: $rowMidYs,
-                reorderIndex: $reorderIndex,
-                reorderPosition: $reorderPosition,
-                reorderTargetIndex: $reorderTargetIndex,
-                navPath: $navPath,
-                isPanelExpanded: $isPanelExpanded,
-                alwaysExpanded: true
-            )
-            .padding(.top, 8)
+            codePanel(alwaysExpanded: true)
+                .padding(.top, 8)
         }
     }
 
-    // MARK: - 아이패드 전용 게임 레이아웃
-    // 맥과 동일한 좌-코드/우-맵 배치(맥 UI 배치 이식) — 색상·컴포넌트는 전부 기존 것 재사용,
-    // CodePanelView 자체는 os(iOS) 컴파일 분기라 기존 iOSBody(확장/축소 토글 + 팔레트 + 컨트롤 바)가
-    // 그대로 렌더링되므로 터치 조작에 필요한 버튼들은 하나도 안 빠짐
+    // MARK: - 아이패드·맥 공용 게임 레이아웃
+    // 좌: 코드 패널(세로로 길게) / 우: 정사각 맵(남은 공간) — 코드 패널 안의 배치 차이는 CodePanelView가 플랫폼별로 처리
 
-    private func iPadGameLayout(totalWidth: CGFloat) -> some View {
-        // 코드 패널 폭 — 화면의 38%를 기준으로 420~520pt 사이로 제한 (맥보다 살짝 넓게 — 터치 팔레트 블럭이 더 큼)
+    private func splitGameLayout(totalWidth: CGFloat) -> some View {
+        // 코드 패널 폭 — 아이패드는 터치 팔레트 블럭이 더 커서 맥보다 살짝 넓게
+        #if os(macOS)
+        let leftWidth = min(max(totalWidth * 0.36, 400), 480)
+        #else
         let leftWidth = min(max(totalWidth * 0.38, 420), 520)
+        #endif
 
         return VStack(spacing: 0) {
             navigationBar
 
             HStack(spacing: 0) {
-                // 좌측 — 코드 패널 (코드 리스트가 남은 높이를 전부 사용 = 세로로 길게)
-                CodePanelView(
-                    viewModel: viewModel,
-                    stage: stage,
-                    dragType: $dragType,
-                    dragPosition: $dragPosition,
-                    dragInsertIndex: $dragInsertIndex,
-                    codeListFrame: $codeListFrame,
-                    rowMidYs: $rowMidYs,
-                    reorderIndex: $reorderIndex,
-                    reorderPosition: $reorderPosition,
-                    reorderTargetIndex: $reorderTargetIndex,
-                    navPath: $navPath,
-                    isPanelExpanded: $isPanelExpanded,
-                    alwaysExpanded: true  // 아이패드는 좌우 분할로 공간이 넉넉해 확장/축소 토글 자체가 불필요
-                )
-                .frame(width: leftWidth)
+                // 좌측 — 코드 패널 (좌우 분할로 공간이 넉넉해 확장/축소 토글 없이 항상 펼침)
+                codePanel(alwaysExpanded: true)
+                    .frame(width: leftWidth)
 
                 // 우측 — 정사각형 맵 (상한선 없이 남은 공간을 가득 채우고 가운데 정렬)
                 VStack(spacing: 0) {
@@ -375,6 +323,27 @@ struct StageView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         }
+    }
+
+    // MARK: - 코드 패널
+
+    /// 모든 레이아웃이 함께 쓰는 코드 패널 — 드래그 상태는 고스트 오버레이와 공유
+    private func codePanel(alwaysExpanded: Bool = false) -> some View {
+        CodePanelView(
+            viewModel: viewModel,
+            stage: stage,
+            dragType: $dragType,
+            dragPosition: $dragPosition,
+            dragInsertIndex: $dragInsertIndex,
+            codeListFrame: $codeListFrame,
+            rowMidYs: $rowMidYs,
+            reorderIndex: $reorderIndex,
+            reorderPosition: $reorderPosition,
+            reorderTargetIndex: $reorderTargetIndex,
+            navPath: $navPath,
+            isPanelExpanded: $isPanelExpanded,
+            alwaysExpanded: alwaysExpanded
+        )
     }
 
     // MARK: - 상단 네비게이션 바
@@ -461,7 +430,7 @@ struct StageView: View {
         HStack(spacing: 8) {
             macIconButton(icon: viewModel.characterMoved ? "arrow.uturn.backward" : "arrow.counterclockwise",
                           isPressed: $isMacResetPressed) {
-                if viewModel.characterMoved { viewModel.reset() } else { viewModel.fullReset() }
+                viewModel.resetOrClear()
             }
             .disabled(viewModel.gameState == .running)
 
@@ -503,9 +472,7 @@ struct StageView: View {
 
     /// 상단바용 실행 버튼 — 비활성/실행중은 회색, 활성은 민트 (iOS ControlBarView.runButtonColor와 동일 규칙)
     private var macRunButton: some View {
-        let color: Color = viewModel.codeBlocks.isEmpty || viewModel.gameState == .running
-            ? Color.runButtonInactiveGray
-            : Color.runButtonActiveMint
+        let color: Color = viewModel.canPressRun ? Color.runButtonActiveMint : Color.runButtonInactiveGray
 
         return Button {
             SoundService.shared.play(.buttonTap)
@@ -527,53 +494,8 @@ struct StageView: View {
             }
         }
         .buttonStyle(.plain)
-        .allowsHitTesting(!(viewModel.codeBlocks.isEmpty || viewModel.gameState == .running))
+        .allowsHitTesting(viewModel.canPressRun)
         .onPressState(isPressed: $isMacRunPressed)
-    }
-    #endif
-
-    #if os(macOS)
-    // MARK: - 맥 전용 게임 레이아웃
-    // 좌: 코드 패널(팔레트 위/코드 아래, 폭은 좁게 고정하고 세로로 길게) / 우: 정사각 맵(남은 공간)
-    // (아이패드는 동일한 좌-코드/우-맵 배치를 쓰는 iPadGameLayout을 별도로 둠 — 이 함수는 macOS 빌드에만 존재)
-
-    private func macGameLayout(totalWidth: CGFloat) -> some View {
-        // 코드 패널 폭 — 화면의 36%를 기준으로 400~480pt 사이로 제한
-        let leftWidth = min(max(totalWidth * 0.36, 400), 480)
-
-        return VStack(spacing: 0) {
-            navigationBar
-
-            HStack(spacing: 0) {
-                // 좌측 — 코드 패널 (코드 리스트가 남은 높이를 전부 사용 = 세로로 길게)
-                CodePanelView(
-                    viewModel: viewModel,
-                    stage: stage,
-                    dragType: $dragType,
-                    dragPosition: $dragPosition,
-                    dragInsertIndex: $dragInsertIndex,
-                    codeListFrame: $codeListFrame,
-                    rowMidYs: $rowMidYs,
-                    reorderIndex: $reorderIndex,
-                    reorderPosition: $reorderPosition,
-                    reorderTargetIndex: $reorderTargetIndex,
-                    navPath: $navPath,
-                    isPanelExpanded: $isPanelExpanded
-                )
-                .frame(width: leftWidth)
-
-                // 우측 — 정사각형 맵 (상한선 없이 남은 공간을 가득 채우고 가운데 정렬)
-                VStack(spacing: 0) {
-                    Spacer(minLength: 0)
-                    mapView
-                        .aspectRatio(1.0, contentMode: .fit)
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 4)
-                    Spacer(minLength: 0)
-                }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-            }
-        }
     }
     #endif
 
@@ -693,6 +615,18 @@ struct StageView: View {
         .padding(.horizontal, 16)
     }
 
+    // MARK: - 챕터 목록 복귀
+
+    /// 챕터 선택 화면으로 이동 — onReturnToChapterList가 주입되면(맥 사이드바 셸) 그쪽 동작 사용
+    private func returnToChapterList() {
+        if let onReturnToChapterList {
+            onReturnToChapterList()
+        } else {
+            navPath = NavigationPath()
+            navPath.append(AppRoute.chapterSelect)
+        }
+    }
+
     // MARK: - 씬 초기화
 
     /// GameScene을 생성하고 ViewModel과 연결
@@ -776,3 +710,17 @@ extension Stage {
     @Previewable @State var path = NavigationPath()
     StageView(stage: .previewComplex, navPath: $path)
 }
+
+// 좌우 분할 레이아웃 확인용 — 맥은 기본 프리뷰 창이 좁아 세로 스택으로 나오므로 창 크기를 키움
+#if os(macOS)
+#Preview("넓은 창") {
+    @Previewable @State var path = NavigationPath()
+    StageView(stage: .preview, navPath: $path)
+        .frame(width: 1100, height: 720)
+}
+#else
+#Preview("가로 화면", traits: .landscapeLeft) {
+    @Previewable @State var path = NavigationPath()
+    StageView(stage: .preview, navPath: $path)
+}
+#endif

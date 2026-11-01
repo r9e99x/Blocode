@@ -33,9 +33,9 @@ struct ControlBarView: View {
 
     /// 실행 버튼 색상 — 비활성/실행 중: 따뜻한 회색(모드 무관 기존 값 유지) / 활성: 민트 그린(다크에서만 톤 다운)
     private var runButtonColor: Color {
-        viewModel.codeBlocks.isEmpty || viewModel.gameState == .running
-            ? Color.runButtonInactiveGray  // 솔리드 따뜻한 회색 — 값은 기존과 동일 (AppColors로 단일화)
-            : Color.runButtonActiveMint  // 활성 민트 (라이트: 기존 accentMint / 다크: 딥 민트)
+        viewModel.canPressRun
+            ? Color.runButtonActiveMint  // 활성 민트 (라이트: 기존 accentMint / 다크: 딥 민트)
+            : Color.runButtonInactiveGray  // 솔리드 따뜻한 회색 — 값은 기존과 동일 (AppColors로 단일화)
     }
 
     // MARK: - Body
@@ -47,8 +47,7 @@ struct ControlBarView: View {
             // 앞면: 다크에서 배경에 묻히지 않는 슬레이트 / 베벨: 다크에서만 강도 완화 (라이트는 기존 그대로)
             Button {
                 SoundService.shared.play(.buttonTap)
-                if viewModel.characterMoved { viewModel.reset() }
-                else { viewModel.fullReset() }
+                viewModel.resetOrClear()
             } label: {
                 Bevel3DButtonLabel(color: Color.controlIconButtonFace, width: 54, height: 54, cornerRadius: 17,
                                    topOverlayOpacity: colorScheme == .dark ? 0.12 : 0.28,
@@ -88,7 +87,7 @@ struct ControlBarView: View {
                 }
             }
             .buttonStyle(.plain)
-            .allowsHitTesting(!(viewModel.codeBlocks.isEmpty || viewModel.gameState == .running))
+            .allowsHitTesting(viewModel.canPressRun)
             .onPressState(isPressed: $isRunPressed)
             .animation(.easeInOut(duration: 0.15), value: viewModel.gameState)
 

@@ -83,4 +83,28 @@ struct GameViewModelStateTests {
         #expect(vm.failedBlockPath == nil)
         #expect(vm.failureMessage.isEmpty)
     }
+
+    @Test("되돌리기 버튼 — 캐릭터가 움직였으면 블럭 유지, 안 움직였으면 전체 초기화")
+    func resetOrClear_dependsOnCharacterMoved() {
+        let (vm, _) = makeFixture()
+        vm.codeBlocks = [Block(type: .moveForward)]
+        vm.characterMoved = true
+        vm.resetOrClear()
+        #expect(vm.codeBlocks.count == 1)
+        #expect(vm.characterMoved == false)
+        vm.resetOrClear()
+        #expect(vm.codeBlocks.isEmpty)
+    }
+
+    @Test("실행 버튼 — 블럭이 없거나 실행 중일 때만 누를 수 없음")
+    func canPressRun_rules() {
+        let (vm, _) = makeFixture()
+        #expect(vm.canPressRun == false)  // 블럭 없음
+        vm.codeBlocks = [Block(type: .moveForward)]
+        #expect(vm.canPressRun == true)
+        vm.gameState = .running
+        #expect(vm.canPressRun == false)
+        vm.gameState = .failure
+        #expect(vm.canPressRun == true)   // 기존 버튼 규칙 유지 — 실패 상태에서도 활성 표시
+    }
 }

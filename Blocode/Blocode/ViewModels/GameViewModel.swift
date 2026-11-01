@@ -286,6 +286,16 @@ final class GameViewModel: ObservableObject {
 
     // MARK: - 실행 제어
 
+    /// 실행 버튼을 누를 수 있는 상태인지 — 버튼 색상과 터치 허용 판단에 사용
+    var canPressRun: Bool {
+        !codeBlocks.isEmpty && gameState != .running
+    }
+
+    /// 되돌리기 버튼 동작 — 캐릭터가 움직였으면 위치만 되돌리고, 아니면 블럭까지 전체 초기화
+    func resetOrClear() {
+        if characterMoved { reset() } else { fullReset() }
+    }
+
     /// 코드 블럭 실행 시작 — idle 상태이고 블럭이 있을 때만 동작
     func run() {
         guard gameState == .idle, !codeBlocks.isEmpty else { return }
