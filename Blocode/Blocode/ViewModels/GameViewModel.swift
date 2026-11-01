@@ -28,37 +28,38 @@ final class GameViewModel: ObservableObject {
     // MARK: - Published 프로퍼티 (View에서 감지)
 
     /// 현재 게임 상태 — 상태 변경 시 UI 자동 갱신
-    @Published var gameState: GameState = .idle
+    @Published private(set) var gameState: GameState = .idle
 
     /// 사용자가 추가한 코드 블럭 목록 (순서대로 실행)
+    /// 쓰기를 열어 둔 이유: 테스트와 프리뷰가 초기 블럭을 넣는 데 사용 (화면은 편집 함수로만 변경)
     @Published var codeBlocks: [Block] = []
 
     /// 현재 실행 중인 블럭 경로 (하이라이트용) — nil이면 하이라이트 없음
     /// 경로 형식: [최상위 인덱스], [최상위, 자식], [최상위, 자식, 손자]
     /// (단일 Int는 중첩 블럭 실행 시 최상위 인덱스 공간과 충돌하므로 경로로 추적)
-    @Published var currentBlockPath: [Int]? = nil
+    @Published private(set) var currentBlockPath: [Int]? = nil
 
     /// 실패한 블럭 경로 (빨간 하이라이트용) — nil이면 표시 안 함 (형식은 currentBlockPath와 동일)
-    @Published var failedBlockPath: [Int]? = nil
+    @Published private(set) var failedBlockPath: [Int]? = nil
 
     /// 실패 이유 메시지 — 토스트 배너에 표시
-    @Published var failureMessage: String = ""
+    @Published private(set) var failureMessage: String = ""
 
     /// 클리어 시 획득한 별 수 — ClearOverlayView에 전달
-    @Published var clearedStars: Int = 0
+    @Published private(set) var clearedStars: Int = 0
 
     /// 클리어 시 걸린 시간 (초) — 스테이지 진입(또는 재도전)부터 클리어까지, 클리어 순간에 한 번 계산
-    @Published var elapsedTime: TimeInterval = 0
+    @Published private(set) var elapsedTime: TimeInterval = 0
 
     /// 도전 횟수 — run() 호출 시마다 증가
-    @Published var attemptCount: Int = 0
+    @Published private(set) var attemptCount: Int = 0
 
     /// 캐릭터가 시작 위치에서 벗어났는지 (리셋 버튼 아이콘 결정용)
-    @Published var characterMoved: Bool = false
+    @Published private(set) var characterMoved: Bool = false
 
     /// 수집한 보석 위치 집합 (기믹 스테이지 전용) — 상단바 보석 카운터 표시 + 별점 계산에 사용
     /// (기믹 없는 스테이지는 stage.mapData.items가 nil이라 항상 빈 상태로 아무 영향 없음)
-    @Published var collectedItems: Set<Position> = []
+    @Published private(set) var collectedItems: Set<Position> = []
 
     // MARK: - 내부 상태
 

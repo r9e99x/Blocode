@@ -101,7 +101,8 @@ struct GameViewModelStateTests {
     func resetOrClear_dependsOnCharacterMoved() {
         let (vm, _) = makeFixture()
         vm.codeBlocks = [Block(type: .moveForward)]
-        vm.characterMoved = true
+        vm.run()  // 실행을 시작하면 캐릭터가 움직인 상태가 됨
+        #expect(vm.characterMoved)
         vm.resetOrClear()
         #expect(vm.codeBlocks.count == 1)
         #expect(vm.characterMoved == false)
@@ -110,14 +111,16 @@ struct GameViewModelStateTests {
     }
 
     @Test("실행 버튼 — 블럭이 없거나 실행 중일 때만 누를 수 없음")
-    func canPressRun_rules() {
+    func canPressRun_rules() async throws {
         let (vm, _) = makeFixture()
+        vm.scene = nil  // 씬이 없으면 첫 이동에서 바로 실패 상태가 됨
         #expect(vm.canPressRun == false)  // 블럭 없음
         vm.codeBlocks = [Block(type: .moveForward)]
         #expect(vm.canPressRun == true)
-        vm.gameState = .running
-        #expect(vm.canPressRun == false)
-        vm.gameState = .failure
+        vm.run()
+        #expect(vm.canPressRun == false)  // 실행 중
+        try await waitUntilFinished(vm)
+        #expect(vm.gameState == .failure)
         #expect(vm.canPressRun == true)   // 기존 버튼 규칙 유지 — 실패 상태에서도 활성 표시
     }
 }
