@@ -105,8 +105,7 @@ struct ChapterMapView: View {
                         // 잠긴 챕터: 전용 잠금 사운드 + 해금 조건 팝업 표시
                         SoundService.shared.play(.lockButton)
                         withAnimation(.easeInOut(duration: 0.2)) {
-                            lockInfo = LockInfo(title: "아직 잠겨 있어요",
-                                                message: vm.lockMessage(for: chapter),
+                            lockInfo = LockInfo(message: vm.lockMessage(for: chapter),
                                                 accentColor: chapter.color)
                         }
                     }

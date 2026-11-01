@@ -29,10 +29,10 @@ struct ChapterView: View {
     }
 
     // MARK: - 챕터 색상 (챕터 번호 → 색상)
-    /// 챕터 색상 — ChapterCatalog(단일 원본)에서 조회, 헤더 배경과 스테이지 아이콘에 사용
+    /// 챕터 색상 — 헤더 배경과 스테이지 아이콘에 사용
     /// (색상 값 자체는 카탈로그가 보유 — 화면별 색상 이중 정의 제거)
     var chapterColor: Color {
-        ChapterCatalog.chapter(vm.chapter)?.color ?? Color.accentColor
+        vm.chapterInfo?.color ?? Color.accentColor
     }
 
     var body: some View {
@@ -68,7 +68,7 @@ struct ChapterView: View {
 
                         // 챕터 색 헤더 카드 (맥/아이패드 챕터 브라우저와 공용 부품)
                         ChapterHeaderCard(chapterNumber: vm.chapter, title: vm.chapterTitle, color: chapterColor,
-                                          earned: vm.totalStars(), maxStars: vm.stages.count * 3)
+                                          earned: vm.totalStars(), maxStars: vm.maxStars)
                             .padding(.horizontal, 16)
 
                         // 카드 아래 빈 공간의 정중앙에 챕터 한 줄 설명 배치
@@ -77,7 +77,7 @@ struct ChapterView: View {
                         // 한글은 .italic()이나 .design(.serif)가 안 먹혀서(한글 서체엔 진짜 이탤릭이
                         // 없음), 인용구와 동일하게 Georgia-Italic 폰트 이름 + 수동 기울임 변환을 사용
                         Spacer(minLength: 0)
-                        if let description = ChapterCatalog.chapter(vm.chapter)?.description {
+                        if let description = vm.chapterInfo?.description {
                             Text(description)
                                 .font(.custom("Georgia-Italic", size: 22))
                                 .foregroundStyle(Color.primary.opacity(0.55))
@@ -189,7 +189,7 @@ struct ChapterView: View {
     /// 챕터 전체 별 획득 현황을 시각화하는 바 (개별 별 아이콘 + 숫자)
     private var starProgressBar: some View {
         let total  = vm.totalStars()       // 현재 획득 별
-        let maxStar = vm.stages.count * 3  // 챕터 최대 별 수 (스테이지 수 × 3)
+        let maxStar = vm.maxStars          // 챕터 최대 별 수
 
         return HStack(alignment: .top, spacing: 8) {
             // 별 아이콘 — 한 줄에 다 안 들어가면 다음 줄로 자동 감싸기
@@ -244,7 +244,6 @@ struct ChapterView: View {
                 SoundService.shared.play(.lockButton)
                 withAnimation(.easeInOut(duration: 0.2)) {
                     lockInfo = LockInfo(
-                        title: "아직 잠겨 있어요",
                         message: vm.lockMessage(for: stage),
                         accentColor: chapterColor
                     )

@@ -18,4 +18,7 @@ struct ChapterInfo: Identifiable {
     let stageCount: Int             // 챕터 내 스테이지 수
     let rgb: (red: Double, green: Double, blue: Double)  // 챕터 카드 색상 값 — Color 변환은 View 계층(AppColors.swift)
     let requiredStarsFromPrev: Int  // 다음 챕터 해금에 필요한 이전 챕터 총 별점 (종합 클리어와 함께 AND 조건)
+
+    /// 이 챕터에서 얻을 수 있는 최대 별 수 (스테이지당 3개)
+    var maxStars: Int { stageCount * 3 }
 }

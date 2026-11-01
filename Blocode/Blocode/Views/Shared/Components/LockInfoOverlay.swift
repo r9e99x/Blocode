@@ -11,7 +11,7 @@ import SwiftUI
 /// 잠금 안내 팝업에 표시할 내용 (제목 / 조건 문구 / 강조 색)
 struct LockInfo: Identifiable {
     let id = UUID()
-    let title: String        // 팝업 제목
+    var title = "아직 잠겨 있어요"  // 팝업 제목
     let message: String      // 해금 조건 안내 문구
     let accentColor: Color   // 강조 색 (챕터 색)
 }
@@ -193,7 +193,6 @@ extension View {
 #Preview {
     LockInfoOverlay(
         info: LockInfo(
-            title: "아직 잠겨 있어요",
             message: "이전 챕터에서 별 12개를 모으고\n종합 스테이지를 클리어하면 열려요",
             accentColor: Color(red: 0.58, green: 0.76, blue: 0.88)
         ),

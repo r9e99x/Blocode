@@ -97,6 +97,61 @@ struct GameViewModelStateTests {
         #expect(vm.gameState == .idle)
     }
 
+    @Test("다음 스테이지 번호 — 마지막 스테이지와 없는 챕터는 nil")
+    func nextStageNumber_followsCatalog() throws {
+        let first = try #require(ChapterCatalog.chapter(1))
+        func viewModel(chapter: Int, stage: Int) -> GameViewModel {
+            let mapData = MapData(grid: [[1]], start: Position(x: 0, y: 0), startDirection: .up, goal: Position(x: 0, y: 0))
+            return GameViewModel(stage: Stage(id: "unittest_next", chapter: chapter, stageNumber: stage, name: "Next",
+                                              mapData: mapData, starThresholds: StarThresholds(threeStar: 1, twoStar: 1)),
+                                 progress: .makeForTesting(), executionSpeed: { 1 })
+        }
+        #expect(viewModel(chapter: 1, stage: 1).nextStageNumber == 2)
+        #expect(viewModel(chapter: 1, stage: first.stageCount).nextStageNumber == nil)
+        #expect(viewModel(chapter: 0, stage: 1).nextStageNumber == nil)
+    }
+
+    @Test("편집 가능 여부 — 실행 중에는 불가, 리셋하면 다시 가능")
+    func canEdit_followsState() {
+        let (vm, _) = makeFixture()
+        #expect(vm.canEdit)
+        vm.codeBlocks = [Block(type: .moveForward)]
+        vm.run()
+        #expect(vm.canEdit == false)
+        vm.reset()
+        #expect(vm.canEdit)
+    }
+
+    @Test("실행 강조 — 자식이 실행 중이면 부모 행과 자식 경로가 함께 강조됨")
+    func activeHighlight_followsCurrentPath() async throws {
+        let (vm, scene) = makeFixture()
+        vm.codeBlocks = [Block(type: .functionBlock, children: [Block(type: .moveForward)]), Block(type: .moveForward)]
+        vm.run()
+        try await Task.sleep(nanoseconds: 50_000_000)  // 첫 이동 애니메이션 도중
+        #expect(vm.isRowActive(0))
+        #expect(vm.isRowActive(1) == false)
+        #expect(vm.activeChildPath(inRow: 0) == [0])
+        #expect(vm.activeChildPath(inRow: 1).isEmpty)
+        vm.reset()
+        #expect(vm.isRowActive(0) == false)  // 실행이 끝나면 강조 없음
+        #expect(vm.activeChildPath(inRow: 0).isEmpty)
+        _ = scene
+    }
+
+    @Test("실패 강조 — 자식이 실패하면 부모 행과 자식 경로가 함께 표시됨")
+    func failedHighlight_followsFailedPath() async throws {
+        let (vm, scene) = makeFixture()
+        vm.codeBlocks = [Block(type: .functionBlock, children: [Block(type: .collectItem)])]  // 보석이 없어 실패
+        vm.run()
+        try await waitUntilFinished(vm)
+        #expect(vm.gameState == .failure)
+        #expect(vm.isRowFailed(0))
+        #expect(vm.isRowFailed(1) == false)
+        #expect(vm.failedChildPath(inRow: 0) == [0])
+        #expect(vm.failedChildPath(inRow: 1).isEmpty)
+        _ = scene
+    }
+
     @Test("되돌리기 버튼 — 캐릭터가 움직였으면 블럭 유지, 안 움직였으면 전체 초기화")
     func resetOrClear_dependsOnCharacterMoved() {
         let (vm, _) = makeFixture()

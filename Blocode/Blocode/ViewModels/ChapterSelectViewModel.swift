@@ -58,7 +58,7 @@ final class ChapterSelectViewModel: ObservableObject {
     func displayStarCount(_ chapter: ChapterInfo) -> Int {
         let earned = chapterStars(chapter)
         guard earned > 0 else { return 0 }
-        let maxStars = max(chapter.stageCount * 3, 3)
+        let maxStars = max(chapter.maxStars, 3)
         return max(1, min(3, Int(Double(earned) / Double(maxStars) * 3 + 0.5)))
     }
 

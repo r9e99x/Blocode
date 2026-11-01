@@ -126,10 +126,36 @@ final class GameViewModel: ObservableObject {
         }
     }
 
-    /// 다음 스테이지 존재 여부 — 챕터 마지막 스테이지이면 false
+    /// 다음 스테이지 번호 — 챕터 마지막 스테이지이면 nil
     /// (ChapterCatalog의 스테이지 수로 판단 — 예전엔 화면을 그릴 때마다 다음 스테이지 JSON을 읽어 디코딩했음)
-    var hasNextStage: Bool {
-        stage.stageNumber < (ChapterCatalog.chapter(stage.chapter)?.stageCount ?? 0)
+    var nextStageNumber: Int? {
+        let next = stage.stageNumber + 1
+        return next <= (ChapterCatalog.chapter(stage.chapter)?.stageCount ?? 0) ? next : nil
+    }
+
+    /// 블럭을 편집할 수 있는 상태인지 — 대기 중에만 가능
+    var canEdit: Bool { gameState == .idle }
+
+    // MARK: - 실행·실패 하이라이트 (코드 리스트 행 기준)
+
+    /// 이 행이 실행 중인지 — 자식·손자가 실행 중이어도 부모 행 강조 유지
+    func isRowActive(_ row: Int) -> Bool {
+        gameState == .running && currentBlockPath?.first == row
+    }
+
+    /// 이 행(또는 그 안의 블럭)이 실패했는지
+    func isRowFailed(_ row: Int) -> Bool {
+        failedBlockPath?.first == row
+    }
+
+    /// 이 행 안에서 실행 중인 자식의 상대 경로 — 다른 행이 실행 중이면 빈 배열
+    func activeChildPath(inRow row: Int) -> [Int] {
+        isRowActive(row) ? Array((currentBlockPath ?? []).dropFirst()) : []
+    }
+
+    /// 이 행 안에서 실패한 자식의 상대 경로 — 다른 행이 실패했으면 빈 배열
+    func failedChildPath(inRow row: Int) -> [Int] {
+        isRowFailed(row) ? Array((failedBlockPath ?? []).dropFirst()) : []
     }
 
     // MARK: - 블럭 관리
@@ -142,7 +168,7 @@ final class GameViewModel: ObservableObject {
 
     /// 팔레트에서 블럭 추가 — idle 상태일 때만 허용
     func addBlock(_ type: BlockType) {
-        guard gameState == .idle, isAllowed(type) else { return }
+        guard canEdit, isAllowed(type) else { return }
         let block = Block(type: type)
         codeBlocks.append(block)
         SoundService.shared.play(.blockAdd)
@@ -151,7 +177,7 @@ final class GameViewModel: ObservableObject {
     /// 블럭 순서 변경 (드래그 앤 드롭) — idle 상태이고 유효한 위치일 때만 허용
     /// destination은 옮기기 전 배열 기준의 삽입 위치 (0...count)
     func moveBlock(from source: Int, to destination: Int) {
-        guard gameState == .idle,
+        guard canEdit,
               codeBlocks.indices.contains(source),
               (0...codeBlocks.count).contains(destination) else { return }
         var blocks = codeBlocks
@@ -191,7 +217,7 @@ final class GameViewModel: ObservableObject {
 
     /// 경로의 블럭 수정 — idle 상태이고 경로가 유효할 때만
     private func editBlock(at path: [Int], _ edit: (inout Block) -> Void) {
-        guard gameState == .idle, let first = path.first, block(at: path) != nil else { return }
+        guard canEdit, let first = path.first, block(at: path) != nil else { return }
         Self.editBlock(&codeBlocks[first], remainingPath: path.dropFirst(), edit)
     }
 
@@ -212,7 +238,7 @@ final class GameViewModel: ObservableObject {
 
     /// 경로의 블럭 삭제 (최상위·중첩 공용)
     func removeBlock(at path: [Int]) {
-        guard gameState == .idle, block(at: path) != nil, let index = path.last else { return }
+        guard canEdit, block(at: path) != nil, let index = path.last else { return }
         if path.count == 1 {
             codeBlocks.remove(at: index)
         } else {
@@ -234,7 +260,7 @@ final class GameViewModel: ObservableObject {
 
     /// 특정 위치에 블럭 삽입 (팔레트 드래그-앤-드롭 위치 지정 삽입)
     func insertBlock(_ type: BlockType, at index: Int) {
-        guard gameState == .idle, isAllowed(type) else { return }
+        guard canEdit, isAllowed(type) else { return }
         let block = Block(type: type)
         // 인덱스가 범위를 벗어나지 않도록 클램핑
         let safeIndex = min(max(0, index), codeBlocks.count)

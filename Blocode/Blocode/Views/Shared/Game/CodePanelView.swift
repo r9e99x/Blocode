@@ -130,8 +130,8 @@ struct CodePanelView: View {
                 viewModel.addBlock(type)
             },
             onDragStart: { type, pt in
-                // 드래그 시작: idle 상태일 때만 허용
-                guard viewModel.gameState == .idle else { return }
+                // 드래그 시작: 편집 가능할 때만 허용
+                guard viewModel.canEdit else { return }
                 withAnimation(.spring(duration: 0.2)) {
                     drag.paletteType = type
                     drag.palettePosition = pt
@@ -276,20 +276,13 @@ struct CodePanelView: View {
                             BlockRowView(
                                 block: block,
                                 index: offset,
-                                // 실행 중이고 현재 경로의 최상위 인덱스와 일치하면 활성 표시
-                                // (자식/손자 실행 중에도 부모 행 하이라이트 유지)
-                                isActive: viewModel.currentBlockPath?.first == offset && viewModel.gameState == .running,
-                                isFailed: viewModel.failedBlockPath?.first == offset,
-                                // 이 행 내부에서 실행 중인 자식의 상대 경로 — [자식] 또는 [자식, 손자]
-                                // (다른 행이 실행 중이면 빈 배열 → 자식 하이라이트 없음)
-                                activeChildPath: (viewModel.gameState == .running && viewModel.currentBlockPath?.first == offset)
-                                    ? Array((viewModel.currentBlockPath ?? []).dropFirst()) : [],
-                                // 이 행 내부에서 실패한 자식의 상대 경로 (형식 동일)
-                                failedChildPath: viewModel.failedBlockPath?.first == offset
-                                    ? Array((viewModel.failedBlockPath ?? []).dropFirst()) : [],
+                                isActive: viewModel.isRowActive(offset),
+                                isFailed: viewModel.isRowFailed(offset),
+                                activeChildPath: viewModel.activeChildPath(inRow: offset),
+                                failedChildPath: viewModel.failedChildPath(inRow: offset),
                                 actions: BlockEditActions(viewModel: viewModel),
                                 onReorderDragStart: { pt in
-                                    guard viewModel.gameState == .idle else { return }
+                                    guard viewModel.canEdit else { return }
                                     withAnimation(.spring(duration: 0.2)) {
                                         drag.reorderIndex = offset
                                         drag.reorderPosition = pt

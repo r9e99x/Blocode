@@ -140,7 +140,7 @@ struct StageView: View {
                     stageLabel: "\(stage.chapter)-\(stage.stageNumber)",
                     stageName: stage.name,
                     threeStarCut: stage.starThresholds.threeStar,
-                    isLastStage: !viewModel.hasNextStage,
+                    isLastStage: viewModel.nextStageNumber == nil,
                     itemHint: viewModel.itemHint,
                     onClose: {
                         // 닫기 → 챕터 화면으로 이동 (빈 스택이면 무시 — 언더플로우 방지)
@@ -155,12 +155,9 @@ struct StageView: View {
                         // 별 3개 + 마지막 스테이지: 챕터 선택 화면까지 2번 pop
                         viewModel.reset()
                         DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
-                            if viewModel.hasNextStage {
+                            if let next = viewModel.nextStageNumber {
                                 if !navPath.isEmpty { navPath.removeLast() }
-                                navPath.append(AppRoute.stage(
-                                    chapter: stage.chapter,
-                                    number: stage.stageNumber + 1
-                                ))
+                                navPath.append(AppRoute.stage(chapter: stage.chapter, number: next))
                             } else {
                                 // 마지막(종합) 스테이지를 별 3개로 클리어 → "챕터 목록으로"
                                 // 진입 경로(홈 바로 시작 / 챕터 둘러보기)와 무관하게

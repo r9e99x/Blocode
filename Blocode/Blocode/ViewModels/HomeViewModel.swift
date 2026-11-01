@@ -40,7 +40,7 @@ final class HomeViewModel: ObservableObject {
 
     /// 전체 획득 가능 별 수 (모든 챕터 합산)
     var totalPossibleStars: Int {
-        chapters.reduce(0) { $0 + $1.stageCount * 3 }
+        ChapterCatalog.all.reduce(0) { $0 + $1.maxStars }
     }
 
     /// 현재까지 획득한 총 별 수

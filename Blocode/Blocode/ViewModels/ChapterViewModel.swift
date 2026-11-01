@@ -39,9 +39,19 @@ final class ChapterViewModel: ObservableObject {
             .store(in: &cancellables)
     }
 
-    /// 챕터 번호에 따른 한국어 제목 반환 (ChapterCatalog 단일 원본에서 조회)
+    /// 이 챕터의 메타데이터 (ChapterCatalog 단일 원본에서 조회) — 설명·색상 표시에 사용
+    var chapterInfo: ChapterInfo? {
+        ChapterCatalog.chapter(chapter)
+    }
+
+    /// 챕터 번호에 따른 한국어 제목 반환
     var chapterTitle: String {
-        ChapterCatalog.chapter(chapter)?.title ?? "챕터 \(chapter)"
+        chapterInfo?.title ?? "챕터 \(chapter)"
+    }
+
+    /// 챕터 최대 별점 — 실제로 불러온 스테이지 수 기준 (스테이지당 3개)
+    var maxStars: Int {
+        stages.count * 3
     }
 
     /// 챕터별 스테이지 수 (ChapterCatalog 단일 원본에서 조회)

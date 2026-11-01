@@ -23,6 +23,7 @@ struct HomeViewModelTests {
         let vm = HomeViewModel(progress: .makeForTesting())
         #expect(vm.isFirstTime)
         #expect(vm.earnedStars == 0)
+        #expect(vm.totalPossibleStars == ChapterCatalog.all.map(\.stageCount).reduce(0, +) * 3)
         #expect(vm.dynamicSubtitle == "첫 번째 블럭을 놓아볼까요?")
         #expect(vm.nextStage?.chapter == 1)
         #expect(vm.nextStage?.stage == 1)
@@ -139,11 +140,13 @@ struct ChapterSelectViewModelTests {
 @Suite("스테이지 목록 ViewModel")
 struct ChapterViewModelTests {
 
-    @Test("챕터 데이터 로드 — 제목과 스테이지 수")
+    @Test("챕터 데이터 로드 — 제목·메타데이터·스테이지 수·최대 별")
     func loadsChapter() {
         let vm = ChapterViewModel(chapter: 1, progress: .makeForTesting())
         #expect(vm.chapterTitle == ChapterCatalog.all[0].title)
+        #expect(vm.chapterInfo?.number == 1)
         #expect(vm.stages.count == ChapterCatalog.all[0].stageCount)
+        #expect(vm.maxStars == ChapterCatalog.all[0].maxStars)
     }
 
     @Test("현재 위치는 첫 미클리어 스테이지, 모두 깨면 없음")

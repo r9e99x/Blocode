@@ -75,7 +75,7 @@ struct ChapterBrowsePane: View {
     }
 
     private var chapterColor: Color {
-        ChapterCatalog.chapter(chapterNumber)?.color ?? .accentColor
+        vm.chapterInfo?.color ?? .accentColor
     }
 
     var body: some View {
@@ -121,8 +121,7 @@ struct ChapterBrowsePane: View {
                     guard unlocked else {
                         SoundService.shared.play(.lockButton)
                         withAnimation(.easeInOut(duration: 0.2)) {
-                            lockInfo = LockInfo(title: "아직 잠겨 있어요",
-                                                message: chapterSelectVM.lockMessage(for: chapter),
+                            lockInfo = LockInfo(message: chapterSelectVM.lockMessage(for: chapter),
                                                 accentColor: chapter.color)
                         }
                         return
@@ -145,7 +144,7 @@ struct ChapterBrowsePane: View {
                         VStack(alignment: .leading, spacing: 1) {
                             Text(chapter.title).font(.system(size: m.chapterTitleFontSize, weight: .semibold))
                             if unlocked {
-                                Text("\(chapterSelectVM.chapterStars(chapter)) / \(chapter.stageCount * 3) stars")
+                                Text("\(chapterSelectVM.chapterStars(chapter)) / \(chapter.maxStars) stars")
                                     .font(.system(size: m.chapterStarsFontSize)).foregroundStyle(.secondary)
                             }
                         }
@@ -171,7 +170,7 @@ struct ChapterBrowsePane: View {
             VStack(alignment: .leading, spacing: 0) {
                 // 챕터 색 헤더 카드 (iOS 가로 챕터 화면·아이패드 브라우저와 공용 부품)
                 ChapterHeaderCard(chapterNumber: chapterNumber, title: vm.chapterTitle, color: chapterColor,
-                                  earned: vm.totalStars(), maxStars: vm.stages.count * 3)
+                                  earned: vm.totalStars(), maxStars: vm.maxStars)
                     .padding(16)
 
                 ForEach(vm.stages) { stage in
@@ -181,8 +180,7 @@ struct ChapterBrowsePane: View {
                         if locked {
                             SoundService.shared.play(.lockButton)
                             withAnimation(.easeInOut(duration: 0.2)) {
-                                lockInfo = LockInfo(title: "아직 잠겨 있어요",
-                                                    message: vm.lockMessage(for: stage),
+                                lockInfo = LockInfo(message: vm.lockMessage(for: stage),
                                                     accentColor: chapterColor)
                             }
                         } else {
