@@ -71,7 +71,16 @@ final class GameViewModel: ObservableObject {
     let loadFailed: Bool
 
     /// GameScene 참조 (캐릭터 이동 명령용) — weak으로 순환 참조 방지
-    weak var scene: GameScene?
+    /// 연결될 때 실행 속도를 넘겨 씬의 애니메이션 시간과 VM의 대기 시간이 항상 같은 값을 쓰게 함
+    weak var scene: GameScene? {
+        didSet { scene?.executionSpeed = executionSpeedProvider }
+    }
+
+    /// 클리어 기록 저장소 — 테스트는 메모리 저장소를 주입
+    private let progress: ProgressService
+
+    /// 실행 속도를 읽는 함수 — 기본은 설정값을 실시간으로 읽고, 테스트는 고정값을 주입
+    private let executionSpeedProvider: () -> Double
 
     /// 열린 문 위치 집합 (기믹 스테이지 전용, 내부 판정용) — 이동 가능 여부 계산에만 쓰이고 UI에 직접 노출 안 됨
     private var openedGates: Set<Position> = []
@@ -82,8 +91,8 @@ final class GameViewModel: ObservableObject {
     /// 이 Task의 실행이 아직 유효한지 — 상태만 보면 리셋 후 재실행 때 이전 실행도 running으로 착각함
     private var isRunActive: Bool { gameState == .running && !Task.isCancelled }
 
-    /// 실행 속도 배율 — SettingsService에서 실시간으로 읽어옴
-    private var executionSpeed: Double { SettingsService.shared.executionSpeed }
+    /// 실행 속도 배율
+    private var executionSpeed: Double { executionSpeedProvider() }
 
     /// 걸린 시간 측정 시작 시각 — VM 생성(스테이지 화면 진입) 시 기록, retry()/fullReset()에서 다시 기록
     /// (생각하는 시간까지 포함해야 "걸린 시간"이라는 이름과 맞음 — 실행 시간만 재던 기존 방식 수정)
@@ -92,14 +101,20 @@ final class GameViewModel: ObservableObject {
     // MARK: - 초기화
 
     /// 스테이지 데이터로 ViewModel 초기화 (프리뷰/테스트용 — 직접 주입)
-    init(stage: Stage) {
+    init(stage: Stage,
+         progress: ProgressService = .shared,
+         executionSpeed: @escaping () -> Double = { SettingsService.shared.executionSpeed }) {
         self.stage = stage
         self.loadFailed = false
+        self.progress = progress
+        self.executionSpeedProvider = executionSpeed
     }
 
     /// 챕터/스테이지 번호로 ViewModel 초기화 (프로덕션)
     /// 데이터 소스(StageLoader) 접근은 View가 아닌 ViewModel의 책임
     init(chapter: Int, stageNumber: Int) {
+        self.progress = .shared
+        self.executionSpeedProvider = { SettingsService.shared.executionSpeed }
         if let loaded = StageLoader.load(chapter: chapter, stage: stageNumber) {
             self.stage = loaded
             self.loadFailed = false
@@ -572,8 +587,8 @@ final class GameViewModel: ObservableObject {
         gameState = .success
         SoundService.shared.play(stars == 3 ? .clearThreeStar : .clearLowStar)
 
-        // ProgressService에 클리어 기록 저장 (더 좋은 기록이면 갱신)
-        ProgressService.shared.recordClear(
+        // 클리어 기록 저장 (더 좋은 기록이면 갱신)
+        progress.recordClear(
             stageId: stage.id,
             stars: stars,
             blockCount: totalBlockCount

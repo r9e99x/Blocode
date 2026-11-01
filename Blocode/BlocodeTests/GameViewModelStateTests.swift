@@ -5,8 +5,7 @@
 //  Created by 조준희 on 10/15/26.
 //
 //  재도전(retry) · 걸린 시간 · 실행 중 리셋 등 실행 전후 상태 검증.
-//  주의: 클리어 시 handleSuccess()가 실제 ProgressService.shared에 기록을 남기므로
-//  GameViewModelExecutionTests와 동일하게 "unittest_" 접두사 가짜 id만 사용한다.
+//  클리어 기록은 메모리 저장소에만 남으므로 실제 진행도와 연속 일수에 영향이 없다.
 
 import Testing
 import Foundation
@@ -23,7 +22,7 @@ struct GameViewModelStateTests {
         let stage = Stage(id: "unittest_\(UUID().uuidString)", chapter: 0, stageNumber: 0,
                           name: "State Test", mapData: mapData,
                           starThresholds: StarThresholds(threeStar: 99, twoStar: 99))
-        let viewModel = GameViewModel(stage: stage)
+        let viewModel = GameViewModel(stage: stage, progress: .makeForTesting(), executionSpeed: { 1 })
         let scene = GameScene(mapData: mapData)
         scene.size = CGSize(width: 400, height: 400)  // size가 0이면 캐릭터 노드가 안 만들어짐
         scene.setupMap()

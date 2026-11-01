@@ -6,9 +6,7 @@
 //  실제 69개 스테이지 JSON은 StageDataIntegrityTests에서 구조적으로 검증하고,
 //  여기서는 화면 없이 엔진 로직 자체가 정확한지에 집중한다.
 //
-//  주의: handleSuccess()가 실제 ProgressService.shared(SwiftData, 영구 저장)에 기록을 남긴다.
-//  실제 챕터 진행도와 절대 충돌하지 않도록 stage id는 전부 "unittest_"로 시작하는
-//  가짜 식별자만 사용한다(ChapterCatalog/실제 스테이지는 "ch{N}_stage{M}" 형식만 조회하므로 무해).
+//  클리어 기록은 메모리 저장소에만 남으므로 실제 진행도와 연속 일수에 영향이 없다.
 
 import Testing
 import Foundation
@@ -48,7 +46,7 @@ struct GameViewModelExecutionTests {
             mapData: mapData,
             starThresholds: StarThresholds(threeStar: threeStar, twoStar: twoStar)
         )
-        let viewModel = GameViewModel(stage: stage)
+        let viewModel = GameViewModel(stage: stage, progress: .makeForTesting(), executionSpeed: { 1 })
         let scene = GameScene(mapData: mapData)
         scene.size = CGSize(width: 400, height: 400)
         scene.setupMap()

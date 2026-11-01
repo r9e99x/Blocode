@@ -68,6 +68,7 @@ class GameScene: SKScene {
     // GameViewModel에서 직접 수정 가능 (external write 허용)
     var characterPosition: Position   // 현재 캐릭터가 있는 타일 좌표
     var characterDirection: Direction // 현재 캐릭터가 바라보는 방향
+    var executionSpeed: () -> Double = { 1 }  // 실행 속도 배율 — GameViewModel이 연결될 때 주입
 
     // MARK: - 노드 참조
     private var characterNode: SKNode?  // 캐릭터 SKNode — 이동/회전 애니메이션 적용 대상
@@ -506,7 +507,7 @@ class GameScene: SKScene {
 
         if animated {
             // 설정된 실행 속도에 맞춰 애니메이션 시간 조절
-            let speed  = SettingsService.shared.executionSpeed
+            let speed  = executionSpeed()
             let move   = SKAction.move(to: targetPos, duration: 0.25 / speed)
             let rotate = SKAction.rotate(toAngle: targetAngle, duration: 0.15 / speed, shortestUnitArc: true)
             move.timingMode = .easeInEaseOut  // 부드러운 시작과 끝

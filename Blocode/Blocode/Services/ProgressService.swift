@@ -65,15 +65,20 @@ final class ProgressService: ObservableObject {
     private let streakKey        = "blocode_streak"
     private let lastClearDateKey = "blocode_last_clear_date"
 
+    /// streak 저장소 — 테스트는 격리된 UserDefaults를 주입
+    private let defaults: UserDefaults
+
     // MARK: 초기화
 
     /// 초기화 시 SwiftData 컨테이너를 생성하고 저장된 진행도를 미러로 로드
-    private init() {
+    /// 앱은 항상 기본값(영구 저장)인 `shared`를 쓰고, 테스트만 메모리 저장소와 격리된 UserDefaults를 주입
+    init(isStoredInMemoryOnly: Bool = false, defaults: UserDefaults = .standard) {
+        self.defaults = defaults
         // 진행도 모델 스키마로 컨테이너 생성
         let schema = Schema([StageProgress.self])
         let config = ModelConfiguration(
             schema: schema,
-            isStoredInMemoryOnly: false  // 영구 저장 (앱 종료 후에도 유지)
+            isStoredInMemoryOnly: isStoredInMemoryOnly  // 기본값 false = 영구 저장 (앱 종료 후에도 유지)
             // 주의: iCloud 동기화 시 여기에 cloudKitDatabase 옵션 추가 예정
             //       (Apple Developer 등록 필요 → 현재는 비활성)
         )
@@ -87,7 +92,7 @@ final class ProgressService: ObservableObject {
         // SwiftData → 메모리 미러 채우기
         reloadMirror()
         // streak는 UserDefaults에서 로드
-        streak = UserDefaults.standard.integer(forKey: streakKey)
+        streak = defaults.integer(forKey: streakKey)
     }
 
     // MARK: - 미러 동기화
@@ -260,7 +265,7 @@ final class ProgressService: ObservableObject {
     /// 오늘 처음 클리어 시 streak 증가, 하루 넘기면 리셋
     private func updateStreak() {
         let today = Calendar.current.startOfDay(for: Date())
-        let lastDate = UserDefaults.standard.object(forKey: lastClearDateKey) as? Date
+        let lastDate = defaults.object(forKey: lastClearDateKey) as? Date
         let lastDay  = lastDate.map { Calendar.current.startOfDay(for: $0) }
 
         if lastDay == today {
@@ -274,8 +279,8 @@ final class ProgressService: ObservableObject {
             // 하루 이상 비었음 — 리셋
             streak = 1
         }
-        UserDefaults.standard.set(today, forKey: lastClearDateKey)
-        UserDefaults.standard.set(streak, forKey: streakKey)
+        defaults.set(today, forKey: lastClearDateKey)
+        defaults.set(streak, forKey: streakKey)
     }
 
     // MARK: - 개발자 전용 (설정 화면 개발자 섹션 — 테스트 편의)
