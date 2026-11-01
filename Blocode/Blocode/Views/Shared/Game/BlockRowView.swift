@@ -21,35 +21,11 @@ struct BlockRowView: View {
     var activeChildPath: [Int] = []
     // 실패한 자식의 상대 경로 — 형식은 activeChildPath와 동일
     var failedChildPath: [Int] = []
-    let onDelete: (() -> Void)?                                      // 블럭 삭제 콜백
-    let onAddChild: ((BlockType) -> Void)?                           // 자식 블럭 추가 콜백
-    let onRemoveChild: ((Int) -> Void)?                              // 자식 블럭 삭제 콜백
-    let onRepeatCountChange: ((Int) -> Void)?                        // repeat 횟수 변경 콜백
-    let onIfConditionChange: ((IfCondition) -> Void)?                // if 조건 변경 콜백
-    // 중첩 블럭 (자식 컨테이너의 손자 블럭) 관리 콜백
-    let onAddGrandchild: ((BlockType, Int) -> Void)?                 // (type, childIndex)
-    let onRemoveGrandchild: ((Int, Int) -> Void)?                    // (grandchildIndex, childIndex)
-    let onSetChildIfCondition: ((IfCondition, Int) -> Void)?         // (condition, childIndex)
-    let onSetChildRepeatCount: ((Int, Int) -> Void)?                 // (count, childIndex)
-    // 증손자 블럭(손자 컨테이너의 자식) 관리 콜백 — 손자가 repeat/if일 때만 사용, 3단 중첩 지원
-    var onAddGreatGrandchild: ((BlockType, Int, Int) -> Void)? = nil       // (type, childIndex, grandchildIndex)
-    var onRemoveGreatGrandchild: ((Int, Int, Int) -> Void)? = nil          // (greatGrandchildIndex, childIndex, grandchildIndex)
-    var onSetGrandchildIfCondition: ((IfCondition, Int, Int) -> Void)? = nil   // (condition, childIndex, grandchildIndex)
-    var onSetGrandchildRepeatCount: ((Int, Int, Int) -> Void)? = nil           // (count, childIndex, grandchildIndex)
+    let actions: BlockEditActions  // 블럭 편집 동작 — 깊이와 무관하게 경로로 호출
     // 코드 리스트 내 순서 변경(재정렬) 드래그 콜백 — 팔레트의 삽입 드래그와 동일한 구조(글로벌 좌표 전달)
     var onReorderDragStart:  ((CGPoint) -> Void)? = nil
     var onReorderDragChange: ((CGPoint) -> Void)? = nil
     var onReorderDragEnd:    ((CGPoint) -> Void)? = nil
-    /// 이 스테이지 팔레트에 있는 블럭 목록 — 자식/손자/증손자 미니 팔레트가 이 안에서만 고르게 함
-    /// (기본값 전체 블럭 → 프리뷰 등 기존 호출부는 무수정)
-    var availableBlocks: [BlockType] = BlockType.allCases
-
-    // 자식 블럭 추가 팔레트 펼침 여부
-    @State private var showChildPalette = false
-    // 손자 블럭 추가 팔레트 펼침 여부 (자식 인덱스별 관리)
-    @State private var showGrandchildPalette: [UUID: Bool] = [:]
-    // 증손자 블럭 추가 팔레트 펼침 여부 (손자 인덱스별 관리)
-    @State private var showGreatGrandchildPalette: [UUID: Bool] = [:]
 
     // 순서 변경 드래그 상태 (PaletteCardView의 드래그 감지 로직과 동일한 구조)
     @State private var isReorderPressed = false
@@ -88,7 +64,10 @@ struct BlockRowView: View {
             blockRow
             // 컨테이너 블럭(repeat/if/function)이면 자식 블럭 영역 추가 표시
             if block.hasChildren {
-                containerChildArea
+                NestedBlockArea(
+                    parent: block, parentPath: [index], depth: 1,
+                    activePath: activeChildPath, failedPath: failedChildPath, actions: actions
+                )
             }
         }
     }
@@ -164,7 +143,7 @@ struct BlockRowView: View {
                             Button {
                                 // 탭할 때마다 pathClear ↔ pathBlocked 전환
                                 let next: IfCondition = condition == .pathClear ? .pathBlocked : .pathClear
-                                onIfConditionChange?(next)
+                                actions.setIfCondition(next, [index])
                             } label: {
                                 HStack(spacing: 4) {
                                     Text(condition.displayName)
@@ -186,9 +165,9 @@ struct BlockRowView: View {
                         }
 
                         // 삭제 버튼 — 실행 중에는 숨김
-                        if let onDelete, !isActive {
+                        if !isActive {
                             Button {
-                                withAnimation(.spring(duration: 0.2)) { onDelete() }
+                                withAnimation(.spring(duration: 0.2)) { actions.remove([index]) }
                             } label: {
                                 Image(systemName: "trash")
                                     .font(.system(size: 13))
@@ -274,7 +253,7 @@ struct BlockRowView: View {
         HStack(spacing: 0) {
             // 횟수 감소 버튼 (최소 1회)
             Button {
-                onRepeatCountChange?(max(1, count - 1))
+                actions.setRepeatCount(max(1, count - 1), [index])
             } label: {
                 Image(systemName: "minus")
                     .font(.system(size: 11, weight: .bold))
@@ -290,7 +269,7 @@ struct BlockRowView: View {
 
             // 횟수 증가 버튼 (최대 10회)
             Button {
-                onRepeatCountChange?(min(10, count + 1))
+                actions.setRepeatCount(min(10, count + 1), [index])
             } label: {
                 Image(systemName: "plus")
                     .font(.system(size: 11, weight: .bold))
@@ -302,178 +281,206 @@ struct BlockRowView: View {
         .background(Color.white.opacity(0.18))  // 반투명 흰 배경
         .clipShape(Capsule())
     }
+}
 
-    // MARK: - 컨테이너 블럭 공통 헬퍼
+// MARK: - BlockEditActions
+/// 블럭 편집 동작 묶음 — 경로는 GameViewModel과 같은 형식([최상위, 자식, 손자, ...])
+struct BlockEditActions {
+    let addChild: (BlockType, [Int]) -> Void
+    let remove: ([Int]) -> Void
+    let setRepeatCount: (Int, [Int]) -> Void
+    let setIfCondition: (IfCondition, [Int]) -> Void
+    let allowedChildTypes: ([Int]) -> [BlockType]
 
-    /// 컨테이너 블럭 종류에 따른 끝 레이블 텍스트
-    private var containerEndLabel: String {
-        switch block.type {
-        case .repeatBlock:   return "end repeat"
-        case .ifBlock:       return "end if"
-        case .functionBlock: return "end function"
-        default:             return "end"
-        }
+    init(viewModel: GameViewModel) {
+        addChild = { viewModel.addChildBlock($0, at: $1) }
+        remove = { viewModel.removeBlock(at: $0) }
+        setRepeatCount = { viewModel.setRepeatCount($0, at: $1) }
+        setIfCondition = { viewModel.setIfCondition($0, at: $1) }
+        allowedChildTypes = { viewModel.allowedChildTypes(at: $0) }
     }
+}
 
-    // MARK: - 컨테이너 블럭 자식 영역
+// MARK: - NestedBlockArea
+/// 컨테이너 블럭의 내부 영역 — 자식 행 목록 + 추가 버튼 + 미니 팔레트 + end 레이블
+/// 자식이 컨테이너이면 한 단계 깊은 NestedBlockArea를 다시 표시 (깊이 1=자식, 2=손자, 3=증손자)
+private struct NestedBlockArea: View {
 
-    /// 컨테이너 블럭(repeat/if/function) 아래에 표시되는 자식 블럭 목록 및 추가 UI
-    private var containerChildArea: some View {
-        VStack(alignment: .leading, spacing: 4) {
+    let parent: Block            // 이 영역을 가진 컨테이너 블럭
+    let parentPath: [Int]        // 컨테이너의 전체 경로
+    let depth: Int               // 자식 행의 깊이 — 글자·여백 크기를 결정
+    let activePath: [Int]        // 실행 중인 블럭의 이 영역 기준 상대 경로 (없으면 빈 배열)
+    let failedPath: [Int]        // 실패한 블럭의 이 영역 기준 상대 경로 (없으면 빈 배열)
+    let actions: BlockEditActions
 
-            if let children = block.children, !children.isEmpty {
-                // 자식 블럭 목록 표시
-                ForEach(Array(children.enumerated()), id: \.element.id) { childIndex, child in
-                    HStack(spacing: 10) {
-                        Color.clear.frame(width: 28) // 번호 열 맞춤 (부모 인덱스 번호 너비)
-                        // 세로 연결선 — 자식 블럭들의 들여쓰기 표시
-                        Rectangle()
-                            .fill(block.type.blockColor.opacity(0.35))
-                            .frame(width: 2)
-                        // 자식 블럭 미니 행
-                        childBlockMiniRow(child, index: childIndex)
-                    }
+    @State private var showPalette = false  // 미니 팔레트 펼침 여부
+
+    private var metrics: Metrics { Metrics.forDepth(depth) }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: metrics.areaSpacing) {
+
+            if let children = parent.children, !children.isEmpty {
+                ForEach(Array(children.enumerated()), id: \.element.id) { index, child in
+                    childItem(child, index: index)
                 }
             } else {
                 // 자식 블럭이 없을 때 안내 텍스트
-                HStack(spacing: 10) {
-                    Color.clear.frame(width: 28)
-                    Rectangle()
-                        .fill(block.type.blockColor.opacity(0.35))
-                        .frame(width: 2)
+                linedRow {
                     Text("블럭을 추가하세요")
-                        .font(.caption)
+                        .font(metrics.emptyFont)
                         .foregroundStyle(.tertiary)
-                        .padding(.vertical, 8)
+                        .padding(.vertical, metrics.emptyPadding)
                 }
             }
 
-            // 자식 블럭 추가 버튼 — 탭 시 미니 팔레트 토글
-            HStack(spacing: 10) {
-                Color.clear.frame(width: 28)
-                Rectangle()
-                    .fill(block.type.blockColor.opacity(0.35))
-                    .frame(width: 2)
+            // 추가 버튼 — 탭 시 미니 팔레트 토글
+            linedRow {
                 Button {
-                    withAnimation(.spring(duration: 0.25)) {
-                        showChildPalette.toggle()
+                    withAnimation(.spring(duration: metrics.paletteToggleDuration)) {
+                        showPalette.toggle()
                     }
                 } label: {
                     Label("추가", systemImage: "plus.circle.fill")
-                        .font(.caption.bold())
-                        .foregroundStyle(block.type.blockColor)
+                        .font(metrics.addFont)
+                        .foregroundStyle(parent.type.blockColor)
                 }
                 .buttonStyle(.borderless)
-                .padding(.vertical, 4)
+                .padding(.vertical, metrics.addPadding)
             }
 
-            // 미니 팔레트 — 자식 블럭 타입 선택
-            if showChildPalette {
-                childMiniPalette
+            if showPalette {
+                miniPalette
                     .transition(.opacity.combined(with: .scale(scale: 0.95, anchor: .topLeading)))
             }
 
-            // 컨테이너 블럭 끝 레이블 — 블럭 타입별로 다른 텍스트 표시
-            Text(containerEndLabel)
-                .font(.system(size: 11, weight: .medium, design: .monospaced))
-                .foregroundStyle(block.type.blockColor.opacity(0.5))
-                .padding(.top, 2)
+            Text(endLabel)
+                .font(.system(size: metrics.endSize, weight: .medium, design: .monospaced))
+                .foregroundStyle(parent.type.blockColor.opacity(metrics.endOpacity))
+                .padding(.top, metrics.endTop)
         }
-        .padding(.leading, 18)
-        .padding(.bottom, 8)
+        .padding(.leading, metrics.areaLeading)
+        .padding(.bottom, metrics.areaBottom)
     }
 
-    /// 자식 블럭 하나를 표시하는 미니 행 뷰
-    /// 자식이 컨테이너(repeat/if)이면 손자 블럭 영역과 조건/횟수 컨트롤도 함께 표시
-    private func childBlockMiniRow(_ child: Block, index childIndex: Int) -> some View {
-        // 이 자식(또는 그 손자)이 현재 실행/실패 중인지 — 경로 첫 요소로 판별
-        let isChildActive = activeChildPath.first == childIndex
-        let isChildFailed = failedChildPath.first == childIndex
+    // MARK: - 연결선
 
-        return VStack(alignment: .leading, spacing: 4) {
-
-            // ── 자식 블럭 헤더 행 ──
-            HStack(spacing: 8) {
-                Image(systemName: child.type.iconName)
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(child.type.blockColor)
-                Text(child.type.displayName)
-                    .font(.system(size: 13, weight: .medium))
-                    .foregroundStyle(.primary)
-
-                Spacer()
-
-                // 중첩 repeat 전용: 횟수 스테퍼
-                if child.type == .repeatBlock, let count = child.repeatCount {
-                    nestedRepeatStepper(count: count, childIndex: childIndex)
-                }
-
-                // 중첩 if 전용: 조건 토글 버튼
-                if child.type == .ifBlock, let condition = child.ifCondition {
-                    Button {
-                        let next: IfCondition = condition == .pathClear ? .pathBlocked : .pathClear
-                        onSetChildIfCondition?(next, childIndex)
-                    } label: {
-                        HStack(spacing: 3) {
-                            Text(condition.displayName)
-                                .font(.system(size: 10, weight: .semibold))
-                                .foregroundStyle(child.type.blockColor)
-                            Image(systemName: "arrow.up.arrow.down")
-                                .font(.system(size: 8, weight: .bold))
-                                .foregroundStyle(child.type.blockColor.opacity(0.7))
-                        }
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 3)
-                        .background(child.type.lightColor)
-                        .clipShape(Capsule())
-                    }
-                    .buttonStyle(.borderless)
-                }
-
-                // 자식 삭제 버튼
-                Button {
-                    withAnimation(.easeInOut(duration: 0.2)) { onRemoveChild?(childIndex) }
-                } label: {
-                    Image(systemName: "xmark.circle.fill")
-                        .font(.system(size: 16))
-                        .foregroundStyle(Color.secondary.opacity(0.5))
-                }
-                .buttonStyle(.borderless)
+    /// 왼쪽 세로 연결선이 붙은 행 — 들여쓰기 깊이를 표시
+    private func linedRow<Content: View>(@ViewBuilder content: () -> Content) -> some View {
+        HStack(spacing: metrics.lineSpacing) {
+            if let column = metrics.numberColumnWidth {
+                Color.clear.frame(width: column)  // 번호 열 맞춤 (부모 인덱스 번호 너비)
             }
-            .padding(.horizontal, 10)
-            .padding(.vertical, 7)
-            .background(child.type.lightColor)
-            .clipShape(RoundedRectangle(cornerRadius: 8))
-            // 실행/실패 중 테두리 하이라이트 — 밝은 lightColor 배경 위라
-            // (최상위 행의 흰 테두리 대신) 블럭 색/실패 색 테두리로 표시
-            .overlay {
-                if isChildActive {
-                    RoundedRectangle(cornerRadius: 8)
-                        .strokeBorder(child.type.blockColor.opacity(0.9), lineWidth: 2)
-                } else if isChildFailed {
-                    RoundedRectangle(cornerRadius: 8)
-                        .strokeBorder(Color.failureRed, lineWidth: 2)
+            Rectangle()
+                .fill(parent.type.blockColor.opacity(metrics.lineOpacity))
+                .frame(width: 2)
+            content()
+        }
+    }
+
+    // MARK: - 자식 행
+
+    /// 자식 한 줄 — 깊이 1은 연결선이 손자 영역까지 이어지고, 그 아래 깊이는 자기 행 옆에만 표시
+    @ViewBuilder
+    private func childItem(_ child: Block, index: Int) -> some View {
+        if metrics.lineSpansNestedArea {
+            linedRow {
+                VStack(alignment: .leading, spacing: metrics.rowSpacing) {
+                    childCard(child, index: index)
+                    nestedArea(of: child, index: index)
                 }
             }
-            .animation(.easeInOut(duration: 0.15), value: isChildActive)
-            .animation(.easeInOut(duration: 0.15), value: isChildFailed)
-
-            // 자식이 컨테이너이면 손자 블럭 영역 표시
-            if child.hasChildren {
-                grandchildArea(child: child, childIndex: childIndex)
+        } else {
+            VStack(alignment: .leading, spacing: metrics.rowSpacing) {
+                linedRow { childCard(child, index: index) }
+                nestedArea(of: child, index: index)
             }
         }
+    }
+
+    /// 자식이 컨테이너이면 한 단계 깊은 영역 표시 — 하이라이트 경로에서 자기 인덱스를 떼어 전달
+    @ViewBuilder
+    private func nestedArea(of child: Block, index: Int) -> some View {
+        if child.hasChildren {
+            NestedBlockArea(
+                parent: child,
+                parentPath: parentPath + [index],
+                depth: depth + 1,
+                activePath: activePath.first == index ? Array(activePath.dropFirst()) : [],
+                failedPath: failedPath.first == index ? Array(failedPath.dropFirst()) : [],
+                actions: actions
+            )
+        }
+    }
+
+    /// 자식 카드 — 아이콘·이름·(repeat 횟수 / if 조건)·삭제 버튼
+    private func childCard(_ child: Block, index: Int) -> some View {
+        // 경로 첫 요소로 판별 — 더 깊은 블럭이 실행/실패 중이어도 조상 행이 함께 강조됨
+        let isActive = activePath.first == index
+        let isFailed = failedPath.first == index
+        let path = parentPath + [index]
+
+        return HStack(spacing: metrics.cardSpacing) {
+            Image(systemName: child.type.iconName)
+                .font(.system(size: metrics.iconSize, weight: .semibold))
+                .foregroundStyle(child.type.blockColor)
+            Text(child.type.displayName)
+                .font(.system(size: metrics.textSize, weight: .medium))
+                .foregroundStyle(.primary)
+
+            Spacer()
+
+            if child.type == .repeatBlock, let count = child.repeatCount {
+                repeatStepper(count: count, path: path)
+            }
+
+            if child.type == .ifBlock, let condition = child.ifCondition {
+                conditionToggle(child, condition: condition, path: path)
+            }
+
+            Button {
+                withAnimation(metrics.removeAnimation) { actions.remove(path) }
+            } label: {
+                Image(systemName: "xmark.circle.fill")
+                    .font(.system(size: metrics.deleteSize))
+                    .foregroundStyle(Color.secondary.opacity(metrics.deleteOpacity))
+            }
+            .buttonStyle(.borderless)
+        }
+        .padding(.horizontal, metrics.cardHorizontal)
+        .padding(.vertical, metrics.cardVertical)
+        .background(child.type.lightColor)
+        .clipShape(RoundedRectangle(cornerRadius: metrics.cardRadius))
+        // 실행/실패 중 테두리 — 밝은 배경 위라 최상위 행의 흰 테두리 대신 블럭 색/실패 색 사용
+        .overlay {
+            if isActive {
+                RoundedRectangle(cornerRadius: metrics.cardRadius)
+                    .strokeBorder(child.type.blockColor.opacity(0.9), lineWidth: 2)
+            } else if isFailed {
+                RoundedRectangle(cornerRadius: metrics.cardRadius)
+                    .strokeBorder(Color.failureRed, lineWidth: 2)
+            }
+        }
+        .animation(.easeInOut(duration: 0.15), value: isActive)
+        .animation(.easeInOut(duration: 0.15), value: isFailed)
     }
 
     /// 중첩 repeat 블럭의 횟수 스테퍼 (소형)
-    private func nestedRepeatStepper(count: Int, childIndex: Int) -> some View {
+    private func repeatStepper(count: Int, path: [Int]) -> some View {
         HStack(spacing: 0) {
-            Button { onSetChildRepeatCount?(max(1, count - 1), childIndex) } label: {
-                Image(systemName: "minus").font(.system(size: 10, weight: .bold)).frame(width: 22, height: 22)
+            Button { actions.setRepeatCount(max(1, count - 1), path) } label: {
+                Image(systemName: "minus")
+                    .font(.system(size: metrics.stepperIconSize, weight: .bold))
+                    .frame(width: metrics.stepperButtonSize, height: metrics.stepperButtonSize)
             }
-            Text("\(count)×").font(.system(size: 12, weight: .bold)).monospacedDigit().frame(minWidth: 18)
-            Button { onSetChildRepeatCount?(min(10, count + 1), childIndex) } label: {
-                Image(systemName: "plus").font(.system(size: 10, weight: .bold)).frame(width: 22, height: 22)
+            Text("\(count)×")
+                .font(.system(size: metrics.stepperTextSize, weight: .bold))
+                .monospacedDigit()
+                .frame(minWidth: metrics.stepperTextMinWidth)
+            Button { actions.setRepeatCount(min(10, count + 1), path) } label: {
+                Image(systemName: "plus")
+                    .font(.system(size: metrics.stepperIconSize, weight: .bold))
+                    .frame(width: metrics.stepperButtonSize, height: metrics.stepperButtonSize)
             }
         }
         .foregroundStyle(BlockType.repeatBlock.blockColor)
@@ -482,255 +489,48 @@ struct BlockRowView: View {
         .buttonStyle(.borderless)
     }
 
-    /// 손자 블럭 영역 — 자식 컨테이너(repeat/if)의 내부 블럭 목록 + 추가 버튼
-    /// 손자 자신이 컨테이너(repeat/if)이면 조건/횟수 컨트롤 + 증손자 영역까지 표시 (3단 중첩 지원)
-    private func grandchildArea(child: Block, childIndex: Int) -> some View {
-        let lineColor = child.type.blockColor.opacity(0.30)
-
-        return VStack(alignment: .leading, spacing: 3) {
-
-            // 손자 블럭 목록
-            if let grandchildren = child.children, !grandchildren.isEmpty {
-                ForEach(Array(grandchildren.enumerated()), id: \.element.id) { gcIdx, gc in
-                    grandchildRow(gc, childIndex: childIndex, grandchildIndex: gcIdx, lineColor: lineColor)
-                }
-            } else {
-                HStack(spacing: 6) {
-                    Rectangle().fill(lineColor).frame(width: 2)
-                    Text("블럭을 추가하세요").font(.caption).foregroundStyle(.tertiary).padding(.vertical, 4)
-                }
+    /// 중첩 if 블럭의 조건 토글 버튼
+    private func conditionToggle(_ child: Block, condition: IfCondition, path: [Int]) -> some View {
+        Button {
+            let next: IfCondition = condition == .pathClear ? .pathBlocked : .pathClear
+            actions.setIfCondition(next, path)
+        } label: {
+            HStack(spacing: 3) {
+                Text(condition.displayName)
+                    .font(.system(size: metrics.toggleTextSize, weight: .semibold))
+                    .foregroundStyle(child.type.blockColor)
+                Image(systemName: "arrow.up.arrow.down")
+                    .font(.system(size: metrics.toggleArrowSize, weight: .bold))
+                    .foregroundStyle(child.type.blockColor.opacity(0.7))
             }
-
-            // 손자 블럭 추가 버튼
-            HStack(spacing: 6) {
-                Rectangle().fill(lineColor).frame(width: 2)
-                Button {
-                    withAnimation(.spring(duration: 0.2)) {
-                        showGrandchildPalette[child.id, default: false].toggle()
-                    }
-                } label: {
-                    Label("추가", systemImage: "plus.circle.fill")
-                        .font(.caption.bold())
-                        .foregroundStyle(child.type.blockColor)
-                }
-                .buttonStyle(.borderless)
-                .padding(.vertical, 2)
-            }
-
-            // 손자 팔레트
-            if showGrandchildPalette[child.id, default: false] {
-                grandchildMiniPalette(child: child, childIndex: childIndex)
-                    .transition(.opacity.combined(with: .scale(scale: 0.95, anchor: .topLeading)))
-            }
-
-            // end 레이블
-            Text(child.type == .repeatBlock ? "end repeat" : "end if")
-                .font(.system(size: 10, weight: .medium, design: .monospaced))
-                .foregroundStyle(child.type.blockColor.opacity(0.45))
-                .padding(.top, 1)
+            .padding(.horizontal, metrics.toggleHorizontal)
+            .padding(.vertical, metrics.toggleVertical)
+            .background(child.type.lightColor)
+            .clipShape(Capsule())
         }
-        .padding(.leading, 14)
+        .buttonStyle(.borderless)
     }
 
-    /// 손자 블럭 하나를 표시하는 행 — 손자가 컨테이너(repeat/if)면 조건/횟수 컨트롤과 증손자 영역도 함께 표시
-    private func grandchildRow(_ gc: Block, childIndex: Int, grandchildIndex gcIdx: Int, lineColor: Color) -> some View {
-        // 이 손자(또는 그 증손자)가 현재 실행/실패 중인지 — 경로가 [자식, 손자]로 시작하면 조상 하이라이트
-        // (증손자가 실행 중이어도 손자 행 테두리가 함께 강조되도록 자식 행과 동일한 prefix 방식 사용)
-        let isGcActive = activeChildPath.starts(with: [childIndex, gcIdx])
-        let isGcFailed = failedChildPath.starts(with: [childIndex, gcIdx])
+    // MARK: - 미니 팔레트
 
-        return VStack(alignment: .leading, spacing: 3) {
-            HStack(spacing: 6) {
-                Rectangle().fill(lineColor).frame(width: 2)
-                HStack(spacing: 6) {
-                    Image(systemName: gc.type.iconName)
-                        .font(.system(size: 11, weight: .semibold))
-                        .foregroundStyle(gc.type.blockColor)
-                    Text(gc.type.displayName)
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundStyle(.primary)
-
-                    Spacer()
-
-                    // 중첩 repeat 전용: 횟수 스테퍼 (손자가 repeat일 때)
-                    if gc.type == .repeatBlock, let count = gc.repeatCount {
-                        HStack(spacing: 0) {
-                            Button { onSetGrandchildRepeatCount?(max(1, count - 1), childIndex, gcIdx) } label: {
-                                Image(systemName: "minus").font(.system(size: 9, weight: .bold)).frame(width: 20, height: 20)
-                            }
-                            Text("\(count)×").font(.system(size: 11, weight: .bold)).monospacedDigit().frame(minWidth: 16)
-                            Button { onSetGrandchildRepeatCount?(min(10, count + 1), childIndex, gcIdx) } label: {
-                                Image(systemName: "plus").font(.system(size: 9, weight: .bold)).frame(width: 20, height: 20)
-                            }
-                        }
-                        .foregroundStyle(BlockType.repeatBlock.blockColor)
-                        .background(BlockType.repeatBlock.lightColor)
-                        .clipShape(Capsule())
-                        .buttonStyle(.borderless)
-                    }
-
-                    // 중첩 if 전용: 조건 토글 버튼 (손자가 if일 때)
-                    if gc.type == .ifBlock, let condition = gc.ifCondition {
-                        Button {
-                            let next: IfCondition = condition == .pathClear ? .pathBlocked : .pathClear
-                            onSetGrandchildIfCondition?(next, childIndex, gcIdx)
-                        } label: {
-                            HStack(spacing: 3) {
-                                Text(condition.displayName)
-                                    .font(.system(size: 9, weight: .semibold))
-                                    .foregroundStyle(gc.type.blockColor)
-                                Image(systemName: "arrow.up.arrow.down")
-                                    .font(.system(size: 7, weight: .bold))
-                                    .foregroundStyle(gc.type.blockColor.opacity(0.7))
-                            }
-                            .padding(.horizontal, 5)
-                            .padding(.vertical, 2)
-                            .background(gc.type.lightColor)
-                            .clipShape(Capsule())
-                        }
-                        .buttonStyle(.borderless)
-                    }
-
+    /// 추가할 블럭 선택 — 허용 규칙은 GameViewModel.allowedChildTypes 한 곳에서 결정
+    private var miniPalette: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: metrics.paletteSpacing) {
+                ForEach(actions.allowedChildTypes(parentPath), id: \.self) { type in
                     Button {
-                        withAnimation { onRemoveGrandchild?(gcIdx, childIndex) }
+                        actions.addChild(type, parentPath)
+                        withAnimation { showPalette = false }
                     } label: {
-                        Image(systemName: "xmark.circle.fill")
-                            .font(.system(size: 13))
-                            .foregroundStyle(Color.secondary.opacity(0.45))
-                    }
-                    .buttonStyle(.borderless)
-                }
-                .padding(.horizontal, 8)
-                .padding(.vertical, 5)
-                .background(gc.type.lightColor)
-                .clipShape(RoundedRectangle(cornerRadius: 6))
-                // 실행/실패 중 테두리 하이라이트 — 자식 미니 행과 동일한 방식
-                .overlay {
-                    if isGcActive {
-                        RoundedRectangle(cornerRadius: 6)
-                            .strokeBorder(gc.type.blockColor.opacity(0.9), lineWidth: 2)
-                    } else if isGcFailed {
-                        RoundedRectangle(cornerRadius: 6)
-                            .strokeBorder(Color.failureRed, lineWidth: 2)
-                    }
-                }
-                .animation(.easeInOut(duration: 0.15), value: isGcActive)
-                .animation(.easeInOut(duration: 0.15), value: isGcFailed)
-            }
-
-            // 손자가 컨테이너(repeat/if)이면 증손자 영역 표시
-            if gc.hasChildren {
-                greatGrandchildArea(grandchild: gc, childIndex: childIndex, grandchildIndex: gcIdx)
-            }
-        }
-    }
-
-    /// 증손자 블럭 영역 — 손자 컨테이너(repeat/if)의 내부 블럭 목록 + 추가 버튼
-    /// 여기서는 기본 동작 블럭만 허용해 더 깊은 중첩(4단 이상)은 만들지 않음
-    private func greatGrandchildArea(grandchild: Block, childIndex: Int, grandchildIndex gcIdx: Int) -> some View {
-        let lineColor = grandchild.type.blockColor.opacity(0.30)
-
-        return VStack(alignment: .leading, spacing: 2) {
-            if let greatGrandchildren = grandchild.children, !greatGrandchildren.isEmpty {
-                ForEach(Array(greatGrandchildren.enumerated()), id: \.element.id) { ggcIdx, ggc in
-                    // 증손자는 항상 기본 동작 블럭(leaf)이므로 경로 완전 일치로 판별
-                    let isActive = activeChildPath == [childIndex, gcIdx, ggcIdx]
-                    let isFailed = failedChildPath == [childIndex, gcIdx, ggcIdx]
-
-                    HStack(spacing: 5) {
-                        Rectangle().fill(lineColor).frame(width: 2)
-                        HStack(spacing: 5) {
-                            Image(systemName: ggc.type.iconName)
-                                .font(.system(size: 10, weight: .semibold))
-                                .foregroundStyle(ggc.type.blockColor)
-                            Text(ggc.type.displayName)
-                                .font(.system(size: 11, weight: .medium))
-                                .foregroundStyle(.primary)
-                            Spacer()
-                            Button {
-                                withAnimation { onRemoveGreatGrandchild?(ggcIdx, childIndex, gcIdx) }
-                            } label: {
-                                Image(systemName: "xmark.circle.fill")
-                                    .font(.system(size: 12))
-                                    .foregroundStyle(Color.secondary.opacity(0.45))
-                            }
-                            .buttonStyle(.borderless)
-                        }
-                        .padding(.horizontal, 7)
-                        .padding(.vertical, 4)
-                        .background(ggc.type.lightColor)
-                        .clipShape(RoundedRectangle(cornerRadius: 5))
-                        .overlay {
-                            if isActive {
-                                RoundedRectangle(cornerRadius: 5)
-                                    .strokeBorder(ggc.type.blockColor.opacity(0.9), lineWidth: 2)
-                            } else if isFailed {
-                                RoundedRectangle(cornerRadius: 5)
-                                    .strokeBorder(Color.failureRed, lineWidth: 2)
-                            }
-                        }
-                        .animation(.easeInOut(duration: 0.15), value: isActive)
-                        .animation(.easeInOut(duration: 0.15), value: isFailed)
-                    }
-                }
-            } else {
-                HStack(spacing: 5) {
-                    Rectangle().fill(lineColor).frame(width: 2)
-                    Text("블럭을 추가하세요").font(.system(size: 10)).foregroundStyle(.tertiary).padding(.vertical, 3)
-                }
-            }
-
-            // 증손자 블럭 추가 버튼
-            HStack(spacing: 5) {
-                Rectangle().fill(lineColor).frame(width: 2)
-                Button {
-                    withAnimation(.spring(duration: 0.2)) {
-                        showGreatGrandchildPalette[grandchild.id, default: false].toggle()
-                    }
-                } label: {
-                    Label("추가", systemImage: "plus.circle.fill")
-                        .font(.system(size: 10, weight: .bold))
-                        .foregroundStyle(grandchild.type.blockColor)
-                }
-                .buttonStyle(.borderless)
-                .padding(.vertical, 1)
-            }
-
-            // 증손자 팔레트
-            if showGreatGrandchildPalette[grandchild.id, default: false] {
-                greatGrandchildMiniPalette(grandchildId: grandchild.id, childIndex: childIndex, grandchildIndex: gcIdx)
-                    .transition(.opacity.combined(with: .scale(scale: 0.95, anchor: .topLeading)))
-            }
-
-            Text(grandchild.type == .repeatBlock ? "end repeat" : "end if")
-                .font(.system(size: 9, weight: .medium, design: .monospaced))
-                .foregroundStyle(grandchild.type.blockColor.opacity(0.45))
-        }
-        .padding(.leading, 12)
-    }
-
-    /// 손자 블럭 선택 미니 팔레트 — repeat/if 상호 허용, 동일 타입·function 중첩 불허 (자식 팔레트와 동일 규칙)
-    /// (기존엔 컨테이너를 전부 막았지만, 손자도 컨테이너가 될 수 있도록 자식 팔레트와 같은 규칙으로 완화)
-    private func grandchildMiniPalette(child: Block, childIndex: Int) -> some View {
-        let types = availableBlocks.filter { type in  // 스테이지 팔레트에 있는 블럭만
-            if type == .functionBlock { return false }  // function 중첩 불허
-            if type == child.type    { return false }  // 동일 타입 중첩 불허
-            return true
-        }
-        return ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 6) {
-                ForEach(types, id: \.self) { type in
-                    Button {
-                        onAddGrandchild?(type, childIndex)
-                        withAnimation { showGrandchildPalette[child.id] = false }
-                    } label: {
-                        HStack(spacing: 4) {
-                            Image(systemName: type.iconName).font(.system(size: 11, weight: .semibold))
-                            Text(type.shortName).font(.system(size: 11, weight: .semibold))
+                        HStack(spacing: metrics.paletteIconSpacing) {
+                            Image(systemName: type.iconName)
+                                .font(.system(size: metrics.paletteFontSize, weight: .semibold))
+                            Text(type.shortName)
+                                .font(.system(size: metrics.paletteFontSize, weight: .semibold))
                         }
                         .foregroundStyle(.white)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 5)
+                        .padding(.horizontal, metrics.paletteHorizontal)
+                        .padding(.vertical, metrics.paletteVertical)
                         .background(type.blockColor)
                         .clipShape(Capsule())
                     }
@@ -738,103 +538,121 @@ struct BlockRowView: View {
                 }
             }
         }
-        .padding(.leading, 20)
+        .padding(.leading, metrics.paletteLeading)
+        .padding(.bottom, metrics.paletteBottom)
     }
 
-    /// 증손자 블럭 선택 미니 팔레트 — 기본 동작 블럭만 허용 (여기서 중첩을 끊어 4단 이상은 만들지 않음)
-    private func greatGrandchildMiniPalette(grandchildId: UUID, childIndex: Int, grandchildIndex: Int) -> some View {
-        let types = availableBlocks.filter {  // 스테이지 팔레트에 있는 블럭만
-            $0 != .repeatBlock && $0 != .ifBlock && $0 != .functionBlock
+    /// 컨테이너 블럭 종류에 따른 끝 레이블
+    private var endLabel: String {
+        switch parent.type {
+        case .repeatBlock:   return "end repeat"
+        case .ifBlock:       return "end if"
+        case .functionBlock: return "end function"
+        default:             return "end"
         }
-        return ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 5) {
-                ForEach(types, id: \.self) { type in
-                    Button {
-                        onAddGreatGrandchild?(type, childIndex, grandchildIndex)
-                        withAnimation { showGreatGrandchildPalette[grandchildId] = false }
-                    } label: {
-                        HStack(spacing: 3) {
-                            Image(systemName: type.iconName).font(.system(size: 10, weight: .semibold))
-                            Text(type.shortName).font(.system(size: 10, weight: .semibold))
-                        }
-                        .foregroundStyle(.white)
-                        .padding(.horizontal, 7)
-                        .padding(.vertical, 4)
-                        .background(type.blockColor)
-                        .clipShape(Capsule())
-                    }
-                    .buttonStyle(.borderless)
-                }
-            }
-        }
-        .padding(.leading, 18)
     }
 
-    /// 자식 블럭 선택용 미니 팔레트
-    /// 허용 규칙: 동일 타입 중첩 불허, functionBlock 중첩 불허
-    /// → repeat 안에 if 가능, if 안에 repeat 가능
-    private var childMiniPalette: some View {
-        let childTypes = availableBlocks.filter { type in  // 스테이지 팔레트에 있는 블럭만
-            if type == .functionBlock { return false }  // function 중첩 불허
-            if type == block.type    { return false }  // 동일 타입 중첩 불허
-            return true
-        }
-        return ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 8) {
-                ForEach(childTypes, id: \.self) { type in
-                    Button {
-                        onAddChild?(type)
-                        withAnimation { showChildPalette = false }
-                    } label: {
-                        HStack(spacing: 5) {
-                            Image(systemName: type.iconName).font(.system(size: 12, weight: .semibold))
-                            Text(type.shortName).font(.system(size: 12, weight: .semibold))
-                        }
-                        .foregroundStyle(.white)
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 6)
-                        .background(type.blockColor)
-                        .clipShape(Capsule())
-                    }
-                    .buttonStyle(.borderless)
-                }
+    // MARK: - 깊이별 크기
+
+    /// 깊어질수록 작아지는 글자·여백 값 — 깊이 3의 스테퍼·토글 값은 안 쓰이지만(증손자는 기본 동작 블럭만) 깊이 2와 맞춤
+    private struct Metrics {
+        var areaSpacing: CGFloat, areaLeading: CGFloat, areaBottom: CGFloat
+        var numberColumnWidth: CGFloat?, lineSpacing: CGFloat, lineOpacity: Double, lineSpansNestedArea: Bool
+        var emptyFont: Font, emptyPadding: CGFloat
+        var addFont: Font, addPadding: CGFloat, paletteToggleDuration: Double
+        var endSize: CGFloat, endOpacity: Double, endTop: CGFloat
+        var rowSpacing: CGFloat, cardSpacing: CGFloat, iconSize: CGFloat, textSize: CGFloat
+        var cardHorizontal: CGFloat, cardVertical: CGFloat, cardRadius: CGFloat
+        var deleteSize: CGFloat, deleteOpacity: Double, removeAnimation: Animation
+        var stepperIconSize: CGFloat, stepperButtonSize: CGFloat, stepperTextSize: CGFloat, stepperTextMinWidth: CGFloat
+        var toggleTextSize: CGFloat, toggleArrowSize: CGFloat, toggleHorizontal: CGFloat, toggleVertical: CGFloat
+        var paletteSpacing: CGFloat, paletteIconSpacing: CGFloat, paletteFontSize: CGFloat
+        var paletteHorizontal: CGFloat, paletteVertical: CGFloat, paletteLeading: CGFloat, paletteBottom: CGFloat
+
+        static func forDepth(_ depth: Int) -> Metrics {
+            switch depth {
+            case 1: return child
+            case 2: return grandchild
+            default: return greatGrandchild
             }
         }
-        .padding(.leading, 32)
-        .padding(.bottom, 4)
+
+        static let child = Metrics(
+            areaSpacing: 4, areaLeading: 18, areaBottom: 8,
+            numberColumnWidth: 28, lineSpacing: 10, lineOpacity: 0.35, lineSpansNestedArea: true,
+            emptyFont: .caption, emptyPadding: 8,
+            addFont: .caption.bold(), addPadding: 4, paletteToggleDuration: 0.25,
+            endSize: 11, endOpacity: 0.5, endTop: 2,
+            rowSpacing: 4, cardSpacing: 8, iconSize: 13, textSize: 13,
+            cardHorizontal: 10, cardVertical: 7, cardRadius: 8,
+            deleteSize: 16, deleteOpacity: 0.5, removeAnimation: .easeInOut(duration: 0.2),
+            stepperIconSize: 10, stepperButtonSize: 22, stepperTextSize: 12, stepperTextMinWidth: 18,
+            toggleTextSize: 10, toggleArrowSize: 8, toggleHorizontal: 6, toggleVertical: 3,
+            paletteSpacing: 8, paletteIconSpacing: 5, paletteFontSize: 12,
+            paletteHorizontal: 10, paletteVertical: 6, paletteLeading: 32, paletteBottom: 4
+        )
+
+        static let grandchild = Metrics(
+            areaSpacing: 3, areaLeading: 14, areaBottom: 0,
+            numberColumnWidth: nil, lineSpacing: 6, lineOpacity: 0.30, lineSpansNestedArea: false,
+            emptyFont: .caption, emptyPadding: 4,
+            addFont: .caption.bold(), addPadding: 2, paletteToggleDuration: 0.2,
+            endSize: 10, endOpacity: 0.45, endTop: 1,
+            rowSpacing: 3, cardSpacing: 6, iconSize: 11, textSize: 12,
+            cardHorizontal: 8, cardVertical: 5, cardRadius: 6,
+            deleteSize: 13, deleteOpacity: 0.45, removeAnimation: .default,
+            stepperIconSize: 9, stepperButtonSize: 20, stepperTextSize: 11, stepperTextMinWidth: 16,
+            toggleTextSize: 9, toggleArrowSize: 7, toggleHorizontal: 5, toggleVertical: 2,
+            paletteSpacing: 6, paletteIconSpacing: 4, paletteFontSize: 11,
+            paletteHorizontal: 8, paletteVertical: 5, paletteLeading: 20, paletteBottom: 0
+        )
+
+        static let greatGrandchild = Metrics(
+            areaSpacing: 2, areaLeading: 12, areaBottom: 0,
+            numberColumnWidth: nil, lineSpacing: 5, lineOpacity: 0.30, lineSpansNestedArea: false,
+            emptyFont: .system(size: 10), emptyPadding: 3,
+            addFont: .system(size: 10, weight: .bold), addPadding: 1, paletteToggleDuration: 0.2,
+            endSize: 9, endOpacity: 0.45, endTop: 0,
+            rowSpacing: 3, cardSpacing: 5, iconSize: 10, textSize: 11,
+            cardHorizontal: 7, cardVertical: 4, cardRadius: 5,
+            deleteSize: 12, deleteOpacity: 0.45, removeAnimation: .default,
+            stepperIconSize: 9, stepperButtonSize: 20, stepperTextSize: 11, stepperTextMinWidth: 16,
+            toggleTextSize: 9, toggleArrowSize: 7, toggleHorizontal: 5, toggleVertical: 2,
+            paletteSpacing: 5, paletteIconSpacing: 3, paletteFontSize: 10,
+            paletteHorizontal: 7, paletteVertical: 4, paletteLeading: 18, paletteBottom: 0
+        )
     }
 }
 
 // MARK: - Preview
 
+/// 프리뷰용 편집 동작 — 실제 편집 규칙(미니 팔레트 목록)이 적용되도록 VM을 사용
+private func previewActions(blocks: [Block]) -> BlockEditActions {
+    let viewModel = GameViewModel(stage: .preview)
+    viewModel.codeBlocks = blocks
+    return BlockEditActions(viewModel: viewModel)
+}
+
 #Preview {
+    let actions = previewActions(blocks: [])
     VStack(spacing: 12) {
         // 실행 중 활성 상태 블럭
         BlockRowView(
             block: Block(type: .moveForward),
             index: 0, isActive: true, isFailed: false,
-            onDelete: nil, onAddChild: nil, onRemoveChild: nil,
-            onRepeatCountChange: nil, onIfConditionChange: nil,
-            onAddGrandchild: nil, onRemoveGrandchild: nil,
-            onSetChildIfCondition: nil, onSetChildRepeatCount: nil
+            actions: actions
         )
         // 일반 상태 블럭
         BlockRowView(
             block: Block(type: .turnLeft),
             index: 1, isActive: false, isFailed: false,
-            onDelete: nil, onAddChild: nil, onRemoveChild: nil,
-            onRepeatCountChange: nil, onIfConditionChange: nil,
-            onAddGrandchild: nil, onRemoveGrandchild: nil,
-            onSetChildIfCondition: nil, onSetChildRepeatCount: nil
+            actions: actions
         )
         // 실패 상태 블럭
         BlockRowView(
             block: Block(type: .moveForward),
             index: 2, isActive: false, isFailed: true,
-            onDelete: nil, onAddChild: nil, onRemoveChild: nil,
-            onRepeatCountChange: nil, onIfConditionChange: nil,
-            onAddGrandchild: nil, onRemoveGrandchild: nil,
-            onSetChildIfCondition: nil, onSetChildRepeatCount: nil
+            actions: actions
         )
         // repeat 블럭 (if 자식 포함)
         BlockRowView(
@@ -842,10 +660,7 @@ struct BlockRowView: View {
                          children: [Block(type: .moveForward),
                                     Block(type: .ifBlock, children: [Block(type: .turnRight)])]),
             index: 3, isActive: false, isFailed: false,
-            onDelete: { }, onAddChild: { _ in }, onRemoveChild: { _ in },
-            onRepeatCountChange: { _ in }, onIfConditionChange: nil,
-            onAddGrandchild: nil, onRemoveGrandchild: nil,
-            onSetChildIfCondition: nil, onSetChildRepeatCount: nil
+            actions: actions
         )
         // if 블럭 (repeat 자식 포함)
         BlockRowView(
@@ -853,12 +668,66 @@ struct BlockRowView: View {
                          children: [Block(type: .repeatBlock, repeatCount: 2,
                                           children: [Block(type: .moveForward)])]),
             index: 4, isActive: false, isFailed: false,
-            onDelete: { }, onAddChild: { _ in }, onRemoveChild: { _ in },
-            onRepeatCountChange: nil, onIfConditionChange: { _ in },
-            onAddGrandchild: nil, onRemoveGrandchild: nil,
-            onSetChildIfCondition: nil, onSetChildRepeatCount: nil
+            actions: actions
         )
     }
     .padding()
     .background(Color(red: 0.957, green: 0.925, blue: 0.843))
+}
+
+// 중첩 영역 전후 비교용 — 자식·손자·증손자 모든 깊이의 스테퍼·토글·빈 안내를 한 화면에 표시
+private let previewNestedTree = Block(type: .functionBlock, children: [
+    Block(type: .moveForward),
+    Block(type: .repeatBlock, repeatCount: 3, children: [
+        Block(type: .turnLeft),
+        Block(type: .ifBlock, children: [Block(type: .moveForward), Block(type: .turnRight)]),
+        Block(type: .ifBlock, children: [])
+    ]),
+    Block(type: .ifBlock, children: [
+        Block(type: .repeatBlock, repeatCount: 2, children: [Block(type: .collectItem)])
+    ]),
+    Block(type: .repeatBlock, repeatCount: 4, children: [])
+])
+
+private let previewHighlightTree = Block(type: .repeatBlock, repeatCount: 2, children: [
+    Block(type: .ifBlock, children: [
+        Block(type: .repeatBlock, repeatCount: 3, children: [Block(type: .moveForward), Block(type: .turnLeft)]),
+        Block(type: .turnRight)
+    ]),
+    Block(type: .moveForward)
+])
+
+#Preview("중첩") {
+    let actions = previewActions(blocks: [previewNestedTree])
+    BlockRowView(
+        block: previewNestedTree,
+        index: 0, isActive: false, isFailed: false,
+        actions: actions
+    )
+    .padding()
+    .frame(width: 400)
+    .background(Color.appBackground)
+}
+
+#Preview("중첩 강조") {
+    let actions = previewActions(blocks: [previewHighlightTree, previewHighlightTree])
+    VStack(spacing: 8) {
+        // 증손자 실행 중 — 자식·손자 테두리까지 함께 강조
+        BlockRowView(
+            block: previewHighlightTree,
+            index: 0, isActive: true, isFailed: false,
+            activeChildPath: [0, 0, 1],
+            actions: actions
+        )
+        // 손자 실패
+        BlockRowView(
+            block: previewHighlightTree,
+            index: 1, isActive: false, isFailed: true,
+            failedChildPath: [0, 1],
+            actions: actions
+        )
+    }
+    .padding()
+    .frame(width: 400)
+    .background(Color.appBackground)
 }

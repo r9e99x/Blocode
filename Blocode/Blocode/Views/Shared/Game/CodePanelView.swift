@@ -287,43 +287,7 @@ struct CodePanelView: View {
                                 // 이 행 내부에서 실패한 자식의 상대 경로 (형식 동일)
                                 failedChildPath: viewModel.failedBlockPath?.first == offset
                                     ? Array((viewModel.failedBlockPath ?? []).dropFirst()) : [],
-                                onDelete: { viewModel.removeBlock(at: [offset]) },
-                                onAddChild: { childType in
-                                    viewModel.addChildBlock(childType, at: [offset])
-                                },
-                                onRemoveChild: { childIndex in
-                                    viewModel.removeBlock(at: [offset, childIndex])
-                                },
-                                onRepeatCountChange: { count in
-                                    viewModel.setRepeatCount(count, at: [offset])
-                                },
-                                onIfConditionChange: { condition in
-                                    viewModel.setIfCondition(condition, at: [offset])
-                                },
-                                onAddGrandchild: { type, childIndex in
-                                    viewModel.addChildBlock(type, at: [offset, childIndex])
-                                },
-                                onRemoveGrandchild: { gcIdx, childIndex in
-                                    viewModel.removeBlock(at: [offset, childIndex, gcIdx])
-                                },
-                                onSetChildIfCondition: { condition, childIndex in
-                                    viewModel.setIfCondition(condition, at: [offset, childIndex])
-                                },
-                                onSetChildRepeatCount: { count, childIndex in
-                                    viewModel.setRepeatCount(count, at: [offset, childIndex])
-                                },
-                                onAddGreatGrandchild: { type, childIndex, gcIdx in
-                                    viewModel.addChildBlock(type, at: [offset, childIndex, gcIdx])
-                                },
-                                onRemoveGreatGrandchild: { ggcIdx, childIndex, gcIdx in
-                                    viewModel.removeBlock(at: [offset, childIndex, gcIdx, ggcIdx])
-                                },
-                                onSetGrandchildIfCondition: { condition, childIndex, gcIdx in
-                                    viewModel.setIfCondition(condition, at: [offset, childIndex, gcIdx])
-                                },
-                                onSetGrandchildRepeatCount: { count, childIndex, gcIdx in
-                                    viewModel.setRepeatCount(count, at: [offset, childIndex, gcIdx])
-                                },
+                                actions: BlockEditActions(viewModel: viewModel),
                                 onReorderDragStart: { pt in
                                     guard viewModel.gameState == .idle else { return }
                                     withAnimation(.spring(duration: 0.2)) {
@@ -346,8 +310,7 @@ struct CodePanelView: View {
                                     withAnimation(.spring(duration: 0.2)) {
                                         drag.reorderIndex = nil  // 고스트 제거 (이동했든 취소했든)
                                     }
-                                },
-                                availableBlocks: viewModel.availableBlocks  // 중첩 미니 팔레트도 스테이지 팔레트로 제한
+                                }
                             )
                             .padding(.horizontal, 12)
                             // 각 행의 중간 Y 좌표를 preference로 보고 (드래그 인덱스 계산용)
