@@ -145,7 +145,7 @@ final class ProgressService: ObservableObject {
         guard stageCount > 0 else { return 0 }
         // 1번부터 stageCount까지 각 스테이지 별점 합산
         return (1...stageCount).reduce(0) { total, stageNum in
-            total + stars(for: "ch\(chapter)_stage\(stageNum)")
+            total + stars(for: Stage.makeID(chapter: chapter, number: stageNum))
         }
     }
 
@@ -158,7 +158,7 @@ final class ProgressService: ObservableObject {
 
         // 모든 스테이지(종합 포함)는 직전 스테이지를 클리어하면 개방
         // 스테이지가 순차 진행이므로 "직전 클리어" = "이전 스테이지 전부 클리어"와 동일
-        let prevId = "ch\(chapter)_stage\(stageNumber - 1)"
+        let prevId = Stage.makeID(chapter: chapter, number: stageNumber - 1)
         return !isCleared(prevId)
     }
 
@@ -176,7 +176,7 @@ final class ProgressService: ObservableObject {
         chapters.filter { ch in
             guard ch.stageCount > 0 else { return false }
             return (1...ch.stageCount).allSatisfy { stageNum in
-                isCleared("ch\(ch.id)_stage\(stageNum)")
+                isCleared(Stage.makeID(chapter: ch.id, number: stageNum))
             }
         }.count
     }
@@ -204,9 +204,9 @@ final class ProgressService: ObservableObject {
         guard let prev = chapters.first(where: { $0.number == chapter.number - 1 }),
               prev.stageCount > 0 else { return false }
         let prevStars = (1...prev.stageCount).reduce(0) { total, stageNum in
-            total + (results["ch\(prev.number)_stage\(stageNum)"]?.stars ?? 0)
+            total + (results[Stage.makeID(chapter: prev.number, number: stageNum)]?.stars ?? 0)
         }
-        let finalCleared = results["ch\(prev.number)_stage\(prev.stageCount)"]?.isCleared ?? false
+        let finalCleared = results[Stage.makeID(chapter: prev.number, number: prev.stageCount)]?.isCleared ?? false
         return prevStars >= chapter.requiredStarsFromPrev && finalCleared
     }
 
@@ -222,13 +222,13 @@ final class ProgressService: ObservableObject {
                 // 여기까지 왔다면 이전 챕터는 전부 클리어된 상태 → 잠긴 이유는 별 부족
                 guard let prev = chapters.first(where: { $0.number == ch.number - 1 }) else { return nil }
                 let lowStar = (1...prev.stageCount).first { stageNum in
-                    (results["ch\(prev.number)_stage\(stageNum)"]?.stars ?? 0) < 3
+                    (results[Stage.makeID(chapter: prev.number, number: stageNum)]?.stars ?? 0) < 3
                 }
                 return (prev.number, lowStar ?? prev.stageCount)
             }
 
             // 해금된 챕터의 첫 미클리어 스테이지 — 앞 스테이지가 전부 클리어라 항상 플레이 가능
-            if let stageNum = (1...ch.stageCount).first(where: { results["ch\(ch.number)_stage\($0)"]?.isCleared != true }) {
+            if let stageNum = (1...ch.stageCount).first(where: { results[Stage.makeID(chapter: ch.number, number: $0)]?.isCleared != true }) {
                 return (ch.number, stageNum)
             }
         }
@@ -301,7 +301,7 @@ final class ProgressService: ObservableObject {
         for ch in chapters where ch.id <= chapterNumber {
             guard ch.stageCount > 0 else { continue }
             for stageNum in 1...ch.stageCount {
-                recordClear(stageId: "ch\(ch.id)_stage\(stageNum)", stars: 3, blockCount: 1)
+                recordClear(stageId: Stage.makeID(chapter: ch.id, number: stageNum), stars: 3, blockCount: 1)
             }
         }
     }

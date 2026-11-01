@@ -57,6 +57,12 @@ struct Stage: Codable, Identifiable {
 
     // MARK: - 헬퍼
 
+    /// 스테이지 ID 조립 — JSON 파일 이름과 진행도 저장 키가 같은 형식을 씀
+    /// 형식을 바꾸면 사용자의 기존 진행도와 연결이 끊기므로 변경 금지
+    static func makeID(chapter: Int, number: Int) -> String {
+        "ch\(chapter)_stage\(number)"
+    }
+
     /// 팔레트에 실제로 표시할 블럭 목록
     /// availableBlocks가 nil이면 전체 블럭 (BlockType.allCases) 반환
     var paletteBlocks: [BlockType] {
@@ -67,7 +73,7 @@ struct Stage: Codable, Identifiable {
     /// (실제 화면에는 표시되지 않음 — View가 loadFailed로 폴백 UI를 띄움)
     static func placeholder(chapter: Int, stageNumber: Int) -> Stage {
         Stage(
-            id: "ch\(chapter)_stage\(stageNumber)",
+            id: Stage.makeID(chapter: chapter, number: stageNumber),
             chapter: chapter,
             stageNumber: stageNumber,
             name: "스테이지를 불러올 수 없어요",

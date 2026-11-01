@@ -36,6 +36,14 @@ struct ProgressServiceTests {
         return Calendar.current.date(byAdding: .day, value: -daysAgo, to: today)!
     }
 
+    // MARK: - 저장 키
+
+    @Test("스테이지 ID 형식은 저장된 진행도 키와 같아야 함 — 바뀌면 기존 기록을 못 찾음")
+    func stageID_formatIsStable() {
+        #expect(Stage.makeID(chapter: 1, number: 2) == "ch1_stage2")
+        #expect(Stage.makeID(chapter: 10, number: 6) == "ch10_stage6")
+    }
+
     // MARK: - 기록 갱신
 
     @Test("더 좋은 기록만 남음 — 별은 최댓값, 블럭 수는 최솟값")

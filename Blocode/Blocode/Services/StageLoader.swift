@@ -26,7 +26,7 @@ enum StageLoader {
         // 파일명 형식: ch1_stage1.json (챕터+스테이지 번호 포함 — 번들 루트에서 유일한 이름)
         // 폴더 구조(Resources/Stages/Chapter1/)는 Xcode Group으로 시각적 정리만 담당
         // 번들에서는 파일명으로만 조회 (Group은 번들 루트에 평탄화되므로 subdirectory 불필요)
-        let fileName = "ch\(chapter)_stage\(stage)"
+        let fileName = Stage.makeID(chapter: chapter, number: stage)
 
         // 번들에서 JSON 파일 URL 조회
         guard let url = Bundle.main.url(forResource: fileName, withExtension: "json") else {
