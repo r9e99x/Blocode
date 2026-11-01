@@ -146,3 +146,87 @@ struct Block: Identifiable, Codable {
         }
     }
 }
+
+// MARK: - 블럭 트리 편집
+// 코드 블럭 목록을 경로로 다루는 규칙 — 경로 형식은 [최상위], [최상위, 자식], [최상위, 자식, 손자], ...
+extension Array where Element == Block {
+
+    /// 경로에 있는 블럭 — 경로가 잘못됐으면 nil
+    func block(at path: [Int]) -> Block? {
+        var siblings = self
+        var found: Block? = nil
+        for index in path {
+            guard siblings.indices.contains(index) else { return nil }
+            found = siblings[index]
+            siblings = siblings[index].children ?? []
+        }
+        return found
+    }
+
+    /// 경로의 컨테이너에 넣을 수 있는 블럭 — 스테이지 팔레트 안에서 중첩 규칙을 적용
+    /// 규칙: function 중첩 불허, 동일 타입 중첩 불허, 증손자는 기본 동작 블럭만(4단 이상 중첩 방지)
+    func allowedChildTypes(at path: [Int], palette: [BlockType]) -> [BlockType] {
+        guard let parent = block(at: path), parent.hasChildren else { return [] }
+        let isDeepestContainer = path.count >= 3
+        return palette.filter { type in
+            if type == .functionBlock || type == parent.type { return false }
+            if isDeepestContainer && (type == .repeatBlock || type == .ifBlock) { return false }
+            return true
+        }
+    }
+
+    /// 경로의 컨테이너에 자식 블럭 추가 — 허용되지 않는 블럭은 무시
+    mutating func addChild(_ type: BlockType, at path: [Int], palette: [BlockType]) {
+        guard allowedChildTypes(at: path, palette: palette).contains(type) else { return }
+        editBlock(at: path) { $0.children?.append(Block(type: type)) }
+    }
+
+    /// 경로의 블럭 삭제 (최상위·중첩 공용) — 경로가 잘못됐으면 무시
+    mutating func removeBlock(at path: [Int]) {
+        guard block(at: path) != nil, let index = path.last else { return }
+        if path.count == 1 {
+            remove(at: index)
+        } else {
+            editBlock(at: Array<Int>(path.dropLast())) { $0.children?.remove(at: index) }
+        }
+    }
+
+    /// 경로의 if 블럭 조건 변경
+    mutating func setIfCondition(_ condition: IfCondition, at path: [Int]) {
+        guard block(at: path)?.type == .ifBlock else { return }
+        editBlock(at: path) { $0.ifCondition = condition }
+    }
+
+    /// 경로의 repeat 블럭 반복 횟수 변경 (1~10회로 제한)
+    mutating func setRepeatCount(_ count: Int, at path: [Int]) {
+        guard block(at: path)?.isRepeatBlock == true else { return }
+        editBlock(at: path) { $0.repeatCount = Swift.max(1, Swift.min(10, count)) }
+    }
+
+    /// 최상위 블럭 순서 변경 — destination은 옮기기 전 배열 기준의 삽입 위치 (0...count), 옮겼으면 true
+    mutating func moveBlock(from source: Int, to destination: Int) -> Bool {
+        guard indices.contains(source), (0...count).contains(destination) else { return false }
+        let block = remove(at: source)
+        // 앞쪽 블럭을 뺐으므로 그 뒤의 삽입 위치는 한 칸 당겨짐
+        insert(block, at: destination > source ? destination - 1 : destination)
+        return true
+    }
+
+    /// 경로의 블럭을 제자리에서 수정 — 경로가 잘못됐으면 무시
+    private mutating func editBlock(at path: [Int], _ edit: (inout Block) -> Void) {
+        guard let first = path.first, block(at: path) != nil else { return }
+        self[first].edit(remainingPath: path.dropFirst(), edit)
+    }
+}
+
+private extension Block {
+
+    /// 트리를 따라 내려가 값 타입 블럭을 제자리에서 수정 (경로는 호출부에서 검증됨)
+    mutating func edit(remainingPath: ArraySlice<Int>, _ edit: (inout Block) -> Void) {
+        guard let next = remainingPath.first else {
+            edit(&self)
+            return
+        }
+        children![next].edit(remainingPath: remainingPath.dropFirst(), edit)
+    }
+}

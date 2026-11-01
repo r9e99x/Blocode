@@ -173,85 +173,45 @@ final class GameViewModel: ObservableObject {
     /// 블럭 순서 변경 (드래그 앤 드롭) — idle 상태이고 유효한 위치일 때만 허용
     /// destination은 옮기기 전 배열 기준의 삽입 위치 (0...count)
     func moveBlock(from source: Int, to destination: Int) {
-        guard canEdit,
-              codeBlocks.indices.contains(source),
-              (0...codeBlocks.count).contains(destination) else { return }
-        var blocks = codeBlocks
-        let block = blocks.remove(at: source)
-        // 앞쪽 블럭을 뺐으므로 그 뒤의 삽입 위치는 한 칸 당겨짐
-        blocks.insert(block, at: destination > source ? destination - 1 : destination)
-        codeBlocks = blocks
+        guard canEdit, codeBlocks.moveBlock(from: source, to: destination) else { return }
         SoundService.shared.play(.blockReorder)
     }
 
     // MARK: - 경로 기반 블럭 편집
-    // 경로 형식은 currentBlockPath와 같음 — [최상위], [최상위, 자식], [최상위, 자식, 손자], ...
+    // 트리 규칙은 Model(Block.swift)이 담당 — VM은 실행 중 편집 차단과 스테이지 팔레트 전달만 맡음
 
     /// 경로에 있는 블럭 — 경로가 잘못됐으면 nil
     func block(at path: [Int]) -> Block? {
-        var siblings = codeBlocks
-        var found: Block? = nil
-        for index in path {
-            guard siblings.indices.contains(index) else { return nil }
-            found = siblings[index]
-            siblings = siblings[index].children ?? []
-        }
-        return found
+        codeBlocks.block(at: path)
     }
 
-    /// 경로의 컨테이너에 넣을 수 있는 블럭 — 스테이지 팔레트 안에서 중첩 규칙을 적용
-    /// 규칙: function 중첩 불허, 동일 타입 중첩 불허, 증손자는 기본 동작 블럭만(4단 이상 중첩 방지)
+    /// 경로의 컨테이너에 넣을 수 있는 블럭
     func allowedChildTypes(at path: [Int]) -> [BlockType] {
-        guard let parent = block(at: path), parent.hasChildren else { return [] }
-        let isDeepestContainer = path.count >= 3
-        return stage.paletteBlocks.filter { type in
-            if type == .functionBlock || type == parent.type { return false }
-            if isDeepestContainer && (type == .repeatBlock || type == .ifBlock) { return false }
-            return true
-        }
-    }
-
-    /// 경로의 블럭 수정 — idle 상태이고 경로가 유효할 때만
-    private func editBlock(at path: [Int], _ edit: (inout Block) -> Void) {
-        guard canEdit, let first = path.first, block(at: path) != nil else { return }
-        Self.editBlock(&codeBlocks[first], remainingPath: path.dropFirst(), edit)
-    }
-
-    /// 트리를 따라 내려가 값 타입 블럭을 제자리에서 수정 (경로는 호출부에서 검증됨)
-    private static func editBlock(_ block: inout Block, remainingPath: ArraySlice<Int>, _ edit: (inout Block) -> Void) {
-        guard let next = remainingPath.first else {
-            edit(&block)
-            return
-        }
-        editBlock(&block.children![next], remainingPath: remainingPath.dropFirst(), edit)
+        codeBlocks.allowedChildTypes(at: path, palette: stage.paletteBlocks)
     }
 
     /// 경로의 컨테이너에 자식 블럭 추가 — 허용되지 않는 블럭은 무시
     func addChildBlock(_ type: BlockType, at path: [Int]) {
-        guard allowedChildTypes(at: path).contains(type) else { return }
-        editBlock(at: path) { $0.children?.append(Block(type: type)) }
+        guard canEdit else { return }
+        codeBlocks.addChild(type, at: path, palette: stage.paletteBlocks)
     }
 
     /// 경로의 블럭 삭제 (최상위·중첩 공용)
     func removeBlock(at path: [Int]) {
-        guard canEdit, block(at: path) != nil, let index = path.last else { return }
-        if path.count == 1 {
-            codeBlocks.remove(at: index)
-        } else {
-            editBlock(at: Array(path.dropLast())) { $0.children?.remove(at: index) }
-        }
+        guard canEdit else { return }
+        codeBlocks.removeBlock(at: path)
     }
 
     /// 경로의 if 블럭 조건 변경
     func setIfCondition(_ condition: IfCondition, at path: [Int]) {
-        guard block(at: path)?.type == .ifBlock else { return }
-        editBlock(at: path) { $0.ifCondition = condition }
+        guard canEdit else { return }
+        codeBlocks.setIfCondition(condition, at: path)
     }
 
     /// 경로의 repeat 블럭 반복 횟수 변경 (1~10회로 제한)
     func setRepeatCount(_ count: Int, at path: [Int]) {
-        guard block(at: path)?.isRepeatBlock == true else { return }
-        editBlock(at: path) { $0.repeatCount = max(1, min(10, count)) }
+        guard canEdit else { return }
+        codeBlocks.setRepeatCount(count, at: path)
     }
 
     /// 특정 위치에 블럭 삽입 (팔레트 드래그-앤-드롭 위치 지정 삽입)

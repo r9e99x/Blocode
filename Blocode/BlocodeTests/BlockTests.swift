@@ -114,3 +114,93 @@ struct BlockTests {
         #expect(thresholds.stars(for: 1) == 3)  // 최소값도 3개 기준 이하면 3개
     }
 }
+
+// MARK: - 블럭 트리 편집
+
+@Suite("Block 트리 편집 — ViewModel 없이 경로로")
+struct BlockTreeTests {
+
+    /// 함수 → 반복 → 만약에 → 앞으로 (4단)
+    private func nestedTree() -> [Block] {
+        [Block(type: .functionBlock, children: [
+            Block(type: .repeatBlock, children: [
+                Block(type: .ifBlock, children: [Block(type: .moveForward)])
+            ])
+        ])]
+    }
+
+    @Test("경로로 깊이별 블럭을 찾고, 잘못된 경로는 nil")
+    func blockAtPath() {
+        let tree = nestedTree()
+        #expect(tree.block(at: [0])?.type == .functionBlock)
+        #expect(tree.block(at: [0, 0, 0, 0])?.type == .moveForward)
+        #expect(tree.block(at: []) == nil)
+        #expect(tree.block(at: [1]) == nil)
+        #expect(tree.block(at: [0, 0, 0, 0, 0]) == nil)
+    }
+
+    @Test("중첩 규칙 — 팔레트 안에서 function·동일 타입 제외, 증손자는 기본 동작만")
+    func allowedChildTypes_followRules() {
+        let palette: [BlockType] = [.moveForward, .repeatBlock, .ifBlock, .functionBlock]
+        let tree = nestedTree()
+        let expectedForFunction: [BlockType] = [.moveForward, .repeatBlock, .ifBlock]
+        let expectedForRepeat: [BlockType] = [.moveForward, .ifBlock]
+        let expectedForDeepest: [BlockType] = [.moveForward]
+        #expect(tree.allowedChildTypes(at: [0], palette: palette) == expectedForFunction)
+        #expect(tree.allowedChildTypes(at: [0, 0], palette: palette) == expectedForRepeat)
+        #expect(tree.allowedChildTypes(at: [0, 0, 0], palette: palette) == expectedForDeepest)
+        #expect(tree.allowedChildTypes(at: [0, 0, 0, 0], palette: palette).isEmpty)  // 기본 동작 블럭은 컨테이너 아님
+    }
+
+    @Test("자식 추가는 허용된 블럭만")
+    func addChild_respectsRules() {
+        var tree = nestedTree()
+        tree.addChild(.turnLeft, at: [0], palette: [.moveForward])  // 팔레트에 없음
+        #expect(tree[0].children?.count == 1)
+        tree.addChild(.moveForward, at: [0], palette: [.moveForward])
+        #expect(tree[0].children?.count == 2)
+    }
+
+    @Test("삭제는 최상위와 중첩 모두 가능, 잘못된 경로는 무시")
+    func removeBlock_atAnyDepth() {
+        var tree = nestedTree()
+        tree.removeBlock(at: [0, 5])
+        tree.removeBlock(at: [])
+        #expect(tree[0].children?.count == 1)
+
+        tree.removeBlock(at: [0, 0, 0, 0])
+        #expect(tree.block(at: [0, 0, 0])?.children?.isEmpty == true)
+        tree.removeBlock(at: [0])
+        #expect(tree.isEmpty)
+    }
+
+    @Test("반복 횟수와 조건은 해당 블럭 종류에만 적용")
+    func settings_applyToMatchingType() {
+        var tree = nestedTree()
+        tree.setRepeatCount(99, at: [0, 0])
+        #expect(tree.block(at: [0, 0])?.repeatCount == 10)
+        tree.setRepeatCount(5, at: [0])              // 함수 블럭 — 무시
+        #expect(tree[0].repeatCount == nil)
+
+        tree.setIfCondition(.pathClear, at: [0, 0, 0])
+        #expect(tree.block(at: [0, 0, 0])?.ifCondition == .pathClear)
+        tree.setIfCondition(.pathClear, at: [0, 0])  // 반복 블럭 — 무시
+        #expect(tree.block(at: [0, 0])?.ifCondition == nil)
+    }
+
+    @Test("순서 변경 — 뒤로·앞으로 이동과 잘못된 위치")
+    func moveBlock_reorders() {
+        var tree = [Block(type: .moveForward), Block(type: .turnLeft), Block(type: .turnRight)]
+        let movedBack = tree.moveBlock(from: 0, to: 3)
+        #expect(movedBack)
+        #expect(tree.map(\.type) == [.turnLeft, .turnRight, .moveForward])
+
+        let movedFront = tree.moveBlock(from: 2, to: 0)
+        #expect(movedFront)
+        #expect(tree.map(\.type) == [.moveForward, .turnLeft, .turnRight])
+
+        let invalid = tree.moveBlock(from: 5, to: 0)
+        #expect(invalid == false)
+        #expect(tree.count == 3)
+    }
+}
