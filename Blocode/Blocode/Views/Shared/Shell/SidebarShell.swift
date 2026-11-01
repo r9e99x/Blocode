@@ -1,24 +1,47 @@
 //
-//  MacContentShell.swift
+//  SidebarShell.swift
 //  Blocode
 //
 //  Created by 조준희 on 7/2/26.
 //
 
-// macOS 전용 최상위 화면 — iOS/iPadOS는 이 파일 전체가 컴파일에서 제외됨
-// (ContentView/ChapterSelectView/ChapterView 등 기존 iOS 화면은 이 파일에서 전혀 참조하지 않음)
-// 색상·3D 효과·눌림 효과는 전부 iOS와 동일한 공용 컴포넌트(ThreeDSurface/AppColors/onPressState/
-// LockInfoOverlay/StarRatingView)를 그대로 재사용해 라이트·다크 모드 모두 iOS와 동일하게 유지한다.
-// 챕터 브라우저(ChapterBrowsePane, Views/Shared/Shell/)와 미리보기 맵(StagePreviewMapView, Views/Shared/Components/)은 별도 파일로 분리됨
-#if os(macOS)
+// 아이패드·맥 공용 최상위 화면 (아이폰은 ContentView의 NavigationStack 화면을 그대로 사용)
+// 색상·3D 효과·눌림 효과는 전부 공용 컴포넌트를 재사용 — 맥 전용 부분(윈도우 제목, 툴바 뒤로가기)만 #if로 분기
+// 챕터 브라우저(ChapterBrowsePane)와 미리보기 맵(StagePreviewMapView)은 별도 파일
 import SwiftUI
 
-// MARK: - MacContentShell
+// MARK: - SidebarShell
 /// 좌측 고정 사이드바(홈/챕터/설정) + 우측 콘텐츠 전환 구조
 /// 챕터를 브라우징 중일 때는 사이드바 자리를 챕터 목록이 대신 차지한다(3단 컬럼)
 /// 게임 화면(StageView) 진입 시에는 이 셸을 벗어나 전체 화면으로 전환하고,
 /// 뒤로가기 시 셸로 복귀한다 (StageView의 onReturnToChapterList로 연결)
-struct MacContentShell: View {
+struct SidebarShell: View {
+
+    /// 플랫폼별 사이드바 항목 크기 — 아이패드는 터치를 고려해 세로 여백을 넉넉히 줘서 탭 영역을 키움
+    private struct ItemMetrics {
+        let spacing: CGFloat        // 아이콘-글자 간격
+        let iconFontSize: CGFloat   // 아이콘 크기
+        let iconWidth: CGFloat      // 아이콘 칸 폭
+        let titleFontSize: CGFloat  // 글자 크기
+        let verticalPadding: CGFloat
+        let cornerRadius: CGFloat
+
+        #if os(macOS)
+        static let current = ItemMetrics(spacing: 10, iconFontSize: 14, iconWidth: 18, titleFontSize: 14, verticalPadding: 10, cornerRadius: 10)
+        #else
+        static let current = ItemMetrics(spacing: 12, iconFontSize: 16, iconWidth: 20, titleFontSize: 15, verticalPadding: 14, cornerRadius: 12)
+        #endif
+    }
+
+    private let item = ItemMetrics.current
+
+    /// 게임 화면 자체 뒤로가기 버튼 사용 여부 — 맥은 툴바 버튼을 따로 두고,
+    /// 아이패드는 StageView가 시스템 내비 바를 숨겨 툴바 버튼이 안 보이므로 자체 버튼을 사용
+    #if os(macOS)
+    private let showsOwnBackButton = false
+    #else
+    private let showsOwnBackButton = true
+    #endif
 
     /// 사이드바 최상위 섹션
     private enum Section: Hashable {
@@ -59,11 +82,13 @@ struct MacContentShell: View {
                 }
             }
             .background(Color.appBackground.ignoresSafeArea())
+            #if os(macOS)
             .navigationTitle(windowTitle)
+            #endif
             .navigationDestination(for: AppRoute.self) { route in
                 if case .stage(let chapter, let number) = route {
                     StageView(chapter: chapter, number: number, navPath: $navPath,
-                              showsOwnBackButton: false) {
+                              showsOwnBackButton: showsOwnBackButton) {
                         // "챕터 목록으로" 복귀 — 사이드바 셸의 챕터 브라우저로 이동
                         if !navPath.isEmpty { navPath.removeLast() }
                         section = .chapters
@@ -71,6 +96,7 @@ struct MacContentShell: View {
                     // 스테이지 번호별로 뷰 정체성을 강제 구분 (iOS ContentView와 동일한 처리)
                     // 이게 없으면 다음 스테이지로 넘어갈 때 이전 GameViewModel(코드 블럭 포함)이 재사용됨
                     .id("stage-\(chapter)-\(number)")
+                    #if os(macOS)
                     .toolbar {
                         ToolbarItem(placement: .navigation) {
                             Button {
@@ -88,13 +114,15 @@ struct MacContentShell: View {
                         }
                     }
                     .navigationBarBackButtonHidden(true)
+                    #endif
                 }
             }
         }
         .preferredColorScheme(settings.theme.colorScheme)
     }
 
-    /// 윈도우 타이틀 바 텍스트 — 현재 섹션/챕터 반영
+    #if os(macOS)
+    /// 윈도우 타이틀 바 텍스트 — 현재 섹션/챕터 반영 (맥 전용)
     private var windowTitle: String {
         switch section {
         case .home: return "Blocode"
@@ -106,6 +134,7 @@ struct MacContentShell: View {
         case .settings: return "Blocode — 설정"
         }
     }
+    #endif
 
     // MARK: - 사이드바
 
@@ -147,12 +176,12 @@ struct MacContentShell: View {
             SoundService.shared.play(.buttonTap)  // iOS 버튼들과 동일하게 탭 효과음
             action()
         } label: {
-            HStack(spacing: 10) {
+            HStack(spacing: item.spacing) {
                 Image(systemName: icon)
-                    .font(.system(size: 14, weight: .semibold))
-                    .frame(width: 18)
+                    .font(.system(size: item.iconFontSize, weight: .semibold))
+                    .frame(width: item.iconWidth)
                 Text(title)
-                    .font(.system(size: 14, weight: .semibold))
+                    .font(.system(size: item.titleFontSize, weight: .semibold))
                 Spacer()
             }
             // 행 전체 폭을 채워야 Spacer가 여백을 차지하고, 그 여백도 탭 가능해짐
@@ -160,9 +189,10 @@ struct MacContentShell: View {
             .contentShape(Rectangle())
             .foregroundStyle(isSelected ? .white : Color.primary)
             .padding(.horizontal, 12)
-            .padding(.vertical, 10)
-            .background(isSelected ? Color.darkInk : Color.clear)
-            .clipShape(RoundedRectangle(cornerRadius: 10))
+            .padding(.vertical, item.verticalPadding)
+            // 선택 항목 — 라이트: 다크 잉크 / 다크: 슬레이트 (고정 darkInk는 다크 배경에 묻혔음)
+            .background(isSelected ? Color.slateButtonFace : Color.clear)
+            .clipShape(RoundedRectangle(cornerRadius: item.cornerRadius))
         }
         .buttonStyle(.plain)
         .padding(.horizontal, 12)
@@ -320,8 +350,13 @@ struct MacContentShell: View {
 
 // MARK: - Preview
 
-#Preview("맥 셸 홈") {
-    MacContentShell()
+#if os(macOS)
+#Preview("셸 홈") {
+    SidebarShell()
         .frame(width: 1280, height: 860)
+}
+#else
+#Preview("셸 홈", traits: .landscapeLeft) {
+    SidebarShell()
 }
 #endif

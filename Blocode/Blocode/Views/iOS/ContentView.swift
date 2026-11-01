@@ -25,19 +25,12 @@ struct ContentView: View {
     @StateObject private var vm = HomeViewModel()
 
     var body: some View {
-        // 아이패드는 맥과 동일한 사이드바 셸 배치를 쓰는 전용 화면으로 완전히 분기
-        // (아이폰·맥은 이 분기를 안 타서 기존 NavigationStack 경로를 그대로 실행함)
-        // IPadContentShell 타입 자체가 #if os(iOS) 전용이라 맥 컴파일에서 참조 자체가 없어야 하므로
-        // 이 분기는 #if os(iOS)로 감싸고, 맥은 else 쪽만 컴파일되게 함
-        #if os(iOS)
+        // 아이패드는 맥과 같은 사이드바 셸로 분기 (아이폰은 기존 NavigationStack 경로 그대로)
         if isPadIdiom {
-            IPadContentShell()
+            SidebarShell()
         } else {
             defaultBody
         }
-        #else
-        defaultBody
-        #endif
     }
 
     /// 아이폰(기존 그대로) · 맥이 함께 쓰는 기본 홈 화면 — NavigationStack 기반

@@ -41,7 +41,7 @@ struct BlocodeApp: App {
                     #if os(macOS)
                     // macOS 전용 최상위 화면 — 좌측 고정 사이드바 + 우측 콘텐츠 전환
                     // (iOS/iPadOS는 이 분기를 전혀 컴파일하지 않음 — ContentView는 완전히 그대로 유지)
-                    MacContentShell()
+                    SidebarShell()
                     #else
                     // 온보딩 완료 → 홈 화면
                     ContentView()
