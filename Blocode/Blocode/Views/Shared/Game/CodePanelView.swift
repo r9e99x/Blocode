@@ -7,28 +7,35 @@
 
 import SwiftUI
 
+// MARK: - BlockDragState
+/// 팔레트 삽입 드래그와 코드 리스트 순서 변경 드래그의 상태 — StageView(고스트)와 CodePanelView(삽입선)가 공유
+struct BlockDragState {
+    var paletteType: BlockType? = nil      // 팔레트에서 드래그 중인 블럭 타입 (nil이면 비활성)
+    var palettePosition: CGPoint = .zero   // 팔레트 드래그 현재 글로벌 좌표
+    var paletteInsertIndex: Int = 0        // 삽입될 예상 인덱스
+
+    var reorderIndex: Int? = nil           // 순서 변경 중인 블럭의 원래 인덱스 (nil이면 비활성)
+    var reorderPosition: CGPoint = .zero   // 순서 변경 드래그 현재 글로벌 좌표
+    var reorderTargetIndex: Int = 0        // 놓일 예상 인덱스
+
+    var codeListFrame: CGRect = .zero      // 코드 리스트 영역의 글로벌 프레임 (놓으면 취소되는 영역 판단용)
+}
+
 // MARK: - CodePanelView
 /// 게임 화면 하단 코드 편집 패널
 /// 코드 블럭 리스트 + 팔레트 + 컨트롤 바로 구성
 ///
-/// 드래그 관련 상태(dragType, dragPosition, dragInsertIndex)는
-/// StageView에서 Binding으로 받아 고스트 블럭 오버레이와 공유
+/// 드래그 상태(BlockDragState)는 StageView에서 Binding으로 받아 고스트 블럭 오버레이와 공유
 struct CodePanelView: View {
 
     @ObservedObject var viewModel: GameViewModel  // 게임 상태 / 블럭 관리
     let stage: Stage                              // 별 기준 표시용
 
-    // 드래그 상태 — StageView의 ghost block과 공유
-    @Binding var dragType: BlockType?
-    @Binding var dragPosition: CGPoint
-    @Binding var dragInsertIndex: Int
-    @Binding var codeListFrame: CGRect
-    @Binding var rowMidYs: [Int: CGFloat]
+    @Binding var drag: BlockDragState  // 드래그 상태 — StageView의 고스트 오버레이와 공유
 
-    // 코드 리스트 내부 순서 변경(재정렬) 드래그 상태 — StageView의 reorder ghost와 공유
-    @Binding var reorderIndex: Int?
-    @Binding var reorderPosition: CGPoint
-    @Binding var reorderTargetIndex: Int
+    /// 각 행의 글로벌 중간 Y 좌표 (드래그 삽입 인덱스 계산용)
+    /// 스크롤할 때마다 바뀌므로 BlockDragState에 넣지 않음 — 넣으면 스크롤 중 StageView 전체가 다시 그려짐
+    @State private var rowMidYs: [Int: CGFloat] = [:]
 
     @Binding var navPath: NavigationPath      // 컨트롤 바 설정 초기화 시 홈 복귀용
     @Binding var isPanelExpanded: Bool        // 패널 확장/최소화 — StageView와 공유 (stageInfoBar·맵 크기와 연동)
@@ -126,25 +133,25 @@ struct CodePanelView: View {
                 // 드래그 시작: idle 상태일 때만 허용
                 guard viewModel.gameState == .idle else { return }
                 withAnimation(.spring(duration: 0.2)) {
-                    dragType = type
-                    dragPosition = pt
-                    dragInsertIndex = calculateInsertIndex(for: pt.y)
+                    drag.paletteType = type
+                    drag.palettePosition = pt
+                    drag.paletteInsertIndex = calculateInsertIndex(for: pt.y)
                 }
             },
             onDragChange: { _, pt in
                 // 드래그 중: 위치와 삽입 인덱스 갱신
-                dragPosition = pt
-                dragInsertIndex = calculateInsertIndex(for: pt.y)
+                drag.palettePosition = pt
+                drag.paletteInsertIndex = calculateInsertIndex(for: pt.y)
             },
             onDragEnd: { type, location in
                 // 코드 리스트 영역 안에서 손을 뗐을 때만 삽입 (영역 밖이면 취소)
-                if codeListFrame.contains(location) {
+                if drag.codeListFrame.contains(location) {
                     withAnimation(.spring(duration: 0.2)) {
-                        viewModel.insertBlock(type, at: dragInsertIndex)
+                        viewModel.insertBlock(type, at: drag.paletteInsertIndex)
                     }
                 }
                 withAnimation(.spring(duration: 0.2)) {
-                    dragType = nil  // 고스트 블럭 제거 (삽입했든 취소했든)
+                    drag.paletteType = nil  // 고스트 블럭 제거 (삽입했든 취소했든)
                 }
             }
         )
@@ -215,7 +222,7 @@ struct CodePanelView: View {
             if viewModel.codeBlocks.isEmpty {
                 Group {
                     // 드래그 중 코드 영역 안이면 "여기에 놓기" 드롭존, 평소엔 안내 메시지
-                    if let dragType, codeListFrame.contains(dragPosition) {
+                    if let dragType = drag.paletteType, drag.codeListFrame.contains(drag.palettePosition) {
                         // 드롭존 — 점선 박스 + 블럭 색 (블럭이 없으니 삽입선 대신 영역 강조)
                         RoundedRectangle(cornerRadius: 14)
                             .fill(dragType.blockColor.opacity(0.10))
@@ -249,7 +256,7 @@ struct CodePanelView: View {
                 .frame(height: 80)
             } else {
                 // 순서 변경 중인 블럭의 색상 — 재정렬 삽입 인디케이터 표시용
-                let reorderColor = reorderIndex.flatMap { viewModel.codeBlocks.indices.contains($0) ? viewModel.codeBlocks[$0].type.blockColor : nil }
+                let reorderColor = drag.reorderIndex.flatMap { viewModel.codeBlocks.indices.contains($0) ? viewModel.codeBlocks[$0].type.blockColor : nil }
 
                 // List의 onMove 기본 재정렬은 시스템 흰 카드 고스트가 앱의 3D 블럭 스타일과 안 맞아서
                 // ScrollView+LazyVStack과 커스텀 드래그(BlockRowView.onReorderDrag*)로 교체 —
@@ -258,10 +265,10 @@ struct CodePanelView: View {
                     LazyVStack(spacing: 8) {
                         ForEach(Array(viewModel.codeBlocks.enumerated()), id: \.element.id) { offset, block in
                             // 삽입 인디케이터 — 첫 번째 위치 (팔레트 삽입 / 순서 변경 공용)
-                            if let dragType, codeListFrame.contains(dragPosition), dragInsertIndex == 0 && offset == 0 {
+                            if let dragType = drag.paletteType, drag.codeListFrame.contains(drag.palettePosition), drag.paletteInsertIndex == 0 && offset == 0 {
                                 insertionIndicator(color: dragType.blockColor)
                             }
-                            if let reorderColor, codeListFrame.contains(reorderPosition), reorderTargetIndex == 0 && offset == 0 {
+                            if let reorderColor, drag.codeListFrame.contains(drag.reorderPosition), drag.reorderTargetIndex == 0 && offset == 0 {
                                 insertionIndicator(color: reorderColor)
                             }
 
@@ -320,24 +327,24 @@ struct CodePanelView: View {
                                 onReorderDragStart: { pt in
                                     guard viewModel.gameState == .idle else { return }
                                     withAnimation(.spring(duration: 0.2)) {
-                                        reorderIndex = offset
-                                        reorderPosition = pt
-                                        reorderTargetIndex = calculateInsertIndex(for: pt.y)
+                                        drag.reorderIndex = offset
+                                        drag.reorderPosition = pt
+                                        drag.reorderTargetIndex = calculateInsertIndex(for: pt.y)
                                     }
                                 },
                                 onReorderDragChange: { pt in
-                                    reorderPosition = pt
-                                    reorderTargetIndex = calculateInsertIndex(for: pt.y)
+                                    drag.reorderPosition = pt
+                                    drag.reorderTargetIndex = calculateInsertIndex(for: pt.y)
                                 },
                                 onReorderDragEnd: { location in
                                     // 코드 리스트 영역 안에서 손을 뗐을 때만 순서 변경 (영역 밖이면 취소)
-                                    if let source = reorderIndex, codeListFrame.contains(location) {
+                                    if let source = drag.reorderIndex, drag.codeListFrame.contains(location) {
                                         withAnimation(.spring(duration: 0.2)) {
-                                            viewModel.moveBlock(from: IndexSet(integer: source), to: reorderTargetIndex)
+                                            viewModel.moveBlock(from: IndexSet(integer: source), to: drag.reorderTargetIndex)
                                         }
                                     }
                                     withAnimation(.spring(duration: 0.2)) {
-                                        reorderIndex = nil  // 고스트 제거 (이동했든 취소했든)
+                                        drag.reorderIndex = nil  // 고스트 제거 (이동했든 취소했든)
                                     }
                                 },
                                 availableBlocks: viewModel.availableBlocks  // 중첩 미니 팔레트도 스테이지 팔레트로 제한
@@ -352,10 +359,10 @@ struct CodePanelView: View {
                             })
 
                             // 삽입 인디케이터 — 현재 블럭 다음 위치 (팔레트 삽입 / 순서 변경 공용)
-                            if let dragType, codeListFrame.contains(dragPosition), dragInsertIndex == offset + 1 {
+                            if let dragType = drag.paletteType, drag.codeListFrame.contains(drag.palettePosition), drag.paletteInsertIndex == offset + 1 {
                                 insertionIndicator(color: dragType.blockColor)
                             }
-                            if let reorderColor, codeListFrame.contains(reorderPosition), reorderTargetIndex == offset + 1 {
+                            if let reorderColor, drag.codeListFrame.contains(drag.reorderPosition), drag.reorderTargetIndex == offset + 1 {
                                 insertionIndicator(color: reorderColor)
                             }
                         }
@@ -367,13 +374,17 @@ struct CodePanelView: View {
         // 확장/축소 상태와 무관하게 항상 남은 세로 공간을 전부 사용 — 아이폰은 StageView가 확장 시 맵을 줄여서
         // 이 공간을 만들어줌(예전엔 고정 160pt라 블럭이 많아지면 좁은 창 안에서만 스크롤됐음)
         .frame(maxHeight: .infinity)
+        // 각 행의 중간 Y 좌표를 preference로 수집 (드래그 삽입 인덱스 계산용)
+        .onPreferenceChange(RowMidYKey.self) { midYs in
+            rowMidYs = midYs
+        }
         // 코드 리스트 글로벌 프레임 추적 (드래그 감지용)
         // size가 아닌 frame(위치+크기) 변화를 추적 — 빈 상태에선 size가 안 바뀌어
         // 좌표 갱신이 누락돼 영역 판정이 어긋났음(빈 영역 드래그 추가 불가)
         .background(GeometryReader { geo in
             Color.clear
-                .onAppear { codeListFrame = geo.frame(in: .global) }
-                .onChange(of: geo.frame(in: .global)) { codeListFrame = geo.frame(in: .global) }
+                .onAppear { drag.codeListFrame = geo.frame(in: .global) }
+                .onChange(of: geo.frame(in: .global)) { drag.codeListFrame = geo.frame(in: .global) }
         })
     }
 
@@ -391,7 +402,7 @@ struct CodePanelView: View {
         }
         .padding(.horizontal, 12)
         .transition(.opacity)
-        .animation(.easeInOut(duration: 0.15), value: dragInsertIndex)
+        .animation(.easeInOut(duration: 0.15), value: drag.paletteInsertIndex)
     }
 
     // MARK: - 드래그 삽입 인덱스 계산
@@ -407,5 +418,15 @@ struct CodePanelView: View {
         }
         // 모든 행보다 아래면 맨 뒤에 삽입
         return sorted.count
+    }
+}
+
+// MARK: - RowMidY PreferenceKey
+/// 각 블럭 행의 글로벌 중간 Y 좌표를 상위 뷰로 전달하기 위한 PreferenceKey
+struct RowMidYKey: PreferenceKey {
+    static var defaultValue: [Int: CGFloat] = [:]
+    /// 여러 행의 값을 병합 — 나중에 온 값이 우선 (같은 키면 새 값으로 덮어씀)
+    static func reduce(value: inout [Int: CGFloat], nextValue: () -> [Int: CGFloat]) {
+        value.merge(nextValue()) { _, new in new }
     }
 }

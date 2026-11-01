@@ -31,18 +31,8 @@ struct StageView: View {
     /// 기본값 true로 iOS/아이패드는 그대로 유지. 맥은 NavigationStack 툴바에 자체 뒤로가기를 따로 두므로 false로 숨김
     var showsOwnBackButton: Bool = true
 
-    // Drag-and-drop 상태 — 팔레트에서 코드 리스트로 드래그 삽입
-    // (ghost block 오버레이가 최상위 ZStack에 렌더링되므로 StageView에서 관리)
-    @State private var dragType: BlockType? = nil        // 드래그 중인 블럭 타입 (nil이면 비활성)
-    @State private var dragPosition: CGPoint = .zero     // 드래그 현재 글로벌 좌표
-    @State private var dragInsertIndex: Int = 0          // 삽입될 예상 인덱스
-    @State private var codeListFrame: CGRect = .zero     // 코드 리스트 영역의 글로벌 프레임
-    @State private var rowMidYs: [Int: CGFloat] = [:]   // 각 행의 글로벌 중간 Y 좌표
-
-    // 코드 리스트 내부 순서 변경(재정렬) 드래그 상태 — 팔레트 드래그와 동일한 구조로 관리
-    @State private var reorderIndex: Int? = nil          // 드래그 중인 블럭의 원래 인덱스 (nil이면 비활성)
-    @State private var reorderPosition: CGPoint = .zero  // 드래그 현재 글로벌 좌표
-    @State private var reorderTargetIndex: Int = 0       // 놓일 예상 인덱스
+    /// 드래그 상태 — 고스트 오버레이가 최상위 ZStack에 렌더링되므로 StageView에서 관리
+    @State private var drag = BlockDragState()
 
     /// 코드 패널 확장 여부 — 맵 크기 조절 및 하단 고정용 Spacer와 연동되므로 StageView에서 관리
     @State private var isPanelExpanded = false
@@ -189,18 +179,14 @@ struct StageView: View {
             }
 
             // MARK: Ghost drag block — 모든 UI 위에 렌더링
-            if let type = dragType {
-                ghostBlock(type: type, at: dragPosition)
+            if let type = drag.paletteType {
+                ghostBlock(type: type, at: drag.palettePosition)
             }
 
             // MARK: 코드 리스트 순서 변경 고스트 — 팔레트 고스트와 동일하게 최상위에 렌더링
-            if let reorderIndex, viewModel.codeBlocks.indices.contains(reorderIndex) {
-                reorderGhost(block: viewModel.codeBlocks[reorderIndex], at: reorderPosition)
+            if let reorderIndex = drag.reorderIndex, viewModel.codeBlocks.indices.contains(reorderIndex) {
+                reorderGhost(block: viewModel.codeBlocks[reorderIndex], at: drag.reorderPosition)
             }
-        }
-        // 각 행의 중간 Y 좌표를 preference로 수집 (드래그 삽입 인덱스 계산용)
-        .onPreferenceChange(RowMidYKey.self) { midYs in
-            rowMidYs = midYs
         }
         .animation(.spring(duration: 0.3), value: viewModel.gameState)
         .background(Color.appBackground.ignoresSafeArea())
@@ -332,14 +318,7 @@ struct StageView: View {
         CodePanelView(
             viewModel: viewModel,
             stage: stage,
-            dragType: $dragType,
-            dragPosition: $dragPosition,
-            dragInsertIndex: $dragInsertIndex,
-            codeListFrame: $codeListFrame,
-            rowMidYs: $rowMidYs,
-            reorderIndex: $reorderIndex,
-            reorderPosition: $reorderPosition,
-            reorderTargetIndex: $reorderTargetIndex,
+            drag: $drag,
             navPath: $navPath,
             isPanelExpanded: $isPanelExpanded,
             alwaysExpanded: alwaysExpanded
@@ -527,7 +506,7 @@ struct StageView: View {
     /// 드래그 중 손가락 위치에 표시되는 반투명 고스트 블럭
     private func ghostBlock(type: BlockType, at position: CGPoint) -> some View {
         // 드래그 위치가 코드 리스트 영역 안인지 — 밖이면 흐리게 표시(놓으면 취소됨을 알림)
-        let insideCodeArea = codeListFrame.contains(position)
+        let insideCodeArea = drag.codeListFrame.contains(position)
         return VStack(spacing: 5) {
             Image(systemName: type.iconName)
                 .font(.system(size: 20, weight: .bold))
@@ -545,14 +524,14 @@ struct StageView: View {
         .position(x: position.x, y: position.y - 50)  // 손가락 위쪽에 표시
         .allowsHitTesting(false)  // 고스트 블럭은 터치 통과
         .transition(.scale(scale: 0.7).combined(with: .opacity))
-        .animation(.spring(duration: 0.2), value: dragType != nil)
+        .animation(.spring(duration: 0.2), value: drag.paletteType != nil)
         .animation(.easeInOut(duration: 0.15), value: insideCodeArea)
     }
 
     /// 코드 리스트 내 순서 변경(재정렬) 중 손가락 위치에 표시되는 고스트 — 팔레트 고스트와 동일한 스타일
     /// (전체 행 대신 아이콘+이름 칩으로 단순화 — 순서 변경 중엔 삭제 버튼 등 부가 컨트롤이 필요 없음)
     private func reorderGhost(block: Block, at position: CGPoint) -> some View {
-        let insideCodeArea = codeListFrame.contains(position)
+        let insideCodeArea = drag.codeListFrame.contains(position)
         return HStack(spacing: 8) {
             Image(systemName: block.type.iconName)
                 .font(.system(size: 15, weight: .semibold))
@@ -571,7 +550,7 @@ struct StageView: View {
         .position(x: position.x, y: position.y)
         .allowsHitTesting(false)
         .transition(.scale(scale: 0.7).combined(with: .opacity))
-        .animation(.spring(duration: 0.2), value: reorderIndex != nil)
+        .animation(.spring(duration: 0.2), value: drag.reorderIndex != nil)
         .animation(.easeInOut(duration: 0.15), value: insideCodeArea)
     }
 
@@ -640,16 +619,6 @@ struct StageView: View {
         // ViewModel에 씬 참조 전달 (캐릭터 이동 명령용)
         viewModel.scene = gameScene
         self.scene = gameScene
-    }
-}
-
-// MARK: - RowMidY PreferenceKey
-/// 각 블럭 행의 글로벌 중간 Y 좌표를 상위 뷰로 전달하기 위한 PreferenceKey
-struct RowMidYKey: PreferenceKey {
-    static var defaultValue: [Int: CGFloat] = [:]
-    /// 여러 행의 값을 병합 — 나중에 온 값이 우선 (같은 키면 새 값으로 덮어씀)
-    static func reduce(value: inout [Int: CGFloat], nextValue: () -> [Int: CGFloat]) {
-        value.merge(nextValue()) { _, new in new }
     }
 }
 
