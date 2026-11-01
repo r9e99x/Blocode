@@ -23,8 +23,6 @@ struct IPadChapterBrowsePane: View {
     @State private var selectedStage: Int?
     @State private var lockInfo: LockInfo? = nil
     @State private var pressedStageNumber: Int? = nil
-    /// 다크/라이트 모드 감지 — 잠긴 스테이지 아이콘 베벨 강도를 iOS ChapterView.stageIcon과 맞추는 데 사용
-    @Environment(\.colorScheme) private var colorScheme
 
     init(chapterNumber: Int, onBackToMap: @escaping () -> Void,
          onSelectChapter: @escaping (Int) -> Void, onStart: @escaping (Int, Int) -> Void) {
@@ -152,8 +150,11 @@ struct IPadChapterBrowsePane: View {
                         }
                     } label: {
                         HStack(spacing: 14) {
-                            stageIcon(stage: stage, locked: locked, cleared: cleared,
-                                      isPressed: pressedStageNumber == stage.stageNumber)
+                            // 3D 스테이지 아이콘 — 아이폰 챕터 화면과 공용 부품 (눌림은 내려앉기만)
+                            StageIcon3D(number: stage.stageNumber, locked: locked, cleared: cleared,
+                                        isCurrent: vm.isCurrent(stage), chapterColor: chapterColor,
+                                        metrics: .init(size: 40, cornerRadius: 13, lockFontSize: 14, checkFontSize: 15, numberFontSize: 17),
+                                        isPressed: pressedStageNumber == stage.stageNumber)
                             Text(stage.name).font(.system(size: 15, weight: .medium))
                                 .foregroundStyle(locked ? .secondary : .primary)
                             Spacer()
@@ -174,46 +175,6 @@ struct IPadChapterBrowsePane: View {
                 }
             }
         }
-    }
-
-    /// 스테이지 아이콘 — iOS ChapterView.stageIcon과 동일한 3D 3레이어 구조 + 눌림 효과
-    private func stageIcon(stage: Stage, locked: Bool, cleared: Bool, isPressed: Bool) -> some View {
-        let isCurrent = vm.isCurrent(stage)
-        let faceColor: Color = locked ? Color.lockedBackground : (isCurrent ? Color.slateButtonFace : chapterColor)
-        let iconSize: CGFloat = 40
-        let radius: CGFloat = 13
-        let topD: CGFloat = 1
-        let botD: CGFloat = 2
-        // 잠긴 아이콘은 다크모드에서만 베벨을 완화 (iOS ChapterView.stageIcon과 동일 — 라이트는 기존 0.32/0.28 유지)
-        let lockedDark = locked && colorScheme == .dark
-
-        return ThreeDSurface(topDepth: topD, bottomDepth: botD, isPressed: isPressed) {
-            ZStack {
-                RoundedRectangle(cornerRadius: radius).fill(faceColor)
-                RoundedRectangle(cornerRadius: radius).fill(Color.white.opacity((isCurrent || lockedDark) ? 0.18 : 0.32))
-            }
-            .frame(width: iconSize, height: iconSize)
-        } bottomBack: {
-            ZStack {
-                RoundedRectangle(cornerRadius: radius).fill(faceColor)
-                RoundedRectangle(cornerRadius: radius).fill(Color.black.opacity(lockedDark ? 0.10 : 0.28))
-            }
-            .frame(width: iconSize, height: iconSize)
-        } front: {
-            ZStack {
-                RoundedRectangle(cornerRadius: radius).fill(faceColor)
-                if locked {
-                    Image(systemName: "lock.fill").font(.system(size: 14)).foregroundStyle(Color.primary.opacity(0.55))
-                } else if cleared {
-                    Image(systemName: "checkmark").font(.system(size: 15, weight: .bold)).foregroundStyle(.white)
-                } else {
-                    Text("\(stage.stageNumber)").font(.system(size: 17, weight: .bold, design: .serif)).italic()
-                        .foregroundStyle(.white)
-                }
-            }
-            .frame(width: iconSize, height: iconSize)
-        }
-        .frame(width: iconSize, height: iconSize + topD + botD)
     }
 
     // MARK: 3열 — 스테이지 미리보기

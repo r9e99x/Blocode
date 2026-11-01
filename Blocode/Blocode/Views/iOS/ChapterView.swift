@@ -16,8 +16,6 @@ struct ChapterView: View {
     /// 챕터 화면 상태/로직 — 스테이지 로딩·진행 계산은 ViewModel이 담당 (MVVM)
     @StateObject private var vm: ChapterViewModel
 
-    /// 다크/라이트 모드 감지 — 잠긴 스테이지 아이콘의 베벨 강도를 다크에서만 조정하는 데 사용
-    @Environment(\.colorScheme) private var colorScheme
     @State private var retryConfirmInfo: RetryConfirmInfo? = nil  // 재도전 확인 팝업 (nil이면 숨김)
     @State private var pressedStageNumber: Int?   = nil  // 눌린 스테이지 아이콘 번호 추적
     @State private var lockInfo: LockInfo?         = nil  // 잠금 안내 팝업 (nil이면 숨김)
@@ -270,10 +268,15 @@ struct ChapterView: View {
         } label: {
             HStack(spacing: 16) {
 
-                // 3D 스테이지 아이콘 (숫자 / 체크 / 자물쇠)
-                stageIcon(number: stage.stageNumber,
-                          locked: locked, cleared: cleared, isCurrent: isCurrent,
-                          isPressed: pressedStageNumber == stage.stageNumber)
+                // 3D 스테이지 아이콘 (숫자 / 체크 / 자물쇠) — 맥·아이패드 브라우저와 공용 부품
+                // 눌림 시 검정 오버레이, "지금 여기" 아래 뒷면은 연한 탄색 단색(라이트) / 슬레이트 그림자(다크)
+                StageIcon3D(number: stage.stageNumber, locked: locked, cleared: cleared, isCurrent: isCurrent,
+                            chapterColor: chapterColor,
+                            metrics: .init(size: 52, cornerRadius: 18, lockFontSize: 18, checkFontSize: 20, numberFontSize: 26),
+                            isPressed: pressedStageNumber == stage.stageNumber,
+                            showsPressedOverlay: true,
+                            currentBottomBack: Color.dynamic(light: (195/255, 189/255, 172/255),
+                                                             dark: (56/255, 61/255, 76/255)))
 
                 // 스테이지 텍스트 정보
                 VStack(alignment: .leading, spacing: 3) {
@@ -310,82 +313,6 @@ struct ChapterView: View {
             get: { pressedStageNumber == stage.stageNumber },
             set: { pressed in pressedStageNumber = pressed ? stage.stageNumber : nil }
         ))
-    }
-
-    // MARK: - 스테이지 아이콘 (챕터 버튼과 동일한 3D 구조)
-
-    /// 스테이지 번호/상태를 표시하는 3D 아이콘
-    private func stageIcon(number: Int, locked: Bool, cleared: Bool, isCurrent: Bool, isPressed: Bool = false) -> some View {
-        // "지금 여기" 아이콘 앞면 — 라이트: darkInk와 동일 / 다크: 슬레이트 (다크 배경에 묻히지 않도록)
-        let darkFace = Color.slateButtonFace
-
-        let faceColor: Color = {
-            if locked    { return Color.lockedBackground }
-            if isCurrent { return darkFace }
-            return chapterColor
-        }()
-
-        // 다크모드 여부 — 잠긴 아이콘 베벨 강도를 챕터 선택 화면의 잠긴 챕터 카드와 맞추는 데 사용
-        let isDark = colorScheme == .dark
-
-        let iconSize: CGFloat = 52
-        let radius:   CGFloat = 18
-        let topDepth: CGFloat = 1
-        let botDepth: CGFloat = 2
-
-        return ThreeDSurface(topDepth: topDepth, bottomDepth: botDepth, isPressed: isPressed) {
-            // ① 위 뒷면
-            // 잠긴 아이콘은 다크모드에서만 챕터 선택 화면 잠긴 카드와 동일한 0.18로 낮춤 (라이트는 기존 0.32 유지)
-            ZStack {
-                RoundedRectangle(cornerRadius: radius).fill(faceColor)
-                RoundedRectangle(cornerRadius: radius)
-                    .fill(Color.white.opacity((isCurrent || (locked && isDark)) ? 0.18 : 0.32))
-            }
-            .frame(width: iconSize, height: iconSize)
-        } bottomBack: {
-            // ② 아래 뒷면 — 진행 중(isCurrent)이면 단색, 아니면 faceColor + 그림자
-            Group {
-                if isCurrent {
-                    // 라이트: 기존 탄색 유지 / 다크: 앞면(슬레이트)보다 약간 어두운 그림자 톤
-                    // (slateButtonBottomBack 다크 값과 동일, Color.dynamic 크로스플랫폼 헬퍼 사용)
-                    RoundedRectangle(cornerRadius: radius)
-                        .fill(Color.dynamic(light: (195/255, 189/255, 172/255),
-                                            dark: (56/255, 61/255, 76/255)))
-                } else {
-                    // 잠긴 아이콘은 다크모드에서만 챕터 선택 화면 잠긴 카드와 동일한 0.10으로 낮춤 (라이트는 기존 0.28 유지)
-                    ZStack {
-                        RoundedRectangle(cornerRadius: radius).fill(faceColor)
-                        RoundedRectangle(cornerRadius: radius)
-                            .fill(Color.black.opacity((locked && isDark) ? 0.10 : 0.28))
-                    }
-                }
-            }
-            .frame(width: iconSize, height: iconSize)
-        } front: {
-            // ③ 앞면 — faceColor + (눌림 시 그림자) + 상태 아이콘
-            ZStack {
-                RoundedRectangle(cornerRadius: radius).fill(faceColor)
-                if isPressed {
-                    RoundedRectangle(cornerRadius: radius).fill(Color.black.opacity(0.10))
-                }
-                if locked {
-                    Image(systemName: "lock.fill")
-                        .font(.system(size: 18))
-                        .foregroundStyle(Color.primary.opacity(0.55))
-                } else if cleared {
-                    Image(systemName: "checkmark")
-                        .font(.system(size: 20, weight: .bold))
-                        .foregroundStyle(.white)
-                } else {
-                    Text("\(number)")
-                        .font(.system(size: 26, weight: .bold, design: .serif))
-                        .italic()
-                        .foregroundStyle(.white)
-                }
-            }
-            .frame(width: iconSize, height: iconSize)
-        }
-        .frame(width: iconSize, height: iconSize + topDepth + botDepth)
     }
 }
 
