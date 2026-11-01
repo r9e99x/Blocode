@@ -5,7 +5,7 @@
 //  Created by 조준희 on 5/19/26.
 //
 
-import SwiftUI   // ChapterInfo가 Color(UI 표현값)를 포함하므로 필요
+import Foundation
 import Combine
 
 // MARK: - ChapterSelectViewModel
@@ -21,7 +21,6 @@ final class ChapterSelectViewModel: ObservableObject {
     private var cancellables = Set<AnyCancellable>()
 
     /// 챕터 목록 — 순서대로 잠금/해제 상태 계산
-    /// (색상 등 UI 표현값을 포함한 ChapterInfo는 화면 구성용 메타데이터)
     let chapters: [ChapterInfo]
 
     init(progress: ProgressService = .shared) {

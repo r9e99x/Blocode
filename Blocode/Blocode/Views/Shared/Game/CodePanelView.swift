@@ -304,7 +304,7 @@ struct CodePanelView: View {
                                     // 코드 리스트 영역 안에서 손을 뗐을 때만 순서 변경 (영역 밖이면 취소)
                                     if let source = drag.reorderIndex, drag.codeListFrame.contains(location) {
                                         withAnimation(.spring(duration: 0.2)) {
-                                            viewModel.moveBlock(from: IndexSet(integer: source), to: drag.reorderTargetIndex)
+                                            viewModel.moveBlock(from: source, to: drag.reorderTargetIndex)
                                         }
                                     }
                                     withAnimation(.spring(duration: 0.2)) {

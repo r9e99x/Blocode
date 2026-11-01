@@ -6,7 +6,6 @@
 //
 
 import Foundation
-import SwiftUI   // codeBlocks.move(fromOffsets:toOffset:)가 SwiftUI 확장이라 필요
 import Combine
 
 // MARK: - GameState
@@ -148,10 +147,17 @@ final class GameViewModel: ObservableObject {
         SoundService.shared.play(.blockAdd)
     }
 
-    /// 블럭 순서 변경 (드래그 앤 드롭) — idle 상태일 때만 허용
-    func moveBlock(from source: IndexSet, to destination: Int) {
-        guard gameState == .idle else { return }
-        codeBlocks.move(fromOffsets: source, toOffset: destination)
+    /// 블럭 순서 변경 (드래그 앤 드롭) — idle 상태이고 유효한 위치일 때만 허용
+    /// destination은 옮기기 전 배열 기준의 삽입 위치 (0...count)
+    func moveBlock(from source: Int, to destination: Int) {
+        guard gameState == .idle,
+              codeBlocks.indices.contains(source),
+              (0...codeBlocks.count).contains(destination) else { return }
+        var blocks = codeBlocks
+        let block = blocks.remove(at: source)
+        // 앞쪽 블럭을 뺐으므로 그 뒤의 삽입 위치는 한 칸 당겨짐
+        blocks.insert(block, at: destination > source ? destination - 1 : destination)
+        codeBlocks = blocks
         SoundService.shared.play(.blockReorder)
     }
 

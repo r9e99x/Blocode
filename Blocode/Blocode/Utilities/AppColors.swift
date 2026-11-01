@@ -206,6 +206,53 @@ extension Color {
     }
 }
 
+// MARK: - 모델별 표현 색상
+// Model은 UI 타입을 모르도록, 블럭·챕터의 Color 변환은 View 계층인 이 파일에 둠
+
+extension BlockType {
+
+    /// 블럭 파스텔 색상 헬퍼
+    /// 라이트: 전달받은 RGB 그대로 (기존 고정 파스텔 — 절대 변경 금지)
+    /// 다크: 같은 색조를 22% 어둡게(×0.78) — 다크 패널 위에서 튀지 않도록 톤 다운 (챕터 카드와 동일 강도)
+    /// (Color.dynamic — iOS/macOS 공용 크로스플랫폼 헬퍼 사용)
+    private static func pastel(_ red: Double, _ green: Double, _ blue: Double) -> Color {
+        Color.dynamic(light: (red, green, blue),
+                      dark: (red * 0.78, green * 0.78, blue * 0.78))
+    }
+
+    /// 블럭 고유 색상 — 라이트: 기존 파스텔 톤 그대로 / 다크: ×0.78 톤 다운
+    /// (팔레트 카드·코드 행·최소화 칩·자식 행·드래그 고스트가 전부 이 색에서 파생되므로 한 곳만 관리)
+    var blockColor: Color {
+        switch self {
+        case .moveForward:    return Self.pastel(124/255, 196/255, 158/255) // 민트 그린
+        case .moveBackward:   return Self.pastel(207/255, 127/255, 122/255) // 살먼 로즈
+        case .turnLeft:       return Self.pastel(142/255, 176/255, 200/255) // 뮤트 블루
+        case .turnRight:      return Self.pastel(142/255, 176/255, 200/255) // 뮤트 블루
+        case .repeatBlock:    return Self.pastel(168/255, 141/255, 192/255) // 라벤더
+        case .ifBlock:        return Self.pastel(240/255, 196/255, 100/255) // 골든 옐로우
+        case .functionBlock:  return Self.pastel(94/255,  198/255, 208/255) // 틸
+        case .collectItem:    return Self.pastel(0.42, 0.82, 0.68)          // 민트 보석 — AppColors.gemMint와 동일 톤
+        case .activateSwitch: return Self.pastel(0.93, 0.62, 0.28)          // 주황 스위치 — AppColors.switchOrange와 동일 톤
+        }
+    }
+
+    /// 연한 배경색 (블럭 행 하이라이트용) — 불투명도 12%로 적용
+    var lightColor: Color {
+        blockColor.opacity(0.12)
+    }
+}
+
+extension ChapterInfo {
+
+    /// 챕터 카드/헤더 색상
+    /// 라이트: 카탈로그 RGB 그대로 (기존 고정값과 동일 — 절대 변경 금지)
+    /// 다크: 같은 색조를 22% 어둡게(×0.78) — 다크 배경에서 카드가 너무 튀지 않도록 톤 다운
+    var color: Color {
+        Color.dynamic(light: rgb,
+                      dark: (rgb.red * 0.78, rgb.green * 0.78, rgb.blue * 0.78))
+    }
+}
+
 // MARK: - SpriteKit 색상 (GameScene 전용 — 위 Color와 동일 RGB 공유)
 /// SwiftUI Color와 같은 값을 SpriteKit에서도 쓰도록 SKColor로 제공
 /// (SKColor는 iOS에선 UIColor, macOS에선 NSColor의 별칭이라 양쪽 모두 동작)

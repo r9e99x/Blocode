@@ -6,7 +6,6 @@
 //
 
 import Foundation
-import SwiftUI
 
 // MARK: - IfCondition
 /// if 블럭의 조건 타입 — 앞 칸 상태를 기준으로 자식 블럭 실행 여부 결정
@@ -82,35 +81,7 @@ enum BlockType: String, Codable, CaseIterable {
         }
     }
 
-    /// 블럭 파스텔 색상 헬퍼
-    /// 라이트: 전달받은 RGB 그대로 (기존 고정 파스텔 — 절대 변경 금지)
-    /// 다크: 같은 색조를 22% 어둡게(×0.78) — 다크 패널 위에서 튀지 않도록 톤 다운 (챕터 카드와 동일 강도)
-    /// (Color.dynamic — iOS/macOS 공용 크로스플랫폼 헬퍼 사용)
-    private static func pastel(_ red: Double, _ green: Double, _ blue: Double) -> Color {
-        Color.dynamic(light: (red, green, blue),
-                      dark: (red * 0.78, green * 0.78, blue * 0.78))
-    }
-
-    /// 블럭 고유 색상 — 라이트: 기존 파스텔 톤 그대로 / 다크: ×0.78 톤 다운
-    /// (팔레트 카드·코드 행·최소화 칩·자식 행·드래그 고스트가 전부 이 색에서 파생되므로 한 곳만 관리)
-    var blockColor: Color {
-        switch self {
-        case .moveForward:    return Self.pastel(124/255, 196/255, 158/255) // 민트 그린
-        case .moveBackward:   return Self.pastel(207/255, 127/255, 122/255) // 살먼 로즈
-        case .turnLeft:       return Self.pastel(142/255, 176/255, 200/255) // 뮤트 블루
-        case .turnRight:      return Self.pastel(142/255, 176/255, 200/255) // 뮤트 블루
-        case .repeatBlock:    return Self.pastel(168/255, 141/255, 192/255) // 라벤더
-        case .ifBlock:        return Self.pastel(240/255, 196/255, 100/255) // 골든 옐로우
-        case .functionBlock:  return Self.pastel(94/255,  198/255, 208/255) // 틸
-        case .collectItem:    return Self.pastel(0.42, 0.82, 0.68)          // 민트 보석 — AppColors.gemMint와 동일 톤
-        case .activateSwitch: return Self.pastel(0.93, 0.62, 0.28)          // 주황 스위치 — AppColors.switchOrange와 동일 톤
-        }
-    }
-
-    /// 연한 배경색 (블럭 행 하이라이트용) — 불투명도 12%로 적용
-    var lightColor: Color {
-        blockColor.opacity(0.12)
-    }
+    // 색상(blockColor·lightColor)은 View 계층인 AppColors.swift에 있음 — Model은 UI 타입을 모름
 }
 
 // MARK: - Block

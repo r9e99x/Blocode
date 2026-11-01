@@ -9,7 +9,6 @@
 //  실행을 하지 않으므로 GameScene·ProgressService를 전혀 쓰지 않는다.
 
 import Testing
-import Foundation  // IndexSet (Testing은 Foundation을 자동으로 가져오지 않음)
 @testable import Blocode
 
 @MainActor
@@ -69,8 +68,29 @@ struct BlockEditingTests {
         vm.addBlock(.moveForward)
         vm.addBlock(.turnLeft)
         vm.addBlock(.turnRight)
-        vm.moveBlock(from: IndexSet(integer: 0), to: 3)  // 첫 블럭을 맨 뒤로
+        vm.moveBlock(from: 0, to: 3)  // 첫 블럭을 맨 뒤로
         #expect(types(vm.codeBlocks) == [.turnLeft, .turnRight, .moveForward])
+    }
+
+    @Test("moveBlock — 앞으로 옮기기·제자리·잘못된 위치")
+    func moveBlock_edgeCases() {
+        let vm = makeViewModel()
+        vm.addBlock(.moveForward)
+        vm.addBlock(.turnLeft)
+        vm.addBlock(.turnRight)
+
+        vm.moveBlock(from: 2, to: 0)  // 마지막 블럭을 맨 앞으로
+        let moved: [BlockType] = [.turnRight, .moveForward, .turnLeft]
+        #expect(types(vm.codeBlocks) == moved)
+
+        vm.moveBlock(from: 1, to: 1)  // 자기 자리
+        vm.moveBlock(from: 1, to: 2)  // 바로 뒤 위치도 제자리
+        #expect(types(vm.codeBlocks) == moved)
+
+        vm.moveBlock(from: 5, to: 0)   // 없는 블럭
+        vm.moveBlock(from: -1, to: 0)
+        vm.moveBlock(from: 0, to: 9)   // 범위 밖 위치
+        #expect(types(vm.codeBlocks) == moved)
     }
 
     // MARK: - 중첩 편집
