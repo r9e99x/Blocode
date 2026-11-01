@@ -6,7 +6,7 @@
 //
 //  GameViewModel의 블럭 편집 함수(추가·삽입·삭제·이동·중첩·반복 횟수) 검증.
 //  리팩토링(블럭 트리 재귀화) 전후로 편집 동작이 똑같은지 증명하는 안전망 역할.
-//  실행을 하지 않으므로 GameScene·ProgressService를 전혀 쓰지 않는다.
+//  화면(GameScene) 없이 메모리 저장소로만 검증한다.
 
 import Testing
 @testable import Blocode
@@ -26,7 +26,8 @@ struct BlockEditingTests {
             starThresholds: StarThresholds(threeStar: 99, twoStar: 99),
             availableBlocks: palette
         )
-        return GameViewModel(stage: stage)
+        // 실행하는 테스트에서 클리어돼도 실제 진행도에 남지 않도록 메모리 저장소 사용
+        return GameViewModel(stage: stage, progress: .makeForTesting())
     }
 
     private func types(_ blocks: [Block]?) -> [BlockType] {

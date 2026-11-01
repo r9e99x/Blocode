@@ -8,6 +8,8 @@
 //  GameBoard는 순수 값 타입이라 SpriteKit 씬 없이 바로 확인한다.
 
 import Testing
+import Foundation
+import SpriteKit
 @testable import Blocode
 
 @Suite("게임 판 규칙")
@@ -190,5 +192,137 @@ struct GameBoardTests {
         #expect(board.collectedItems.isEmpty)
         #expect(board.openedGates.isEmpty)
         #expect(board.hasGimmickChanges == false)
+    }
+}
+
+// MARK: - VM ↔ 화면 연결
+
+/// 판 변화를 기록만 하는 가짜 화면 — 어떤 순서로 무엇을 알리는지 확인
+@MainActor
+private final class RecordingRenderer: GameBoardRendering {
+    var events: [BoardEvent] = []
+    var speeds: [Double] = []
+    var lastBoard: GameBoard?
+
+    func update(board: GameBoard, event: BoardEvent, speed: Double) {
+        events.append(event)
+        speeds.append(speed)
+        lastBoard = board
+    }
+}
+
+@MainActor
+@Suite("게임 판과 화면 연결")
+struct GameBoardRenderingTests {
+
+    /// 가로 한 줄 맵: 0 시작 / 1 보석 / 2 스위치 / 3 문 / 4↔5 포탈 / 6 골
+    private let gimmickMap = MapData(
+        grid: [[1, 1, 1, 0, 1, 1, 1]],
+        start: Position(x: 0, y: 0), startDirection: .right, goal: Position(x: 6, y: 0),
+        items: [Position(x: 1, y: 0)],
+        switches: [SwitchGate(switchAt: Position(x: 2, y: 0), gateAt: Position(x: 3, y: 0))],
+        portals: [PortalPair(a: Position(x: 4, y: 0), b: Position(x: 5, y: 0))]
+    )
+
+    /// 위 맵을 처음부터 끝까지 푸는 프로그램
+    private let solution: [Block] = [
+        Block(type: .turnLeft), Block(type: .turnRight),
+        Block(type: .moveForward), Block(type: .collectItem),
+        Block(type: .moveForward), Block(type: .activateSwitch),
+        Block(type: .moveForward), Block(type: .moveForward), Block(type: .moveForward)
+    ]
+
+    private func makeViewModel(map: MapData) -> GameViewModel {
+        let stage = Stage(id: "unittest_\(UUID().uuidString)", chapter: 0, stageNumber: 0, name: "Rendering",
+                          mapData: map, starThresholds: StarThresholds(threeStar: 99, twoStar: 99))
+        return GameViewModel(stage: stage, progress: .makeForTesting(), executionSpeed: { 4 })
+    }
+
+    private func waitUntilFinished(_ viewModel: GameViewModel) async throws {
+        let deadline = Date().addingTimeInterval(5)
+        while viewModel.gameState == .running, Date() < deadline {
+            try await Task.sleep(nanoseconds: 20_000_000)
+        }
+    }
+
+    @Test("실행하면 변화를 순서대로 알리고 실행 속도도 함께 전달")
+    func run_notifiesEventsInOrder() async throws {
+        let vm = makeViewModel(map: gimmickMap)
+        let renderer = RecordingRenderer()
+        vm.renderer = renderer
+        vm.codeBlocks = solution
+        vm.run()
+        try await waitUntilFinished(vm)
+
+        #expect(vm.gameState == .success)
+        let expected: [BoardEvent] = [
+            .turned, .turned,
+            .moved, .itemCollected(Position(x: 1, y: 0)),
+            .moved, .gateOpened,
+            .moved,            // 열린 문으로 이동
+            .moved, .teleported,  // 포탈 칸 도착 → 짝으로 이동
+            .moved             // 골
+        ]
+        #expect(renderer.events == expected)
+        #expect(renderer.speeds.allSatisfy { $0 == 4 })
+        #expect(renderer.lastBoard?.isAtGoal == true)
+
+        vm.reset()
+        #expect(renderer.events.last == .reset)
+        #expect(renderer.lastBoard?.position == gimmickMap.start)
+    }
+
+    @Test("화면이 없어도 규칙대로 실행돼 클리어됨")
+    func run_worksWithoutRenderer() async throws {
+        let vm = makeViewModel(map: gimmickMap)
+        vm.codeBlocks = solution
+        vm.run()
+        try await waitUntilFinished(vm)
+        #expect(vm.gameState == .success)
+        #expect(vm.collectedItems == [Position(x: 1, y: 0)])
+        #expect(vm.board.openedGates == [Position(x: 3, y: 0)])
+    }
+
+    @Test("이동 대기 중 리셋하면 포탈이 작동하지 않음")
+    func reset_cancelsPendingPortal() async throws {
+        let map = MapData(grid: [[1, 1, 1]], start: Position(x: 0, y: 0), startDirection: .right, goal: Position(x: 2, y: 0),
+                          portals: [PortalPair(a: Position(x: 1, y: 0), b: Position(x: 2, y: 0))])
+        let vm = makeViewModel(map: map)
+        let renderer = RecordingRenderer()
+        vm.renderer = renderer
+        vm.codeBlocks = [Block(type: .moveForward)]
+        vm.run()
+        try await Task.sleep(nanoseconds: 20_000_000)  // 포탈 칸에 도착해 애니메이션 대기 중
+        vm.reset()
+        try await Task.sleep(nanoseconds: 200_000_000)  // 이전 실행이 남아 있다면 움직일 시간
+
+        #expect(renderer.events.contains(.teleported) == false)
+        #expect(vm.board.position == map.start)
+        #expect(vm.gameState == .idle)
+    }
+
+    @Test("진짜 GameScene도 VM과 같은 상태를 유지하고 리셋·크기 변경에 안전함")
+    func gameScene_followsBoard() async throws {
+        let vm = makeViewModel(map: gimmickMap)
+        let scene = GameScene(mapData: gimmickMap)
+        scene.size = CGSize(width: 400, height: 400)
+        scene.setupMap()
+        vm.renderer = scene
+        vm.codeBlocks = solution
+        vm.run()
+        try await waitUntilFinished(vm)
+
+        #expect(vm.gameState == .success)
+        #expect(scene.board.position == vm.board.position)
+        #expect(scene.board.collectedItems == vm.board.collectedItems)
+        #expect(scene.board.openedGates == vm.board.openedGates)
+
+        scene.size = CGSize(width: 300, height: 300)  // 크기 변경 — 맵 재구성 때 저장된 상태 사용
+        #expect(scene.board.openedGates == vm.board.openedGates)
+
+        vm.reset()
+        #expect(scene.board.position == gimmickMap.start)
+        #expect(scene.board.hasGimmickChanges == false)
+        _ = scene  // weak 참조 — 테스트 끝까지 붙잡음
     }
 }

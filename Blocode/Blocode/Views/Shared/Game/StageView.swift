@@ -610,8 +610,8 @@ struct StageView: View {
         let gameScene = GameScene(mapData: stage.mapData)
         // 현재 색상 모드에 맞춰 씬 색상 설정
         gameScene.updateColorScheme(isDark: colorScheme == .dark)
-        // ViewModel에 씬 참조 전달 (캐릭터 이동 명령용)
-        viewModel.scene = gameScene
+        // 씬을 그리기 담당으로 연결 (VM은 판이 바뀔 때 알리기만 함)
+        viewModel.renderer = gameScene
         self.scene = gameScene
     }
 }

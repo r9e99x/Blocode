@@ -138,11 +138,6 @@ struct ProgressServiceTests {
                           mapData: mapData, starThresholds: StarThresholds(threeStar: 1, twoStar: 2))
         let progress = ProgressService.makeForTesting()
         let viewModel = GameViewModel(stage: stage, progress: progress, executionSpeed: { 2 })
-        let scene = GameScene(mapData: mapData)
-        scene.size = CGSize(width: 400, height: 400)
-        scene.setupMap()
-        viewModel.scene = scene  // weak 참조 — scene을 테스트 끝까지 붙잡아야 함
-        #expect(scene.executionSpeed() == 2)  // VM에 주입한 속도가 씬까지 전달됨
 
         viewModel.codeBlocks = [Block(type: .moveForward)]
         viewModel.run()

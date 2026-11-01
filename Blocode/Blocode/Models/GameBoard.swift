@@ -7,6 +7,24 @@
 
 import Foundation
 
+// MARK: - BoardEvent
+/// 판에 일어난 변화 종류 — 화면이 어떤 연출로 그릴지 정하는 데 사용
+enum BoardEvent: Equatable {
+    case moved                    // 한 칸 이동
+    case turned                   // 회전
+    case teleported               // 포탈로 순간이동
+    case itemCollected(Position)  // 보석 획득
+    case gateOpened               // 문 열림
+    case reset                    // 시작 상태로 복귀
+}
+
+// MARK: - GameBoardRendering
+/// 게임 판을 그리는 화면의 규약 — GameViewModel은 이 규약만 알고 SpriteKit을 모름
+protocol GameBoardRendering: AnyObject {
+    /// 판이 바뀔 때 호출 — speed는 애니메이션 시간에 적용할 실행 속도 배율
+    func update(board: GameBoard, event: BoardEvent, speed: Double)
+}
+
 // MARK: - GameBoard
 /// 게임 진행 상태의 원본과 판 위의 규칙 — 캐릭터 위치·방향, 모은 보석, 열린 문
 /// UI를 모르는 순수 값 타입이라 화면 없이 규칙만 검증할 수 있음

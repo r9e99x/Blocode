@@ -16,18 +16,13 @@ import Foundation
 struct GameViewModelStateTests {
 
     /// 3x3 세로 통로: (1,2)에서 위로 두 칸 가면 (1,0) 골인
-    private func makeFixture() -> (viewModel: GameViewModel, scene: GameScene) {
+    private func makeFixture() -> GameViewModel {
         let mapData = MapData(grid: [[0, 1, 0], [0, 1, 0], [0, 1, 0]],
                               start: Position(x: 1, y: 2), startDirection: .up, goal: Position(x: 1, y: 0))
         let stage = Stage(id: "unittest_\(UUID().uuidString)", chapter: 0, stageNumber: 0,
                           name: "State Test", mapData: mapData,
                           starThresholds: StarThresholds(threeStar: 99, twoStar: 99))
-        let viewModel = GameViewModel(stage: stage, progress: .makeForTesting(), executionSpeed: { 1 })
-        let scene = GameScene(mapData: mapData)
-        scene.size = CGSize(width: 400, height: 400)  // size가 0이면 캐릭터 노드가 안 만들어짐
-        scene.setupMap()
-        viewModel.scene = scene  // weak 참조 — 호출부가 scene을 테스트 끝까지 붙잡아야 함
-        return (viewModel, scene)
+        return GameViewModel(stage: stage, progress: .makeForTesting(), executionSpeed: { 1 })
     }
 
     private func waitUntilFinished(_ viewModel: GameViewModel, timeout: TimeInterval = 5) async throws {
@@ -43,7 +38,7 @@ struct GameViewModelStateTests {
 
     @Test("retry()는 블럭을 유지하고 도전 횟수만 새로 시작 (B2)")
     func retry_keepsBlocks_resetsAttempts() async throws {
-        let (vm, scene) = makeFixture()
+        let vm = makeFixture()
         vm.codeBlocks = [Block(type: .moveForward), Block(type: .moveForward)]
         vm.run()
         try await waitUntilFinished(vm)
@@ -54,29 +49,28 @@ struct GameViewModelStateTests {
         #expect(vm.gameState == .idle)
         #expect(vm.codeBlocks.count == 2)  // 예전엔 fullReset()이라 블럭이 전부 지워졌음
         #expect(vm.attemptCount == 0)
-        #expect(scene.characterPosition == Position(x: 1, y: 2))
+        #expect(vm.board.position == Position(x: 1, y: 2))
     }
 
     @Test("걸린 시간은 실행 시간이 아니라 화면 진입부터 잼 (B3)")
     func elapsedTime_countsFromStageEntry() async throws {
-        let (vm, scene) = makeFixture()
+        let vm = makeFixture()
         try await Task.sleep(nanoseconds: 1_000_000_000)  // 1초 동안 "고민"
         vm.codeBlocks = [Block(type: .moveForward), Block(type: .moveForward)]
         vm.run()  // 실행 자체는 약 0.6초
         try await waitUntilFinished(vm)
         #expect(vm.gameState == .success)
         #expect(vm.elapsedTime >= 1.0)  // 예전 방식이면 실행 시간(약 0.6초)만 나왔음
-        _ = scene
     }
 
     @Test("실행 중 리셋하면 실패로 바뀌지 않고 멈춤 (B8 — 화면 이탈 시 onDisappear가 하는 일)")
     func resetWhileRunning_doesNotFail() async throws {
-        let (vm, _) = makeFixture()
+        let vm = makeFixture()
         vm.codeBlocks = [Block(type: .moveForward), Block(type: .moveForward)]
         vm.run()
         try await Task.sleep(nanoseconds: 100_000_000)  // 첫 이동 애니메이션 도중
         vm.reset()
-        vm.scene = nil  // 화면이 사라지며 씬도 해제되는 상황 재현
+        vm.renderer = nil  // 화면이 사라지며 그리기 담당도 해제되는 상황 재현
         try await Task.sleep(nanoseconds: 800_000_000)  // 남은 이동 대기 시간이 다 지나도록
         #expect(vm.gameState == .idle)
         #expect(vm.failedBlockPath == nil)
@@ -85,7 +79,7 @@ struct GameViewModelStateTests {
 
     @Test("실행 중 리셋 후 바로 재실행해도 이전 실행이 이어지지 않음")
     func resetThenRunAgain_doesNotRunTwice() async throws {
-        let (vm, scene) = makeFixture()
+        let vm = makeFixture()
         vm.codeBlocks = [Block(type: .turnLeft), Block(type: .turnLeft)]
         vm.run()
         try await Task.sleep(nanoseconds: 50_000_000)  // 첫 회전 대기 중
@@ -93,7 +87,7 @@ struct GameViewModelStateTests {
         vm.run()
         try await waitUntilFinished(vm)
         try await Task.sleep(nanoseconds: 500_000_000)  // 이전 실행이 남아 있다면 움직일 시간
-        #expect(scene.characterDirection == .down)  // 위에서 왼쪽 2번 — 이전 실행이 이어지면 더 돌아감
+        #expect(vm.board.direction == .down)  // 위에서 왼쪽 2번 — 이전 실행이 이어지면 더 돌아감
         #expect(vm.gameState == .idle)
     }
 
@@ -113,7 +107,7 @@ struct GameViewModelStateTests {
 
     @Test("편집 가능 여부 — 실행 중에는 불가, 리셋하면 다시 가능")
     func canEdit_followsState() {
-        let (vm, _) = makeFixture()
+        let vm = makeFixture()
         #expect(vm.canEdit)
         vm.codeBlocks = [Block(type: .moveForward)]
         vm.run()
@@ -124,7 +118,7 @@ struct GameViewModelStateTests {
 
     @Test("실행 강조 — 자식이 실행 중이면 부모 행과 자식 경로가 함께 강조됨")
     func activeHighlight_followsCurrentPath() async throws {
-        let (vm, scene) = makeFixture()
+        let vm = makeFixture()
         vm.codeBlocks = [Block(type: .functionBlock, children: [Block(type: .moveForward)]), Block(type: .moveForward)]
         vm.run()
         try await Task.sleep(nanoseconds: 50_000_000)  // 첫 이동 애니메이션 도중
@@ -135,12 +129,11 @@ struct GameViewModelStateTests {
         vm.reset()
         #expect(vm.isRowActive(0) == false)  // 실행이 끝나면 강조 없음
         #expect(vm.activeChildPath(inRow: 0).isEmpty)
-        _ = scene
     }
 
     @Test("실패 강조 — 자식이 실패하면 부모 행과 자식 경로가 함께 표시됨")
     func failedHighlight_followsFailedPath() async throws {
-        let (vm, scene) = makeFixture()
+        let vm = makeFixture()
         vm.codeBlocks = [Block(type: .functionBlock, children: [Block(type: .collectItem)])]  // 보석이 없어 실패
         vm.run()
         try await waitUntilFinished(vm)
@@ -149,12 +142,11 @@ struct GameViewModelStateTests {
         #expect(vm.isRowFailed(1) == false)
         #expect(vm.failedChildPath(inRow: 0) == [0])
         #expect(vm.failedChildPath(inRow: 1).isEmpty)
-        _ = scene
     }
 
     @Test("되돌리기 버튼 — 캐릭터가 움직였으면 블럭 유지, 안 움직였으면 전체 초기화")
     func resetOrClear_dependsOnCharacterMoved() {
-        let (vm, _) = makeFixture()
+        let vm = makeFixture()
         vm.codeBlocks = [Block(type: .moveForward)]
         vm.run()  // 실행을 시작하면 캐릭터가 움직인 상태가 됨
         #expect(vm.characterMoved)
@@ -167,10 +159,9 @@ struct GameViewModelStateTests {
 
     @Test("실행 버튼 — 블럭이 없거나 실행 중일 때만 누를 수 없음")
     func canPressRun_rules() async throws {
-        let (vm, _) = makeFixture()
-        vm.scene = nil  // 씬이 없으면 첫 이동에서 바로 실패 상태가 됨
+        let vm = makeFixture()
         #expect(vm.canPressRun == false)  // 블럭 없음
-        vm.codeBlocks = [Block(type: .moveForward)]
+        vm.codeBlocks = [Block(type: .moveBackward)]  // 뒤는 맵 밖이라 바로 실패 상태가 됨
         #expect(vm.canPressRun == true)
         vm.run()
         #expect(vm.canPressRun == false)  // 실행 중

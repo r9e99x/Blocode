@@ -18,8 +18,8 @@ enum GameState {
 }
 
 // MARK: - GameViewModel
-/// 게임 상태, 코드 블럭 목록, 실행 로직을 관리하는 ViewModel
-/// View ↔ GameScene 사이의 중간 역할
+/// 게임 상태, 코드 블럭 목록, 실행 흐름을 관리하는 ViewModel
+/// 판의 규칙은 GameBoard(Model)가, 그리기는 GameBoardRendering을 구현한 화면이 맡음
 /// @MainActor: 모든 상태·실행 로직이 항상 메인 스레드에서만 처리됨을 보장
 /// (수동 MainActor.run/DispatchQueue 디스패치 없이 @Published 접근이 안전해짐)
 @MainActor
@@ -57,9 +57,12 @@ final class GameViewModel: ObservableObject {
     /// 캐릭터가 시작 위치에서 벗어났는지 (리셋 버튼 아이콘 결정용)
     @Published private(set) var characterMoved: Bool = false
 
-    /// 수집한 보석 위치 집합 (기믹 스테이지 전용) — 상단바 보석 카운터 표시 + 별점 계산에 사용
-    /// (기믹 없는 스테이지는 stage.mapData.items가 nil이라 항상 빈 상태로 아무 영향 없음)
-    @Published private(set) var collectedItems: Set<Position> = []
+    /// 게임 판 상태의 원본 — 캐릭터 위치·방향, 모은 보석, 열린 문
+    @Published private(set) var board: GameBoard
+
+    /// 수집한 보석 위치 집합 — 상단바 보석 카운터 표시 + 별점 계산에 사용
+    /// (기믹 없는 스테이지는 항상 빈 상태로 아무 영향 없음)
+    var collectedItems: Set<Position> { board.collectedItems }
 
     // MARK: - 내부 상태
 
@@ -70,20 +73,14 @@ final class GameViewModel: ObservableObject {
     /// (init에서 한 번만 결정되며 이후 변하지 않음)
     let loadFailed: Bool
 
-    /// GameScene 참조 (캐릭터 이동 명령용) — weak으로 순환 참조 방지
-    /// 연결될 때 실행 속도를 넘겨 씬의 애니메이션 시간과 VM의 대기 시간이 항상 같은 값을 쓰게 함
-    weak var scene: GameScene? {
-        didSet { scene?.executionSpeed = executionSpeedProvider }
-    }
+    /// 판을 그리는 화면 — 변화만 알리고 구체 타입은 모름, 없어도 규칙은 정상 동작 (순환 참조 방지로 weak)
+    weak var renderer: GameBoardRendering?
 
     /// 클리어 기록 저장소 — 테스트는 메모리 저장소를 주입
     private let progress: ProgressService
 
     /// 실행 속도를 읽는 함수 — 기본은 설정값을 실시간으로 읽고, 테스트는 고정값을 주입
     private let executionSpeedProvider: () -> Double
-
-    /// 열린 문 위치 집합 (기믹 스테이지 전용, 내부 판정용) — 이동 가능 여부 계산에만 쓰이고 UI에 직접 노출 안 됨
-    private var openedGates: Set<Position> = []
 
     /// 진행 중인 실행 Task — reset()에서 취소해 이전 실행이 새 실행과 겹치지 않게 함
     private var runTask: Task<Void, Never>?
@@ -105,6 +102,7 @@ final class GameViewModel: ObservableObject {
          progress: ProgressService = .shared,
          executionSpeed: @escaping () -> Double = { SettingsService.shared.executionSpeed }) {
         self.stage = stage
+        self.board = GameBoard(map: stage.mapData)
         self.loadFailed = false
         self.progress = progress
         self.executionSpeedProvider = executionSpeed
@@ -115,15 +113,13 @@ final class GameViewModel: ObservableObject {
     init(chapter: Int, stageNumber: Int) {
         self.progress = .shared
         self.executionSpeedProvider = { SettingsService.shared.executionSpeed }
-        if let loaded = StageLoader.load(chapter: chapter, stage: stageNumber) {
-            self.stage = loaded
-            self.loadFailed = false
-        } else {
-            // 로딩 실패 — 타입 불변식(비옵셔널 Stage) 유지를 위한 안전 플레이스홀더
-            // (실제로는 View가 loadFailed를 보고 폴백 UI를 띄우므로 사용되지 않음)
-            self.stage = Stage.placeholder(chapter: chapter, stageNumber: stageNumber)
-            self.loadFailed = true
-        }
+        // 로딩 실패 시 플레이스홀더로 타입 불변식(비옵셔널 Stage) 유지
+        // (실제로는 View가 loadFailed를 보고 폴백 UI를 띄우므로 사용되지 않음)
+        let loaded = StageLoader.load(chapter: chapter, stage: stageNumber)
+        let stage = loaded ?? Stage.placeholder(chapter: chapter, stageNumber: stageNumber)
+        self.stage = stage
+        self.board = GameBoard(map: stage.mapData)
+        self.loadFailed = loaded == nil
     }
 
     /// 다음 스테이지 번호 — 챕터 마지막 스테이지이면 nil
@@ -315,11 +311,9 @@ final class GameViewModel: ObservableObject {
         failedBlockPath = nil
         failureMessage = ""
         characterMoved = false
-        // 기믹 상태 초기화 (기믹 없는 스테이지는 항상 빈 상태라 무해)
-        collectedItems = []
-        openedGates = []
-        // 캐릭터를 시작 위치로 되돌림 (기믹 스테이지는 씬이 보석 재등장·문 다시 닫힘까지 함께 복원)
-        scene?.resetCharacter()
+        // 캐릭터·보석·문을 시작 상태로 되돌림 (기믹 스테이지는 화면이 보석 재등장·문 다시 닫힘까지 함께 그림)
+        board.reset()
+        render(.reset)
     }
 
     /// 전체 초기화 — 캐릭터 + 블럭 + 도전 횟수 모두 삭제
@@ -361,7 +355,7 @@ final class GameViewModel: ObservableObject {
             switch block.type {
             case .moveForward:
                 // 앞으로 이동 — 실패 시 실패 처리 후 종료
-                let success = await moveCharacter(direction: .forward)
+                let success = await moveCharacter(.forward)
                 if !success {
                     // 라인 번호는 사용자에게 보이는 최상위 행 번호(1-based) 기준
                     handleFailure(at: path, message: "벽에 부딪혔어요 · 라인 \(path[0] + 1)")
@@ -370,7 +364,7 @@ final class GameViewModel: ObservableObject {
 
             case .moveBackward:
                 // 뒤로 이동 — 실패 시 실패 처리 후 종료
-                let success = await moveCharacter(direction: .backward)
+                let success = await moveCharacter(.backward)
                 if !success {
                     // 라인 번호는 사용자에게 보이는 최상위 행 번호(1-based) 기준
                     handleFailure(at: path, message: "벽에 부딪혔어요 · 라인 \(path[0] + 1)")
@@ -398,8 +392,7 @@ final class GameViewModel: ObservableObject {
             case .ifBlock:
                 // if 블럭: 앞 칸 상태를 확인하고 조건이 참이면 자식 블럭 실행
                 let condition = block.ifCondition ?? .pathClear
-                let shouldExecute = checkIfCondition(condition)
-                if shouldExecute {
+                if board.satisfies(condition) {
                     let children = block.children ?? []
                     await executeBlocks(children, parentPath: path)
                 }
@@ -428,7 +421,7 @@ final class GameViewModel: ObservableObject {
             // 자식 재귀 안에서 이미 성공/실패 처리가 끝났으면 중복 처리하지 않도록 running일 때만 검사
             // (중첩 클리어 시 handleSuccess가 깊이만큼 반복 호출돼 recordClear가 중복 저장되던 문제 수정)
             guard isRunActive else { return }
-            if checkGoal() {
+            if board.isAtGoal {
                 handleSuccess()
                 return
             }
@@ -452,157 +445,61 @@ final class GameViewModel: ObservableObject {
         return "보석 \(collectedItems.count)/\(items.count)개 — 전부 모으면 별 3개!"
     }
 
-    // MARK: - 조건문 평가
+    // MARK: - 판 변경 (규칙은 GameBoard, 그리기는 renderer)
 
-    /// ifBlock 조건 평가: 앞 칸 이동 가능 여부를 확인 (GameScene 메인스레드 접근)
-    /// - Parameter condition: 확인할 조건 타입 (pathClear / pathBlocked)
-    /// - Returns: 조건이 참이면 true (자식 블럭 실행), 거짓이면 false (자식 블럭 스킵)
-    private func checkIfCondition(_ condition: IfCondition) -> Bool {
-        // @MainActor라 scene(메인 전용)에 직접 접근 가능 (별도 디스패치 불필요)
-        guard let scene = scene else {
-            // scene이 없으면 조건 판단 불가 → false 반환 (실행 안 함)
-            return false
-        }
-        // 현재 방향 기준 한 칸 앞 위치 계산
-        let nextPos = scene.characterPosition.next(direction: scene.characterDirection)
-        let walkable = isWalkable(nextPos)
-        switch condition {
-        case .pathClear:   return walkable   // 뚫려있으면 실행
-        case .pathBlocked: return !walkable  // 막혀있으면 실행
-        }
+    /// 현재 판 상태를 화면에 알림
+    private func render(_ event: BoardEvent) {
+        renderer?.update(board: board, event: event, speed: executionSpeed)
     }
 
-    // MARK: - 기믹 판정 (챕터 6+ 전용 — items/switches/portals가 없는 스테이지는 항상 기존과 동일하게 동작)
-
-    /// 특정 좌표가 이동 가능한지 확인 — 바닥이거나, 열린 문이면 true
-    /// (기믹 없는 스테이지는 openedGates가 항상 비어있어 기존 isFloor 판정과 완전히 동일)
-    private func isWalkable(_ position: Position) -> Bool {
-        guard let scene else { return false }
-        if scene.mapData.isFloor(position) { return true }
-        return openedGates.contains(position)
+    /// 애니메이션이 끝날 때까지 대기 (속도 배율 적용) — 리셋으로 실행이 취소되면 바로 깨어남
+    private func waitForAnimation(_ seconds: Double) async {
+        try? await Task.sleep(for: .seconds(seconds / executionSpeed))
     }
 
-    /// 이동 후 도착한 칸의 포탈 효과 적용 (자동 통과) — 보석 획득/스위치 작동은
-    /// 자동이 아니라 전용 블럭(collectItem/activateSwitch) 실행 시에만 처리됨
-    /// portals가 nil인 스테이지는 아래 블록이 조용히 스킵되므로 완전히 무해
-    private func applyTileEffects(at position: Position) {
-        guard let scene else { return }
-
-        // 포탈 — 입장하면 짝으로 순간이동 (도착 칸에서는 재귀 적용 없이 1회만 이동)
-        if let pair = scene.mapData.portals?.first(where: { $0.a == position || $0.b == position }) {
-            let destination = pair.a == position ? pair.b : pair.a
-            scene.teleportCharacter(to: destination)
+    /// 앞으로/뒤로 이동 — 성공 여부 반환 (벽이면 false)
+    private func moveCharacter(_ direction: GameBoard.MoveDirection) async -> Bool {
+        guard board.move(direction) else { return false }
+        render(.moved)
+        await waitForAnimation(0.3)
+        // 도착 칸의 포탈 — 대기 중 리셋됐으면 적용하지 않음 (리셋 직후 순간이동 방지)
+        if isRunActive, board.enterPortal() != nil {
+            render(.teleported)
             SoundService.shared.play(.portal)
         }
+        return true
     }
 
-    /// "보석 획득" 블럭 실행 — 캐릭터의 현재 위치에 아직 수집하지 않은 보석이 있을 때만 성공
-    /// (한 번 수집한 칸에서 다시 실행하면 실패 — 보석은 1회성)
+    /// 캐릭터 좌우 회전
+    private func turnCharacter(left: Bool) async {
+        board.turn(left: left)
+        render(.turned)
+        await waitForAnimation(0.2)
+    }
+
+    /// "보석 획득" 블럭 실행 — 현재 칸에 아직 안 모은 보석이 있을 때만 성공
     private func collectItemAtCurrentPosition() -> Bool {
-        guard let scene else { return false }
-        let position = scene.characterPosition
-        guard scene.mapData.items?.contains(position) == true,
-              !collectedItems.contains(position) else {
-            return false
-        }
-        collectedItems.insert(position)
-        scene.collectItem(at: position)
+        guard board.collectItem() else { return false }
+        render(.itemCollected(board.position))
         SoundService.shared.play(.itemCollect)
         return true
     }
 
-    /// "스위치 작동" 블럭 실행 — 캐릭터의 현재 위치에 스위치가 있을 때만 성공(연결된 문을 엶)
-    /// 이미 열린 문이어도 스위치 자체는 계속 그 자리에 있으므로 재실행은 실패가 아님(무해한 재작동)
+    /// "스위치 작동" 블럭 실행 — 현재 칸에 스위치가 있을 때만 성공, 이미 열린 문이면 소리만 남 (무해한 재작동)
     private func activateSwitchAtCurrentPosition() -> Bool {
-        guard let scene else { return false }
-        let position = scene.characterPosition
-        guard let gate = scene.mapData.switches?.first(where: { $0.switchAt == position })?.gateAt else {
+        switch board.activateSwitch() {
+        case .noSwitch:
             return false
-        }
-        if !openedGates.contains(gate) {
-            openedGates.insert(gate)
-            scene.openGate(at: gate)
+        case .alreadyOpen:
+            break
+        case .opened:
+            render(.gateOpened)
         }
         SoundService.shared.play(.switchActivate)
         return true
     }
 
-    // MARK: - 캐릭터 이동 (GameScene에 명령)
-
-    /// 앞으로/뒤로 이동 — 성공 여부 반환 (벽이면 false)
-    private func moveCharacter(direction: MoveDirection) async -> Bool {
-        let arrived: Position? = await withCheckedContinuation { continuation in
-            // @MainActor라 scene(메인 전용)에 직접 접근 가능 (별도 디스패치 불필요)
-            guard let scene = scene else {
-                continuation.resume(returning: nil)
-                return
-            }
-
-            // 이동 방향에 따라 다음 위치 계산
-            let nextPos: Position
-            switch direction {
-            case .forward:
-                // 캐릭터가 바라보는 방향으로 한 칸 이동
-                nextPos = scene.characterPosition.next(direction: scene.characterDirection)
-            case .backward:
-                // 캐릭터가 바라보는 방향의 반대 방향으로 한 칸 이동
-                nextPos = scene.characterPosition.previous(direction: scene.characterDirection)
-            }
-
-            // 이동 가능 여부 확인 (맵 범위 & 바닥 타일 또는 열린 문)
-            guard isWalkable(nextPos) else {
-                continuation.resume(returning: nil)  // 벽(또는 닫힌 문): 이동 실패
-                return
-            }
-
-            // 캐릭터 위치 업데이트 및 애니메이션 적용
-            scene.characterPosition = nextPos
-            scene.updateCharacterTransform(animated: true)
-
-            // 이동 애니메이션 완료 후 다음 단계로 (속도 배율 적용)
-            // asyncAfter는 스레드 점프가 아닌 "애니메이션 대기 시간"이라 그대로 유지
-            let delay = 0.3 / executionSpeed
-            DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
-                continuation.resume(returning: nextPos)  // 이동 성공
-            }
-        }
-        guard let arrived else { return false }
-        // 도착 칸의 기믹 효과 — 대기 중 리셋됐으면 적용하지 않음 (리셋 직후 포탈로 순간이동하는 것 방지)
-        if isRunActive { applyTileEffects(at: arrived) }
-        return true
-    }
-
-    /// 캐릭터 좌우 회전 — 애니메이션 완료 후 continuation 재개
-    private func turnCharacter(left: Bool) async {
-        await withCheckedContinuation { continuation in
-            // @MainActor라 scene(메인 전용)에 직접 접근 가능 (별도 디스패치 불필요)
-            guard let scene = scene else {
-                continuation.resume()
-                return
-            }
-            // 방향 값 갱신 (왼쪽/오른쪽 90도 회전)
-            scene.characterDirection = left
-                ? scene.characterDirection.turnedLeft
-                : scene.characterDirection.turnedRight
-            // 회전 애니메이션 적용
-            scene.updateCharacterTransform(animated: true)
-
-            // 회전 애니메이션 완료 후 다음 블럭 실행 (속도 배율 적용)
-            // asyncAfter는 스레드 점프가 아닌 "애니메이션 대기 시간"이라 그대로 유지
-            let delay = 0.2 / executionSpeed
-            DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
-                continuation.resume()
-            }
-        }
-    }
-
     // MARK: - 결과 처리
-
-    /// 현재 캐릭터 위치가 목표 지점인지 확인 (@MainActor라 동기 접근)
-    private func checkGoal() -> Bool {
-        // scene이 없으면 false (클리어 불가)
-        scene?.mapData.isGoal(scene?.characterPosition ?? Position(x: -1, y: -1)) ?? false
-    }
 
     /// 클리어 성공 처리 — 별점 계산 후 ProgressService에 기록 저장 (@MainActor라 동기 처리)
     private func handleSuccess() {
@@ -631,18 +528,10 @@ final class GameViewModel: ObservableObject {
     /// 실패 처리 (벽 충돌 등) — 실패 블럭 경로와 메시지 설정 (@MainActor라 동기 처리)
     private func handleFailure(at path: [Int], message: String) {
         // await(이동 애니메이션 대기) 사이에 reset·화면 이탈로 실행이 끝났으면 실패로 처리하지 않음
-        // (예: 실행 중 뒤로가기 → 씬이 사라져 다음 이동이 "벽 충돌"로 오인되고 챕터 화면에서 실패음이 나던 문제)
         guard isRunActive else { return }
         failedBlockPath = path    // 실패한 블럭 빨간 하이라이트 (경로 기반)
         failureMessage = message  // 토스트 배너 메시지
         gameState = .failure
         SoundService.shared.play(.gameFail)
     }
-}
-
-// MARK: - MoveDirection (내부용)
-/// 이동 방향 — 앞으로/뒤로만 구분 (회전은 별도 처리)
-private enum MoveDirection {
-    case forward   // 캐릭터가 바라보는 방향으로 이동
-    case backward  // 캐릭터가 바라보는 반대 방향으로 이동
 }
