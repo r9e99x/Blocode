@@ -11,27 +11,17 @@ import SwiftUI
 /// 앱 설정 화면 — 테마, 피드백, 게임, 데이터 섹션으로 구성
 struct SettingsView: View {
 
-    /// 진행도 초기화 완료 후 홈으로 이동할 때 호출 (옵셔널)
-    var onResetProgress: (() -> Void)? = nil
-
     /// 임베드 모드 — true면 커스텀 헤더(제목+닫기 버튼)를 숨김
     /// 기본값 false로 기존 iOS 호출부는 전부 동작 변화 없음. 맥 사이드바 셸에 내용만 삽입할 때만 true로 사용
     var isEmbedded: Bool = false
 
-    @ObservedObject private var settings = SettingsService.shared  // 설정값 감지
+    @StateObject private var vm = SettingsViewModel()              // 설정 상태/로직
     @Environment(\.dismiss) private var dismiss                    // fullScreenCover 닫기
     @Environment(\.colorScheme) private var colorScheme            // 현재 색상 모드
 
     @State private var showResetAlert   = false  // 진행도 초기화 확인 알럿 표시 여부
-    @State private var showResetSuccess = false  // 초기화 완료 알럿 표시 여부
     @State private var isScrolled       = false  // 스크롤 여부 (헤더 그림자 표시용)
     @State private var devUnlockedLabel: String? = nil  // 개발자 해금 완료 알럿에 표시할 챕터 설명 (nil이면 알럿 숨김)
-
-    // 슬라이더 인덱스: 0=0.5× / 1=1.0× / 2=2.0×
-    @State private var speedIndex: Double = 1
-
-    /// 실행 속도 선택값 목록
-    private static let speedValues: [Double] = [0.5, 1.0, 2.0]
 
     // 팔레트 블럭 색상 프리뷰 (테마 카드 상단 색상 도트)
     private let paletteColors: [Color] = [
@@ -110,32 +100,16 @@ struct SettingsView: View {
             }
             .background(Color.appBackground.ignoresSafeArea())
             .hideNavigationBar()  // 기본 툴바 숨김 (iOS 전용 API 래퍼 — macOS no-op)
-            .onAppear {
-                // 현재 저장된 실행 속도에 맞는 슬라이더 인덱스 설정
-                let idx = Self.speedValues.firstIndex(of: settings.executionSpeed) ?? 1
-                speedIndex = Double(idx)
-            }
         }
         // 테마 설정에 따라 색상 모드 적용
-        .preferredColorScheme(settings.theme.colorScheme)
+        .preferredColorScheme(vm.theme.colorScheme)
         // 진행도 초기화 확인 알럿
         .alert("진행도 초기화", isPresented: $showResetAlert) {
-            Button("초기화", role: .destructive) {
-                settings.resetProgress()
-                showResetSuccess = true
-            }
+            // 초기화하면 앱 진입점이 바로 온보딩으로 바뀌며 이 화면도 사라짐
+            Button("초기화", role: .destructive) { vm.resetProgress() }
             Button("취소", role: .cancel) {}
         } message: {
             Text("모든 별과 클리어 기록이 삭제됩니다.\n이 작업은 되돌릴 수 없습니다.")
-        }
-        // 초기화 완료 알럿
-        .alert("초기화 완료", isPresented: $showResetSuccess) {
-            Button("확인", role: .cancel) {
-                dismiss()
-                onResetProgress?()  // 홈으로 이동 콜백 호출
-            }
-        } message: {
-            Text("모든 진행도가 삭제됐어요.")
         }
         // 개발자 해금 완료 알럿
         .alert("해금 완료", isPresented: Binding(
@@ -164,10 +138,7 @@ struct SettingsView: View {
             // 시스템 따르기 — 별도 카드로 토글 표시
             settingsCard {
                 settingsRow(title: "시스템 따르기") {
-                    Toggle("", isOn: Binding(
-                        get: { settings.theme == .system },
-                        set: { settings.theme = $0 ? .system : .light }
-                    ))
+                    Toggle("", isOn: $vm.followsSystemTheme)
                     .labelsHidden()
                     .tint(toggleTint)
                 }
@@ -180,12 +151,12 @@ struct SettingsView: View {
         let isDark = (theme == .dark)
         // 현재 선택된 테마인지 판단 (시스템 모드 고려)
         let isSelected: Bool = {
-            if settings.theme == .system {
+            if vm.theme == .system {
                 // 시스템 모드에서는 현재 색상 모드와 일치하는 카드가 선택됨
                 return (theme == .light && colorScheme == .light) ||
                        (theme == .dark  && colorScheme == .dark)
             }
-            return settings.theme == theme
+            return vm.theme == theme
         }()
 
         // 카드 배경색 — 테마 프리뷰를 직접 반영
@@ -193,7 +164,7 @@ struct SettingsView: View {
             ? Color(red: 0.10, green: 0.12, blue: 0.20)
             : Color.white
 
-        return Button { settings.theme = theme } label: {
+        return Button { vm.theme = theme } label: {
             VStack(alignment: .leading, spacing: 0) {
 
                 // 상단 — 블럭 색상 점 + 코드 라인 프리뷰
@@ -253,7 +224,7 @@ struct SettingsView: View {
             )
         }
         .buttonStyle(.plain)
-        .animation(.easeInOut(duration: 0.15), value: settings.theme)
+        .animation(.easeInOut(duration: 0.15), value: vm.theme)
     }
 
     // MARK: - 피드백 섹션
@@ -270,7 +241,7 @@ struct SettingsView: View {
                         iconColor: Color(red: 0.98, green: 0.72, blue: 0.28),  // 노란 계열
                         title: "효과음"
                     ) {
-                        Toggle("", isOn: $settings.soundEnabled)
+                        Toggle("", isOn: $vm.soundEnabled)
                             .labelsHidden()
                             .tint(toggleTint)
                     }
@@ -283,7 +254,7 @@ struct SettingsView: View {
                         iconColor: Color(red: 0.65, green: 0.52, blue: 0.82),  // 보라 계열
                         title: "배경음악"
                     ) {
-                        Toggle("", isOn: $settings.musicEnabled)
+                        Toggle("", isOn: $vm.musicEnabled)
                             .labelsHidden()
                             .tint(toggleTint)
                     }
@@ -311,14 +282,9 @@ struct SettingsView: View {
                         }
 
                         VStack(spacing: 4) {
-                            // 0~2 범위의 정수 슬라이더 (각 값이 speedValues 인덱스)
-                            Slider(value: $speedIndex, in: 0...2, step: 1)
+                            // 0~2 범위의 정수 슬라이더 — 배율 변환과 저장은 ViewModel 담당
+                            Slider(value: $vm.speedIndex, in: 0...2, step: 1)
                                 .tint(Color.primary)
-                                .onChange(of: speedIndex) { _, newVal in
-                                    // 슬라이더 값을 실제 속도 배율로 변환하여 저장
-                                    let idx = max(0, min(2, Int(newVal.rounded())))
-                                    settings.executionSpeed = Self.speedValues[idx]
-                                }
 
                             // 눈금 레이블 (0.5× / 1× / 2×)
                             HStack {
@@ -378,21 +344,20 @@ struct SettingsView: View {
             sectionLabel("개발자")
             settingsCard {
                 VStack(spacing: 0) {
-                    ForEach(Array(ChapterCatalog.all.enumerated()), id: \.element.id) { index, chapter in
+                    ForEach(Array(vm.chapters.enumerated()), id: \.element.id) { index, chapter in
                         settingsRow(
                             title: "챕터 \(chapter.number) · \(chapter.title)",
                             subtitle: "1~\(chapter.number)챕터 전체 스테이지 3별 처리"
                         ) {
                             Button("해금") {
-                                let chapters = ChapterCatalog.all.map { (id: $0.id, stageCount: $0.stageCount) }
-                                ProgressService.shared.devUnlock(throughChapter: chapter.number, chapters: chapters)
+                                vm.devUnlock(throughChapter: chapter.number)
                                 devUnlockedLabel = "챕터 \(chapter.number) · \(chapter.title)"
                             }
                             .font(.system(size: 14, weight: .semibold))
                             .foregroundStyle(toggleTint)
                             .buttonStyle(.plain)
                         }
-                        if index < ChapterCatalog.all.count - 1 {
+                        if index < vm.chapters.count - 1 {
                             rowDivider
                         }
                     }
@@ -489,3 +454,11 @@ struct SettingsView: View {
 #Preview {
     SettingsView()
 }
+
+// 전체 섹션 비교용 — 맥 기본 프리뷰 창은 낮아 위쪽만 보이므로 창 높이를 키움
+#if os(macOS)
+#Preview("전체 섹션") {
+    SettingsView()
+        .frame(width: 700, height: 1500)
+}
+#endif

@@ -242,10 +242,7 @@ struct SidebarShell: View {
                 // browsingChapter가 nil일 때만 이 분기로 오므로 항상 지도
                 chapterMapContent
             case .settings:
-                SettingsView(onResetProgress: {
-                    navPath = NavigationPath()
-                    withAnimation(.easeInOut(duration: 0.2)) { section = .home }
-                }, isEmbedded: true)
+                SettingsView(isEmbedded: true)
             }
         }
         .transition(.opacity)

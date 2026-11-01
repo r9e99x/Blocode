@@ -11,12 +11,10 @@ import SwiftUI
 
 // MARK: - ControlBarView
 /// 게임 화면 하단 컨트롤 바 — 리셋 / 실행 / 설정 버튼 3개
-/// GameViewModel을 통해 게임 상태를 제어하고,
-/// 설정에서 진행도를 초기화하면 onResetProgress로 알림
+/// GameViewModel을 통해 게임 상태를 제어
 struct ControlBarView: View {
 
     @ObservedObject var viewModel: GameViewModel  // 게임 상태/액션 제어
-    let onResetProgress: () -> Void               // 진행도 초기화 후 홈 복귀 (화면 이동은 StageView 담당)
 
     /// 다크/라이트 모드 감지 — 되돌리기/설정 버튼의 베벨 강도를 다크에서만 낮추는 데 사용
     @Environment(\.colorScheme) private var colorScheme
@@ -110,9 +108,9 @@ struct ControlBarView: View {
             .disabled(viewModel.gameState == .running)
             .onPressState(isPressed: $isSettingsPressed)
             .frame(maxWidth: .infinity)
-            // 설정 화면 — 진행도 초기화 시 홈으로 이동 (iOS: fullScreenCover / macOS: sheet)
+            // 설정 화면 (iOS: fullScreenCover / macOS: sheet)
             .fullScreenCoverCompat(isPresented: $showSettings) {
-                SettingsView(onResetProgress: onResetProgress)
+                SettingsView()
                 .preferredColorScheme(SettingsService.shared.theme.colorScheme)
             }
         }

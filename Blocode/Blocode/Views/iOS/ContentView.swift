@@ -67,10 +67,7 @@ struct ContentView: View {
         .preferredColorScheme(settings.theme.colorScheme)
         // 설정 화면 — 모달 표시 (iOS: fullScreenCover / macOS: sheet)
         .fullScreenCoverCompat(isPresented: $showSettings) {
-            SettingsView(onResetProgress: {
-                // 진행 상황 초기화 후 홈으로 돌아오기 (navPath 초기화)
-                navPath = NavigationPath()
-            })
+            SettingsView()
         }
     }
 

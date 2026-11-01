@@ -37,7 +37,6 @@ struct CodePanelView: View {
     /// 스크롤할 때마다 바뀌므로 BlockDragState에 넣지 않음 — 넣으면 스크롤 중 StageView 전체가 다시 그려짐
     @State private var rowMidYs: [Int: CGFloat] = [:]
 
-    let onResetProgress: () -> Void           // 컨트롤 바 설정에서 진행도 초기화 후 홈 복귀 (화면 이동은 StageView 담당)
     @Binding var isPanelExpanded: Bool        // 패널 확장/최소화 — StageView와 공유 (stageInfoBar·맵 크기와 연동)
 
     /// true면 확장/축소 토글 자체를 없애고 코드 리스트를 항상 펼친 상태로 고정
@@ -88,7 +87,7 @@ struct CodePanelView: View {
                 .padding(.top, 8)
 
             // 컨트롤 바
-            ControlBarView(viewModel: viewModel, onResetProgress: onResetProgress)
+            ControlBarView(viewModel: viewModel)
                 .padding(.top, 6)
                 .padding(.bottom, 24)
         }

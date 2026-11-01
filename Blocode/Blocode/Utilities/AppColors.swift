@@ -242,6 +242,18 @@ extension BlockType {
     }
 }
 
+extension SettingsService.ThemePreference {
+
+    /// SwiftUI colorScheme 값으로 변환 (system이면 nil → OS 기본 따름)
+    var colorScheme: ColorScheme? {
+        switch self {
+        case .light:  return .light
+        case .dark:   return .dark
+        case .system: return nil   // nil이면 preferredColorScheme에서 시스템 따름
+        }
+    }
+}
+
 extension ChapterInfo {
 
     /// 챕터 카드/헤더 색상

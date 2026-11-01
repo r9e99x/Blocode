@@ -201,6 +201,115 @@ struct ChapterViewModelTests {
     }
 }
 
+// MARK: - SettingsViewModel
+
+@MainActor
+@Suite("설정 ViewModel")
+struct SettingsViewModelTests {
+
+    /// 격리된 저장소로 VM 구성 — 실제 설정·진행도와 소리에 영향 없음
+    private func makeFixture(applyMusicEnabled: @escaping (Bool) -> Void = { _ in })
+    -> (vm: SettingsViewModel, settings: SettingsService, progress: ProgressService, defaults: UserDefaults) {
+        let defaults = isolatedDefaults()
+        let settings = SettingsService(defaults: defaults)
+        let progress = ProgressService.makeForTesting()
+        let vm = SettingsViewModel(settings: settings, progress: progress, applyMusicEnabled: applyMusicEnabled)
+        return (vm, settings, progress, defaults)
+    }
+
+    @Test("슬라이더 위치와 실행 속도 변환 — 범위 밖은 끝값으로 보정")
+    func speedIndex_convertsToSpeed() {
+        let (vm, settings, _, _) = makeFixture()
+        #expect(vm.speedIndex == 1)  // 기본 1배속
+
+        vm.speedIndex = 0
+        #expect(settings.executionSpeed == 0.5)
+        vm.speedIndex = 2
+        #expect(settings.executionSpeed == 2.0)
+        #expect(vm.speedIndex == 2)
+        vm.speedIndex = 9
+        #expect(settings.executionSpeed == 2.0)
+        vm.speedIndex = -3
+        #expect(settings.executionSpeed == 0.5)
+    }
+
+    @Test("목록에 없는 실행 속도가 저장돼 있으면 슬라이더는 가운데")
+    func speedIndex_fallsBackForUnknownValue() {
+        let (vm, settings, _, _) = makeFixture()
+        settings.executionSpeed = 1.5
+        #expect(vm.speedIndex == 1)
+    }
+
+    @Test("시스템 따르기 토글 — 켜면 시스템, 끄면 라이트")
+    func followsSystemTheme_togglesTheme() {
+        let (vm, settings, _, _) = makeFixture()
+        vm.theme = .dark
+        #expect(vm.followsSystemTheme == false)
+        vm.followsSystemTheme = true
+        #expect(settings.theme == .system)
+        vm.followsSystemTheme = false
+        #expect(settings.theme == .light)
+    }
+
+    @Test("설정값은 저장소에 남아 새로 만들어도 유지됨")
+    func settings_arePersisted() {
+        let (vm, _, _, defaults) = makeFixture()
+        vm.theme = .dark
+        vm.soundEnabled = false
+        vm.musicEnabled = false
+        vm.speedIndex = 2
+
+        let reloaded = SettingsService(defaults: defaults)
+        #expect(reloaded.theme == .dark)
+        #expect(reloaded.soundEnabled == false)
+        #expect(reloaded.musicEnabled == false)
+        #expect(reloaded.executionSpeed == 2.0)
+    }
+
+    @Test("배경음악을 바꾸면 설정을 먼저 저장한 뒤 재생에 반영")
+    func musicEnabled_savesBeforeApplying() {
+        var settingsRef: SettingsService?
+        var applied: [(requested: Bool, saved: Bool?)] = []
+        let (vm, settings, _, _) = makeFixture { enabled in
+            applied.append((enabled, settingsRef?.musicEnabled))
+        }
+        settingsRef = settings
+        vm.musicEnabled = false
+        #expect(applied.count == 1)
+        #expect(applied.first?.requested == false)
+        #expect(applied.first?.saved == false)
+    }
+
+    @Test("진행도 초기화 — 기록을 지우고 온보딩을 다시 보게 함")
+    func resetProgress_clearsRecordsAndOnboarding() {
+        let (vm, _, progress, defaults) = makeFixture()
+        defaults.set(true, forKey: SettingsService.hasSeenOnboardingKey)
+        progress.recordClear(stageId: "ch1_stage1", stars: 3, blockCount: 1)
+
+        vm.resetProgress()
+        #expect(progress.results.isEmpty)
+        #expect(defaults.bool(forKey: SettingsService.hasSeenOnboardingKey) == false)
+    }
+
+    @Test("개발자 해금 — 지정한 챕터까지만 3별 처리")
+    func devUnlock_stopsAtChapter() {
+        let (vm, _, progress, _) = makeFixture()
+        vm.devUnlock(throughChapter: 1)
+        #expect(progress.stars(for: "ch1_stage1") == 3)
+        #expect(progress.isCleared("ch2_stage1") == false)
+    }
+
+    @Test("설정이 바뀌면 화면 갱신 알림을 보냄")
+    func forwardsSettingsChanges() {
+        let (vm, settings, _, _) = makeFixture()
+        var received = false
+        let subscription = vm.objectWillChange.sink { received = true }
+        settings.soundEnabled = false
+        subscription.cancel()
+        #expect(received)
+    }
+}
+
 // MARK: - 변경 알림 전파
 
 @MainActor

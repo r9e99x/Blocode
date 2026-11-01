@@ -316,7 +316,6 @@ struct StageView: View {
             viewModel: viewModel,
             stage: stage,
             drag: $drag,
-            onResetProgress: { navPath = NavigationPath() },  // 스택 초기화로 홈 복귀
             isPanelExpanded: $isPanelExpanded,
             alwaysExpanded: alwaysExpanded
         )
@@ -417,9 +416,7 @@ struct StageView: View {
             }
             .disabled(viewModel.gameState == .running)
             .sheet(isPresented: $showMacSettings) {
-                SettingsView(onResetProgress: {
-                    navPath = NavigationPath()
-                })
+                SettingsView()
                 .preferredColorScheme(SettingsService.shared.theme.colorScheme)
             }
         }
