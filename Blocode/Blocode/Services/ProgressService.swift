@@ -91,8 +91,16 @@ final class ProgressService: ObservableObject {
 
         // SwiftData → 메모리 미러 채우기
         reloadMirror()
-        // streak는 UserDefaults에서 로드
-        streak = defaults.integer(forKey: streakKey)
+        // streak는 UserDefaults에서 로드 — 끊긴 기록은 다음 클리어 전까지 0으로 표시 (저장값은 클리어 때 갱신)
+        streak = isStreakBroken ? 0 : defaults.integer(forKey: streakKey)
+    }
+
+    /// 마지막 클리어가 그저께 이전이면 연속이 끊긴 상태
+    private var isStreakBroken: Bool {
+        guard let lastDate = defaults.object(forKey: lastClearDateKey) as? Date else { return false }
+        let last = Calendar.current.startOfDay(for: lastDate)
+        let today = Calendar.current.startOfDay(for: Date())
+        return (Calendar.current.dateComponents([.day], from: last, to: today).day ?? 0) >= 2
     }
 
     // MARK: - 미러 동기화

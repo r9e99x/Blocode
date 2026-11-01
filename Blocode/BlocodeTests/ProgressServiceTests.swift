@@ -103,6 +103,24 @@ struct ProgressServiceTests {
         #expect(progress.streak == 1)
     }
 
+    @Test("앱을 켤 때 이틀 이상 쉬었으면 연속 일수는 0으로 표시")
+    func streak_showsZeroAfterGapOnLaunch() {
+        let defaults = isolatedDefaults()
+        defaults.set(4, forKey: streakKey)
+        defaults.set(startOfDay(daysAgo: 2), forKey: lastClearDateKey)
+        #expect(ProgressService.makeForTesting(defaults: defaults).streak == 0)
+    }
+
+    @Test("앱을 켤 때 오늘이나 어제 클리어했으면 연속 일수 유지")
+    func streak_keptOnLaunchWhenRecent() {
+        for daysAgo in [0, 1] {
+            let defaults = isolatedDefaults()
+            defaults.set(4, forKey: streakKey)
+            defaults.set(startOfDay(daysAgo: daysAgo), forKey: lastClearDateKey)
+            #expect(ProgressService.makeForTesting(defaults: defaults).streak == 4)
+        }
+    }
+
     // MARK: - GameViewModel 연결
 
     @Test("클리어 기록은 주입한 저장소에 남음")
