@@ -47,6 +47,7 @@ struct CodePanelView: View {
         #endif
     }
 
+    #if os(iOS)
     /// iOS/iPadOS 배치 — 코드 카드(핸들+확장·축소) → 팔레트 → 컨트롤 바 (기존 그대로)
     private var iOSBody: some View {
         VStack(spacing: 0) {
@@ -85,6 +86,7 @@ struct CodePanelView: View {
                 .padding(.bottom, 24)
         }
     }
+    #endif
 
     #if os(macOS)
     /// 맥 전용 배치 — 팔레트를 코드 영역 위에 배치하고, 확장/축소 토글 없이 코드 리스트가 남은 세로 공간을 전부 사용
@@ -148,6 +150,7 @@ struct CodePanelView: View {
         )
     }
 
+    #if os(iOS)
     // MARK: - 드래그 핸들 (확장/최소화 토글)
 
     private var dragHandle: some View {
@@ -165,6 +168,7 @@ struct CodePanelView: View {
         }
         .buttonStyle(.plain)
     }
+    #endif
 
     // MARK: - 코드 리스트 헤더
 

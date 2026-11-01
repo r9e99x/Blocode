@@ -152,11 +152,7 @@ struct BlockRowView: View {
                             Spacer(minLength: 0)
                         }
                         .contentShape(Rectangle())
-                        #if os(macOS)
-                        .highPriorityGesture(reorderDragGesture)
-                        #else
                         .gesture(reorderDragGesture)
-                        #endif
 
                         // repeat 블럭 전용 — 반복 횟수 스테퍼
                         if block.isRepeatBlock, let count = block.repeatCount {

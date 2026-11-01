@@ -5,6 +5,8 @@
 //  Created by 조준희 on 5/10/26.
 //
 
+// 아이폰 챕터 선택 — iOS 전용 (맥은 SidebarShell과 상단바 컨트롤을 사용하므로 컴파일에서 제외)
+#if os(iOS)
 import SwiftUI
 
 // MARK: - ChapterSelectView
@@ -114,3 +116,4 @@ struct ChapterSelectView: View {
     @Previewable @State var path = NavigationPath()
     ChapterSelectView(navPath: $path)
 }
+#endif

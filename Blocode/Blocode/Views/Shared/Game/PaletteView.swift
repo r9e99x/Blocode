@@ -110,13 +110,7 @@ struct PaletteCardView: View {
         .opacity(isDragging ? 0.5 : 1.0)
         .animation(.spring(response: 0.25, dampingFraction: 0.7), value: isDragging)
         .animation(.spring(response: 0.2,  dampingFraction: 0.8), value: isPressed)
-        // 맥에서는 이 카드를 감싼 가로 스크롤뷰(PaletteView)의 스크롤 제스처가 드래그를 가로채는 문제가 있어
-        // highPriorityGesture로 우선순위를 올림 (iOS는 이 문제가 없어 기존 .gesture 그대로 유지)
-        #if os(macOS)
-        .highPriorityGesture(dragGesture)
-        #else
         .gesture(dragGesture)
-        #endif
     }
 
     /// 팔레트 카드 드래그 제스처 — 0.38초 롱프레스 후 드래그 모드 전환, 아니면 탭으로 처리 (플랫폼 공용 정의)

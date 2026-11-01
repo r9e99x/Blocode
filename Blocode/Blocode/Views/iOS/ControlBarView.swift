@@ -5,6 +5,8 @@
 //  Created by 조준희 on 5/10/26.
 //
 
+// 아이폰·아이패드 하단 컨트롤 바 — iOS 전용 (맥은 SidebarShell과 상단바 컨트롤을 사용하므로 컴파일에서 제외)
+#if os(iOS)
 import SwiftUI
 
 // MARK: - ControlBarView
@@ -123,3 +125,4 @@ struct ControlBarView: View {
     // 참고: 3D 버튼 렌더링은 공용 컴포넌트 Bevel3DButtonLabel(Views/Components)이 담당
     // (기존 이 파일의 button3D를 컴포넌트로 승격 — 맥 상단바 컨트롤과 공용)
 }
+#endif
