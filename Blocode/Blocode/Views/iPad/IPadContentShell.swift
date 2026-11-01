@@ -39,7 +39,7 @@ struct IPadContentShell: View {
             Group {
                 if section == .chapters, let chapter = browsingChapter {
                     // 챕터 브라우징 중 — 메인 사이드바 대신 3단 컬럼(챕터목록|스테이지목록|미리보기)
-                    IPadChapterBrowsePane(
+                    ChapterBrowsePane(
                         chapterNumber: chapter,
                         // 지도↔브라우저 이동과 챕터끼리 전환 모두 전환 효과 없이 즉시 교체 (맥과 동일, 사용자 요청)
                         onBackToMap: { browsingChapter = nil },
