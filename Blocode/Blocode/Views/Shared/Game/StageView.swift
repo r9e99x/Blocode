@@ -319,7 +319,7 @@ struct StageView: View {
             viewModel: viewModel,
             stage: stage,
             drag: $drag,
-            navPath: $navPath,
+            onResetProgress: { navPath = NavigationPath() },  // 스택 초기화로 홈 복귀
             isPanelExpanded: $isPanelExpanded,
             alwaysExpanded: alwaysExpanded
         )
