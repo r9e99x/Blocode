@@ -33,8 +33,6 @@ struct IPadContentShell: View {
     @StateObject private var homeVM = HomeViewModel()
     @StateObject private var chapterSelectVM = ChapterSelectViewModel()
     @ObservedObject private var settings = SettingsService.shared
-    /// 다크/라이트 모드 감지 — 잠긴 챕터 카드 자물쇠 밝기를 iOS ChapterSelectView와 맞추는 데 사용
-    @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
         NavigationStack(path: $navPath) {
@@ -258,7 +256,6 @@ struct IPadContentShell: View {
 
     // MARK: - 챕터 지도 (지그재그 + 3D + 눌림 + 잠금 팝업)
 
-    @State private var pressedChapterId: Int? = nil
     @State private var lockInfo: LockInfo? = nil
 
     private var chapterMapContent: some View {
@@ -275,135 +272,15 @@ struct IPadContentShell: View {
 
             // 지도는 세로 스크롤 (iOS/맥 챕터 지도와 동일한 방향)
             ScrollView(.vertical, showsIndicators: false) {
-                zigzagColumn
+                // 지그재그 챕터 지도 (아이폰 챕터 선택과 공용 부품)
+                ChapterMapView(vm: chapterSelectVM,
+                               metrics: .init(cardSize: 100, rowSpacing: 172, cornerRadius: 24, numberFontSize: 40, lockFontSize: 24),
+                               lockInfo: $lockInfo) { browsingChapter = $0 }
                     .padding(.horizontal, 40)
             }
         }
         // 잠긴 챕터 탭 시 해금 조건 팝업 (표시 패턴은 공용 모디파이어)
         .lockInfoPopup($lockInfo)
-    }
-
-    /// 챕터를 세로로 나열하며 좌우로 지그재그 배치 (iOS/맥 챕터 지도와 동일한 방식)
-    private var zigzagColumn: some View {
-        let chapters = chapterSelectVM.chapters
-        let cardSize: CGFloat = 100
-        // chapterCard의 실제 프레임 폭(cardSize + 20, 라벨 여유분 포함)과 반드시 일치시켜야
-        // 점선 연결점이 카드 중심에서 어긋나지 않음
-        let cardOuterWidth = cardSize + 20
-        let rowSpacing: CGFloat = 172
-        let topPad: CGFloat = 8
-        // iOS/맥 챕터 지도와 동일한 시퀀스 — 세 플랫폼 챕터 지도가 같은 리듬으로 지그재그
-        let xCenterFracs: [CGFloat] = [0.26, 0.70, 0.22, 0.68, 0.30, 0.72, 0.24, 0.66, 0.28, 0.74]
-        func xCenterFrac(_ index: Int) -> CGFloat { xCenterFracs[index % xCenterFracs.count] }
-        let totalHeight = topPad + CGFloat(chapters.count) * rowSpacing + 60
-
-        return GeometryReader { geo in
-            let w = geo.size.width
-
-            ZStack(alignment: .topLeading) {
-                // 연결선 (곡선 점선)
-                ForEach(0..<max(chapters.count - 1, 0), id: \.self) { i in
-                    connectorPath(
-                        from: CGPoint(x: xCenterFrac(i) * w, y: topPad + CGFloat(i) * rowSpacing + cardSize),
-                        to: CGPoint(x: xCenterFrac(i + 1) * w, y: topPad + CGFloat(i + 1) * rowSpacing)
-                    )
-                }
-
-                ForEach(Array(chapters.enumerated()), id: \.element.id) { index, chapter in
-                    chapterCard(chapter, cardSize: cardSize)
-                        .offset(
-                            x: xCenterFrac(index) * w - cardOuterWidth / 2,
-                            y: topPad + CGFloat(index) * rowSpacing
-                        )
-                }
-            }
-            .frame(maxWidth: .infinity)
-        }
-        .frame(height: totalHeight)
-        .padding(.bottom, 40)
-    }
-
-    /// 두 챕터 카드를 연결하는 이차 베지어 곡선 점선 (좌→우 이동이면 위로, 우→좌 이동이면 아래로 살짝 휨)
-    private func connectorPath(from: CGPoint, to: CGPoint) -> some View {
-        let midX = (from.x + to.x) / 2
-        let midY = (from.y + to.y) / 2
-        let goingRight = to.x > from.x
-        let controlPt = CGPoint(x: midX + (goingRight ? -30 : 30), y: midY)
-        return Path { p in
-            p.move(to: from)
-            p.addQuadCurve(to: to, control: controlPt)
-        }
-        .stroke(style: StrokeStyle(lineWidth: 2, lineCap: .round, dash: [4, 9]))
-        .foregroundStyle(Color.primary.opacity(0.20))
-    }
-
-    /// 챕터 카드 — iOS ChapterSelectView.chapterNode와 동일한 3D 3레이어 구조 + 눌림 효과
-    private func chapterCard(_ chapter: ChapterInfo, cardSize: CGFloat) -> some View {
-        let unlocked = chapterSelectVM.isUnlocked(chapter)
-        let isPressed = pressedChapterId == chapter.id
-        let topD: CGFloat = 2
-        let botD: CGFloat = 4
-
-        return VStack(spacing: 7) {
-            ThreeDSurface(topDepth: topD, bottomDepth: botD, isPressed: isPressed) {
-                ZStack {
-                    RoundedRectangle(cornerRadius: 24).fill(unlocked ? chapter.color : Color.lockedBackground)
-                    RoundedRectangle(cornerRadius: 24).fill(Color.white.opacity(unlocked ? 0.32 : 0.18))
-                }
-                .frame(width: cardSize, height: cardSize)
-            } bottomBack: {
-                ZStack {
-                    RoundedRectangle(cornerRadius: 24).fill(unlocked ? chapter.color : Color.lockedBackground)
-                    RoundedRectangle(cornerRadius: 24).fill(Color.black.opacity(unlocked ? 0.28 : 0.10))
-                }
-                .frame(width: cardSize, height: cardSize)
-            } front: {
-                ZStack {
-                    RoundedRectangle(cornerRadius: 24).fill(unlocked ? chapter.color : Color.lockedBackground)
-                    if isPressed {
-                        RoundedRectangle(cornerRadius: 24).fill(Color.black.opacity(0.10))
-                    }
-                    if unlocked {
-                        Text("\(chapter.number)")
-                            .font(.system(size: 40, weight: .bold, design: .serif)).italic()
-                            .foregroundStyle(.white.opacity(0.95))
-                    } else {
-                        // 자물쇠 밝기 — 라이트: 기존 0.30 유지 / 다크: iOS 챕터 지도와 동일한 0.55
-                        Image(systemName: "lock.fill")
-                            .font(.system(size: 24))
-                            .foregroundStyle(Color.primary.opacity(colorScheme == .dark ? 0.55 : 0.30))
-                    }
-                }
-                .frame(width: cardSize, height: cardSize)
-            }
-            .frame(width: cardSize, height: cardSize + topD + botD)
-            .contentShape(Rectangle())
-            .onTapGesture {
-                if unlocked && chapter.stageCount > 0 {
-                    SoundService.shared.play(.buttonTap)
-                    browsingChapter = chapter.number
-                } else if !unlocked {
-                    SoundService.shared.play(.lockButton)
-                    withAnimation(.easeInOut(duration: 0.2)) {
-                        lockInfo = LockInfo(title: "아직 잠겨 있어요",
-                                            message: chapterSelectVM.lockMessage(for: chapter),
-                                            accentColor: chapter.color)
-                    }
-                }
-            }
-            .onPressState(isPressed: Binding(
-                get: { pressedChapterId == chapter.id },
-                set: { pressed in pressedChapterId = pressed ? chapter.id : nil }
-            ))
-
-            Text(chapter.title).font(.system(size: 13, weight: .medium))
-                .foregroundStyle(unlocked ? Color.primary : Color.secondary)
-
-            // 별 진행도 (비율 기반으로 최대 3개 표시 — 환산 계산은 VM 담당)
-            StarRatingView(earned: chapterSelectVM.displayStarCount(chapter), size: 11)
-                .opacity(unlocked ? 1 : 0.35)
-        }
-        .frame(width: cardSize + 20)
     }
 }
 
