@@ -17,8 +17,8 @@ import Combine
 /// 화면 자동 갱신 타이밍이 100% 동일하다.
 final class HomeViewModel: ObservableObject {
 
-    // 진행도 서비스 (데이터 소스)
-    private let progress = ProgressService.shared
+    // 진행도 서비스 (데이터 소스) — 테스트는 메모리 저장소를 주입
+    private let progress: ProgressService
     // ProgressService 변경 구독 해제용
     private var cancellables = Set<AnyCancellable>()
 
@@ -28,7 +28,8 @@ final class HomeViewModel: ObservableObject {
         (id: $0.number, stageCount: $0.stageCount)
     }
 
-    init() {
+    init(progress: ProgressService = .shared) {
+        self.progress = progress
         // ProgressService가 바뀌면 이 VM도 변경 알림을 그대로 전파 → 뷰 자동 갱신 유지
         progress.objectWillChange
             .sink { [weak self] _ in self?.objectWillChange.send() }

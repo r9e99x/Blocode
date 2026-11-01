@@ -23,12 +23,13 @@ final class ChapterViewModel: ObservableObject {
     /// 챕터 내 모든 스테이지 데이터 (JSON 로딩 — 데이터 접근은 Service 위임)
     let stages: [Stage]
 
-    // 진행도 서비스 (데이터 소스)
-    private let progress = ProgressService.shared
+    // 진행도 서비스 (데이터 소스) — 테스트는 메모리 저장소를 주입
+    private let progress: ProgressService
     private var cancellables = Set<AnyCancellable>()
 
-    init(chapter: Int) {
+    init(chapter: Int, progress: ProgressService = .shared) {
         self.chapter = chapter
+        self.progress = progress
         // 챕터 JSON 파일에서 스테이지 목록 로드 (챕터별 스테이지 수는 헬퍼로 관리)
         self.stages  = StageLoader.loadChapter(chapter, stageCount: ChapterViewModel.stageCount(for: chapter))
 

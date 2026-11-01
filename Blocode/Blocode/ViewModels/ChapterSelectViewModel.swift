@@ -16,15 +16,16 @@ import Combine
 /// 기존 화면 자동 갱신 타이밍과 100% 동일하다.
 final class ChapterSelectViewModel: ObservableObject {
 
-    // 진행도 서비스 (데이터 소스)
-    private let progress = ProgressService.shared
+    // 진행도 서비스 (데이터 소스) — 테스트는 메모리 저장소를 주입
+    private let progress: ProgressService
     private var cancellables = Set<AnyCancellable>()
 
     /// 챕터 목록 — 순서대로 잠금/해제 상태 계산
     /// (색상 등 UI 표현값을 포함한 ChapterInfo는 화면 구성용 메타데이터)
     let chapters: [ChapterInfo]
 
-    init() {
+    init(progress: ProgressService = .shared) {
+        self.progress = progress
         // 챕터 메타데이터는 ChapterCatalog(단일 원본)에서 가져옴
         // (제목·스테이지 수·색상·해금 기준을 한 곳에서 관리 → 화면 간 불일치 방지)
         self.chapters = ChapterCatalog.all
