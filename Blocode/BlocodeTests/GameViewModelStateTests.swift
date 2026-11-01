@@ -84,6 +84,20 @@ struct GameViewModelStateTests {
         #expect(vm.failureMessage.isEmpty)
     }
 
+    @Test("실행 중 리셋 후 바로 재실행해도 이전 실행이 이어지지 않음")
+    func resetThenRunAgain_doesNotRunTwice() async throws {
+        let (vm, scene) = makeFixture()
+        vm.codeBlocks = [Block(type: .turnLeft), Block(type: .turnLeft)]
+        vm.run()
+        try await Task.sleep(nanoseconds: 50_000_000)  // 첫 회전 대기 중
+        vm.reset()
+        vm.run()
+        try await waitUntilFinished(vm)
+        try await Task.sleep(nanoseconds: 500_000_000)  // 이전 실행이 남아 있다면 움직일 시간
+        #expect(scene.characterDirection == .down)  // 위에서 왼쪽 2번 — 이전 실행이 이어지면 더 돌아감
+        #expect(vm.gameState == .idle)
+    }
+
     @Test("되돌리기 버튼 — 캐릭터가 움직였으면 블럭 유지, 안 움직였으면 전체 초기화")
     func resetOrClear_dependsOnCharacterMoved() {
         let (vm, _) = makeFixture()

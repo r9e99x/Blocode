@@ -76,6 +76,12 @@ final class GameViewModel: ObservableObject {
     /// 열린 문 위치 집합 (기믹 스테이지 전용, 내부 판정용) — 이동 가능 여부 계산에만 쓰이고 UI에 직접 노출 안 됨
     private var openedGates: Set<Position> = []
 
+    /// 진행 중인 실행 Task — reset()에서 취소해 이전 실행이 새 실행과 겹치지 않게 함
+    private var runTask: Task<Void, Never>?
+
+    /// 이 Task의 실행이 아직 유효한지 — 상태만 보면 리셋 후 재실행 때 이전 실행도 running으로 착각함
+    private var isRunActive: Bool { gameState == .running && !Task.isCancelled }
+
     /// 실행 속도 배율 — SettingsService에서 실시간으로 읽어옴
     private var executionSpeed: Double { SettingsService.shared.executionSpeed }
 
@@ -274,7 +280,8 @@ final class GameViewModel: ObservableObject {
 
     /// repeat 블럭의 반복 횟수 변경 (1~10회로 제한 — 자식/손자 조작 함수와 동일 규칙)
     func setRepeatCount(_ count: Int, at index: Int) {
-        guard codeBlocks.indices.contains(index),
+        guard gameState == .idle,
+              codeBlocks.indices.contains(index),
               codeBlocks[index].isRepeatBlock else { return }
         codeBlocks[index].repeatCount = max(1, min(10, count))
     }
@@ -308,10 +315,10 @@ final class GameViewModel: ObservableObject {
 
         // 블럭 순서대로 비동기 실행 → 완료 시 idle 복귀
         // (@MainActor 클래스라 Task도 메인에서 실행됨)
-        Task {
+        runTask = Task {
             await executeBlocks(codeBlocks, parentPath: [])
             // 성공/실패 처리가 안 됐으면 (목표 미도달로 자연 종료) idle로 복귀
-            if gameState == .running {
+            if isRunActive {
                 gameState = .idle
                 currentBlockPath = nil
             }
@@ -320,6 +327,7 @@ final class GameViewModel: ObservableObject {
 
     /// 캐릭터만 리셋 — 블럭 목록은 유지
     func reset() {
+        runTask?.cancel()
         gameState = .idle
         currentBlockPath = nil
         failedBlockPath = nil
@@ -357,8 +365,8 @@ final class GameViewModel: ObservableObject {
     private func executeBlocks(_ blocks: [Block], parentPath: [Int]) async {
         for (offset, block) in blocks.enumerated() {
 
-            // 실행 중단됐으면 멈춤 (stop() 호출 등)
-            guard gameState == .running else { return }
+            // 실행 중단됐으면 멈춤 (reset() 호출 등)
+            guard isRunActive else { return }
 
             // 현재 블럭의 경로 — 부모 경로에 자신의 인덱스를 추가
             // (최상위 인덱스 공간과 충돌하지 않는 경로 기반 식별)
@@ -400,7 +408,7 @@ final class GameViewModel: ObservableObject {
                 let count = block.repeatCount ?? 1
                 let children = block.children ?? []
                 for _ in 0..<count {
-                    guard gameState == .running else { return }
+                    guard isRunActive else { return }
                     // 자식 블럭을 재귀적으로 실행 (자신의 경로를 부모 경로로 전달)
                     await executeBlocks(children, parentPath: path)
                 }
@@ -437,7 +445,7 @@ final class GameViewModel: ObservableObject {
             // 각 블럭 실행 후 목표 도달 여부 확인
             // 자식 재귀 안에서 이미 성공/실패 처리가 끝났으면 중복 처리하지 않도록 running일 때만 검사
             // (중첩 클리어 시 handleSuccess가 깊이만큼 반복 호출돼 recordClear가 중복 저장되던 문제 수정)
-            guard gameState == .running else { return }
+            guard isRunActive else { return }
             if checkGoal() {
                 handleSuccess()
                 return
@@ -541,10 +549,10 @@ final class GameViewModel: ObservableObject {
 
     /// 앞으로/뒤로 이동 — 성공 여부 반환 (벽이면 false)
     private func moveCharacter(direction: MoveDirection) async -> Bool {
-        return await withCheckedContinuation { continuation in
+        let arrived: Position? = await withCheckedContinuation { continuation in
             // @MainActor라 scene(메인 전용)에 직접 접근 가능 (별도 디스패치 불필요)
             guard let scene = scene else {
-                continuation.resume(returning: false)
+                continuation.resume(returning: nil)
                 return
             }
 
@@ -561,7 +569,7 @@ final class GameViewModel: ObservableObject {
 
             // 이동 가능 여부 확인 (맵 범위 & 바닥 타일 또는 열린 문)
             guard isWalkable(nextPos) else {
-                continuation.resume(returning: false)  // 벽(또는 닫힌 문): 이동 실패
+                continuation.resume(returning: nil)  // 벽(또는 닫힌 문): 이동 실패
                 return
             }
 
@@ -569,14 +577,17 @@ final class GameViewModel: ObservableObject {
             scene.characterPosition = nextPos
             scene.updateCharacterTransform(animated: true)
 
-            // 이동 애니메이션 완료 후 도착 칸의 기믹 효과 적용 + 다음 블럭 실행 (속도 배율 적용)
+            // 이동 애니메이션 완료 후 다음 단계로 (속도 배율 적용)
             // asyncAfter는 스레드 점프가 아닌 "애니메이션 대기 시간"이라 그대로 유지
             let delay = 0.3 / executionSpeed
-            DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in
-                self?.applyTileEffects(at: nextPos)
-                continuation.resume(returning: true)  // 이동 성공
+            DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
+                continuation.resume(returning: nextPos)  // 이동 성공
             }
         }
+        guard let arrived else { return false }
+        // 도착 칸의 기믹 효과 — 대기 중 리셋됐으면 적용하지 않음 (리셋 직후 포탈로 순간이동하는 것 방지)
+        if isRunActive { applyTileEffects(at: arrived) }
+        return true
     }
 
     /// 캐릭터 좌우 회전 — 애니메이션 완료 후 continuation 재개
@@ -639,7 +650,7 @@ final class GameViewModel: ObservableObject {
     private func handleFailure(at path: [Int], message: String) {
         // await(이동 애니메이션 대기) 사이에 reset·화면 이탈로 실행이 끝났으면 실패로 처리하지 않음
         // (예: 실행 중 뒤로가기 → 씬이 사라져 다음 이동이 "벽 충돌"로 오인되고 챕터 화면에서 실패음이 나던 문제)
-        guard gameState == .running else { return }
+        guard isRunActive else { return }
         failedBlockPath = path    // 실패한 블럭 빨간 하이라이트 (경로 기반)
         failureMessage = message  // 토스트 배너 메시지
         gameState = .failure

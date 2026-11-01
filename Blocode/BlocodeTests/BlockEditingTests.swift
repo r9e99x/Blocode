@@ -131,6 +131,16 @@ struct BlockEditingTests {
         #expect(types(vm.codeBlocks) == [.moveForward])
     }
 
+    @Test("실행 중에는 반복 횟수를 바꿀 수 없음")
+    func repeatCountBlockedWhileRunning() {
+        let vm = makeViewModel()
+        vm.addBlock(.repeatBlock)
+        let original = vm.codeBlocks[0].repeatCount
+        vm.run()
+        vm.setRepeatCount(5, at: 0)
+        #expect(vm.codeBlocks[0].repeatCount == original)
+    }
+
     // MARK: - 팔레트 제한 (B4)
 
     @Test("팔레트에 없는 블럭은 어떤 깊이에도 추가되지 않음")
