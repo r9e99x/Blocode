@@ -107,14 +107,18 @@ struct StageView: View {
     private var loadedBody: some View {
         GeometryReader { geo in
         ZStack(alignment: .top) {
-            // 화면 폭에 따라 레이아웃 분기 — 아이폰: 세로 스택(가로모드는 좌-맵/우-코드) / 아이패드·맥: 좌-코드/우-맵 분할
+            // 화면 폭에 따라 레이아웃 분기 — 아이폰: 세로 스택(가로모드는 좌-맵/우-코드) / 아이패드·맥: 좌-코드/우-맵 분할 (아이패드 세로만 위-맵/아래-코드)
             // (아이패드는 폭 조건이 아니라 isPadIdiom으로 정확히 걸러서, 아이폰 가로모드는 절대 이 분기를 안 탐)
             if geo.size.width >= LayoutBreakpoint.wide {
                 #if os(macOS)
                 splitGameLayout(totalWidth: geo.size.width)
                 #else
                 if isPadIdiom {
-                    splitGameLayout(totalWidth: geo.size.width)
+                    if geo.size.height > geo.size.width {
+                        padPortraitGameLayout(totalHeight: geo.size.height)
+                    } else {
+                        splitGameLayout(totalWidth: geo.size.width)
+                    }
                 } else {
                     wideGameLayout(totalWidth: geo.size.width)
                 }
@@ -305,6 +309,26 @@ struct StageView: View {
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
+        }
+    }
+
+    // MARK: - 아이패드 세로 게임 레이아웃
+
+    /// 위: 정사각 맵 / 아래: 코드 패널
+    /// 세로 화면에서 좌우로 나누면 패널이 좁아져 팔레트 블럭이 밖으로 밀리고 맵도 작아지므로 위아래로 쌓음
+    /// - Parameter totalHeight: 전체 화면 높이 — 코드 패널이 쓸 공간을 남기려고 맵을 절반까지로 제한
+    private func padPortraitGameLayout(totalHeight: CGFloat) -> some View {
+        VStack(spacing: 0) {
+            navigationBar
+
+            mapView
+                .aspectRatio(1.0, contentMode: .fit)
+                .frame(maxHeight: totalHeight * 0.5)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 4)
+
+            // 세로로 공간이 넉넉해 아이패드 좌우 분할과 같이 확장/축소 토글 없이 항상 펼침
+            codePanel(alwaysExpanded: true)
         }
     }
 

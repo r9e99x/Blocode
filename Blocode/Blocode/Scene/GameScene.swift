@@ -114,6 +114,14 @@ class GameScene: SKScene, GameBoardRendering {
         setupMap()
     }
 
+    /// 매 프레임 씬 크기를 지금 표시 중인 뷰에 맞춤
+    /// 회전으로 배치가 바뀌면 사라지는 이전 뷰가 이 씬의 크기를 늦게 덮어써 타일이 작게 그려지는 일이 생김
+    override func update(_ currentTime: TimeInterval) {
+        guard let viewSize = view?.bounds.size, viewSize.width > 0, viewSize.height > 0,
+              size != viewSize else { return }
+        size = viewSize
+    }
+
     // MARK: - 레이아웃 계산
 
     /// 맵 렌더링과 캐릭터 배치에 공통으로 쓰는 타일 레이아웃 수치

@@ -78,15 +78,23 @@ struct ChapterBrowsePane: View {
         vm.chapterInfo?.color ?? .accentColor
     }
 
+    /// 이 폭보다 좁으면 왼쪽 두 칸을 줄여 미리보기 칸을 확보 — 작은 아이패드 세로에서만 걸림 (맥 창은 최소 폭이 1080이라 해당 없음)
+    private let narrowLayoutWidth: CGFloat = 900
+
     var body: some View {
-        HStack(spacing: 0) {
-            chapterListColumn
-            Divider()
-            stageListColumn
-                .frame(width: m.stageColumnWidth)
-            Divider()
-            stagePreview
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        GeometryReader { geo in
+            let isNarrow = geo.size.width < narrowLayoutWidth
+            HStack(spacing: 0) {
+                chapterListColumn
+                    .frame(width: isNarrow ? 180 : 240)
+                    .background(Color.cardBackground)
+                Divider()
+                stageListColumn
+                    .frame(width: isNarrow ? 260 : m.stageColumnWidth)
+                Divider()
+                stagePreview(padding: isNarrow ? 20 : 32)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            }
         }
         // 잠긴 챕터/스테이지 탭 시 해금 조건 팝업 (표시 패턴은 공용 모디파이어)
         .lockInfoPopup($lockInfo)
@@ -159,8 +167,6 @@ struct ChapterBrowsePane: View {
             }
             Spacer()
         }
-        .frame(width: 240)
-        .background(Color.cardBackground)
     }
 
     // MARK: 2열 — 스테이지 목록 (챕터색 헤더 포함)
@@ -221,7 +227,7 @@ struct ChapterBrowsePane: View {
     @State private var isStartPressed = false
 
     @ViewBuilder
-    private var stagePreview: some View {
+    private func stagePreview(padding: CGFloat) -> some View {
         if let stageNumber = selectedStage,
            let stage = vm.stages.first(where: { $0.stageNumber == stageNumber }) {
             let locked = vm.isLocked(stage)
@@ -272,7 +278,7 @@ struct ChapterBrowsePane: View {
                 .onPressState(isPressed: $isStartPressed)
                 .disabled(locked)
             }
-            .padding(32)
+            .padding(padding)
         } else {
             Text("스테이지를 선택하세요")
                 .foregroundStyle(.secondary)
