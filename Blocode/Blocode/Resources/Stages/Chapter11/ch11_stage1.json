@@ -1,0 +1,21 @@
+{
+  "id": "ch11_stage1",
+  "chapter": 11,
+  "stageNumber": 1,
+  "name": "박자",
+  "mapData": {
+    "grid": [
+      [1, 1, 1, 1, 1, 1, 1, 1, 1]
+    ],
+    "start": {"x": 0, "y": 0},
+    "startDirection": "right",
+    "goal": {"x": 8, "y": 0},
+    "items": [
+      {"x": 2, "y": 0},
+      {"x": 4, "y": 0},
+      {"x": 6, "y": 0}
+    ]
+  },
+  "availableBlocks": ["moveForward", "repeat", "collectItem"],
+  "starThresholds": {"threeStar": 3, "twoStar": 13}
+}

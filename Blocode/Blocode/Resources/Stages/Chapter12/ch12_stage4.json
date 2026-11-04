@@ -1,0 +1,29 @@
+{
+  "id": "ch12_stage4",
+  "chapter": 12,
+  "stageNumber": 4,
+  "name": "보석 길",
+  "mapData": {
+    "grid": [
+      [1, 1, 1, 1],
+      [0, 0, 0, 1],
+      [0, 0, 0, 1],
+      [1, 1, 1, 1]
+    ],
+    "start": {"x": 0, "y": 0},
+    "startDirection": "right",
+    "goal": {"x": 0, "y": 3},
+    "items": [
+      {"x": 1, "y": 0},
+      {"x": 2, "y": 0},
+      {"x": 3, "y": 0},
+      {"x": 3, "y": 1},
+      {"x": 3, "y": 2},
+      {"x": 1, "y": 3},
+      {"x": 2, "y": 3},
+      {"x": 3, "y": 3}
+    ]
+  },
+  "availableBlocks": ["moveForward", "turnLeft", "turnRight", "repeat", "if", "collectItem"],
+  "starThresholds": {"threeStar": 3, "twoStar": 21}
+}

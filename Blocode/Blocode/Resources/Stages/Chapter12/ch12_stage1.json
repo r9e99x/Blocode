@@ -1,0 +1,19 @@
+{
+  "id": "ch12_stage1",
+  "chapter": 12,
+  "stageNumber": 1,
+  "name": "막힐 때까지",
+  "mapData": {
+    "grid": [
+      [1, 1, 1, 1, 1],
+      [0, 0, 0, 0, 1],
+      [0, 0, 0, 0, 1],
+      [0, 1, 1, 1, 1]
+    ],
+    "start": {"x": 0, "y": 0},
+    "startDirection": "right",
+    "goal": {"x": 1, "y": 3}
+  },
+  "availableBlocks": ["moveForward", "turnLeft", "turnRight", "repeat", "if"],
+  "starThresholds": {"threeStar": 2, "twoStar": 14}
+}

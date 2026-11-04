@@ -123,50 +123,63 @@ struct ChapterBrowsePane: View {
             .buttonStyle(.plain)
             .padding(16)
 
-            ForEach(chapterSelectVM.chapters) { chapter in
-                let unlocked = chapterSelectVM.isUnlocked(chapter)
-                Button {
-                    guard unlocked else {
-                        SoundService.shared.play(.lockButton)
-                        withAnimation(.easeInOut(duration: 0.2)) {
-                            lockInfo = LockInfo(message: chapterSelectVM.lockMessage(for: chapter),
-                                                accentColor: chapter.color)
+            // 챕터가 많아 작은 화면에서 넘치므로 목록만 스크롤 — 뒤로가기는 위에 고정
+            ScrollViewReader { proxy in
+                ScrollView {
+                    VStack(spacing: 0) {
+                        ForEach(chapterSelectVM.chapters) { chapter in
+                            chapterRow(chapter)
+                                .id(chapter.number)
                         }
-                        return
                     }
-                    guard chapter.number != chapterNumber else { return }
-                    SoundService.shared.play(.buttonTap)
-                    onSelectChapter(chapter.number)
-                } label: {
-                    HStack(spacing: m.chapterRowSpacing) {
-                        ZStack {
-                            RoundedRectangle(cornerRadius: m.chapterBadgeRadius)
-                                .fill(unlocked ? chapter.color : Color.lockedBackground)
-                                .frame(width: m.chapterBadgeSize, height: m.chapterBadgeSize)
-                            if unlocked {
-                                Text("\(chapter.number)").font(.system(size: m.chapterNumberFontSize, weight: .bold)).foregroundStyle(.white)
-                            } else {
-                                Image(systemName: "lock.fill").font(.system(size: m.chapterLockFontSize)).foregroundStyle(.secondary)
-                            }
-                        }
-                        VStack(alignment: .leading, spacing: 1) {
-                            Text(chapter.title).font(.system(size: m.chapterTitleFontSize, weight: .semibold))
-                            if unlocked {
-                                Text("\(chapterSelectVM.chapterStars(chapter)) / \(chapter.maxStars) stars")
-                                    .font(.system(size: m.chapterStarsFontSize)).foregroundStyle(.secondary)
-                            }
-                        }
-                        Spacer()
-                    }
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, m.rowVerticalPadding)
-                    .contentShape(Rectangle())  // 글자·아이콘뿐 아니라 행 전체가 눌리도록
                 }
-                .buttonStyle(.plain)
-                .background(chapter.number == chapterNumber ? Color.appBackground : Color.clear)
+                // 지금 보는 챕터가 목록 밖에 가려지지 않도록 가운데로 이동
+                .onAppear { proxy.scrollTo(chapterNumber, anchor: .center) }
             }
-            Spacer()
         }
+    }
+
+    private func chapterRow(_ chapter: ChapterInfo) -> some View {
+        let unlocked = chapterSelectVM.isUnlocked(chapter)
+        return Button {
+            guard unlocked else {
+                SoundService.shared.play(.lockButton)
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    lockInfo = LockInfo(message: chapterSelectVM.lockMessage(for: chapter),
+                                        accentColor: chapter.color)
+                }
+                return
+            }
+            guard chapter.number != chapterNumber else { return }
+            SoundService.shared.play(.buttonTap)
+            onSelectChapter(chapter.number)
+        } label: {
+            HStack(spacing: m.chapterRowSpacing) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: m.chapterBadgeRadius)
+                        .fill(unlocked ? chapter.color : Color.lockedBackground)
+                        .frame(width: m.chapterBadgeSize, height: m.chapterBadgeSize)
+                    if unlocked {
+                        Text("\(chapter.number)").font(.system(size: m.chapterNumberFontSize, weight: .bold)).foregroundStyle(.white)
+                    } else {
+                        Image(systemName: "lock.fill").font(.system(size: m.chapterLockFontSize)).foregroundStyle(.secondary)
+                    }
+                }
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(chapter.title).font(.system(size: m.chapterTitleFontSize, weight: .semibold))
+                    if unlocked {
+                        Text("\(chapterSelectVM.chapterStars(chapter)) / \(chapter.maxStars) stars")
+                            .font(.system(size: m.chapterStarsFontSize)).foregroundStyle(.secondary)
+                    }
+                }
+                Spacer()
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, m.rowVerticalPadding)
+            .contentShape(Rectangle())  // 글자·아이콘뿐 아니라 행 전체가 눌리도록
+        }
+        .buttonStyle(.plain)
+        .background(chapter.number == chapterNumber ? Color.appBackground : Color.clear)
     }
 
     // MARK: 2열 — 스테이지 목록 (챕터색 헤더 포함)

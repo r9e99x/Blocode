@@ -57,8 +57,8 @@ struct HomeViewModelTests {
     func subtitleAfterHalf() {
         let progress = ProgressService.makeForTesting()
         let vm = HomeViewModel(progress: progress)
-        progress.devUnlock(throughChapter: 5, chapters: vm.chapters)  // 챕터 1~5 = 별 105개 / 전체 207개
-        #expect(vm.completedChapters == 5)
+        progress.devUnlock(throughChapter: 8, chapters: vm.chapters)  // 챕터 1~8 = 별 168개 / 전체 312개
+        #expect(vm.completedChapters == 8)
         #expect(vm.dynamicSubtitle == "절반을 넘었어요! 계속 달려봐요.")
     }
 

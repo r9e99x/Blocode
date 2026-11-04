@@ -1,0 +1,41 @@
+{
+  "id": "ch13_stage7",
+  "chapter": 13,
+  "stageNumber": 7,
+  "name": "연쇄 종합",
+  "mapData": {
+    "grid": [
+      [0, 0, 1, 0, 0, 0, 0, 0, 0],
+      [0, 0, 1, 0, 0, 0, 0, 0, 0],
+      [0, 0, 1, 0, 0, 0, 0, 0, 0],
+      [0, 0, 0, 0, 0, 0, 0, 0, 0],
+      [1, 1, 1, 1, 1, 1, 1, 0, 1],
+      [0, 0, 0, 0, 0, 0, 0, 0, 0],
+      [0, 0, 0, 0, 0, 1, 0, 0, 0],
+      [0, 0, 0, 0, 0, 1, 0, 0, 0],
+      [0, 0, 0, 0, 0, 1, 0, 0, 0]
+    ],
+    "start": {"x": 4, "y": 4},
+    "startDirection": "right",
+    "goal": {"x": 8, "y": 4},
+    "items": [
+      {"x": 5, "y": 7}
+    ],
+    "switches": [
+      {
+        "switchAt": {"x": 0, "y": 4},
+        "gateAt": {"x": 2, "y": 3}
+      },
+      {
+        "switchAt": {"x": 2, "y": 0},
+        "gateAt": {"x": 5, "y": 5}
+      },
+      {
+        "switchAt": {"x": 5, "y": 8},
+        "gateAt": {"x": 7, "y": 4}
+      }
+    ]
+  },
+  "availableBlocks": ["moveForward", "moveBackward", "turnLeft", "turnRight", "repeat", "if", "collectItem", "activateSwitch"],
+  "starThresholds": {"threeStar": 17, "twoStar": 38}
+}

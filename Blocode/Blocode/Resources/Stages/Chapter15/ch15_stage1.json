@@ -1,0 +1,25 @@
+{
+  "id": "ch15_stage1",
+  "chapter": 15,
+  "stageNumber": 1,
+  "name": "모퉁이 보석",
+  "mapData": {
+    "grid": [
+      [1, 0, 1, 1, 1],
+      [1, 0, 0, 0, 1],
+      [1, 0, 0, 0, 1],
+      [1, 0, 0, 0, 1],
+      [1, 1, 1, 1, 1]
+    ],
+    "start": {"x": 0, "y": 0},
+    "startDirection": "down",
+    "goal": {"x": 2, "y": 0},
+    "items": [
+      {"x": 4, "y": 0},
+      {"x": 0, "y": 4},
+      {"x": 4, "y": 4}
+    ]
+  },
+  "availableBlocks": ["moveForward", "moveBackward", "turnLeft", "turnRight", "repeat", "if", "collectItem"],
+  "starThresholds": {"threeStar": 3, "twoStar": 22}
+}

@@ -1,0 +1,28 @@
+{
+  "id": "ch14_stage2",
+  "chapter": 14,
+  "stageNumber": 2,
+  "name": "가짜 포탈",
+  "mapData": {
+    "grid": [
+      [1, 1, 1, 1, 1, 0, 0],
+      [0, 0, 0, 0, 0, 0, 0],
+      [1, 0, 1, 1, 1, 1, 1]
+    ],
+    "start": {"x": 2, "y": 0},
+    "startDirection": "right",
+    "goal": {"x": 6, "y": 2},
+    "portals": [
+      {
+        "a": {"x": 4, "y": 0},
+        "b": {"x": 0, "y": 2}
+      },
+      {
+        "a": {"x": 0, "y": 0},
+        "b": {"x": 2, "y": 2}
+      }
+    ]
+  },
+  "availableBlocks": ["moveForward", "moveBackward", "repeat"],
+  "starThresholds": {"threeStar": 2, "twoStar": 8}
+}

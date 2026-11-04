@@ -1,0 +1,31 @@
+{
+  "id": "ch11_stage6",
+  "chapter": 11,
+  "stageNumber": 6,
+  "name": "보석 고리",
+  "mapData": {
+    "grid": [
+      [1, 1, 1, 1, 1, 1, 1],
+      [0, 0, 0, 0, 0, 0, 1],
+      [1, 0, 0, 0, 0, 0, 1],
+      [1, 0, 0, 0, 0, 0, 1],
+      [1, 0, 0, 0, 0, 0, 1],
+      [1, 0, 0, 0, 0, 0, 1],
+      [1, 1, 1, 1, 1, 1, 1]
+    ],
+    "start": {"x": 0, "y": 0},
+    "startDirection": "right",
+    "goal": {"x": 0, "y": 2},
+    "items": [
+      {"x": 3, "y": 0},
+      {"x": 6, "y": 0},
+      {"x": 0, "y": 3},
+      {"x": 6, "y": 3},
+      {"x": 0, "y": 6},
+      {"x": 3, "y": 6},
+      {"x": 6, "y": 6}
+    ]
+  },
+  "availableBlocks": ["moveForward", "turnLeft", "turnRight", "repeat", "if", "collectItem"],
+  "starThresholds": {"threeStar": 5, "twoStar": 34}
+}

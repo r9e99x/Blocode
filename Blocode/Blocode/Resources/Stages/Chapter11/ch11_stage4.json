@@ -1,0 +1,23 @@
+{
+  "id": "ch11_stage4",
+  "chapter": 11,
+  "stageNumber": 4,
+  "name": "빗살",
+  "mapData": {
+    "grid": [
+      [0, 0, 1, 0, 1, 0, 1, 0, 0],
+      [0, 0, 1, 0, 1, 0, 1, 0, 0],
+      [1, 1, 1, 1, 1, 1, 1, 1, 1]
+    ],
+    "start": {"x": 0, "y": 2},
+    "startDirection": "right",
+    "goal": {"x": 8, "y": 2},
+    "items": [
+      {"x": 2, "y": 0},
+      {"x": 4, "y": 0},
+      {"x": 6, "y": 0}
+    ]
+  },
+  "availableBlocks": ["moveForward", "moveBackward", "turnLeft", "turnRight", "repeat", "if", "collectItem"],
+  "starThresholds": {"threeStar": 6, "twoStar": 31}
+}

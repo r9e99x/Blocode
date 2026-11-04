@@ -1,0 +1,30 @@
+{
+  "id": "ch14_stage6",
+  "chapter": 14,
+  "stageNumber": 6,
+  "name": "문 너머",
+  "mapData": {
+    "grid": [
+      [1, 1, 1, 0, 1, 1],
+      [0, 0, 0, 0, 0, 0],
+      [1, 1, 1, 0, 0, 0]
+    ],
+    "start": {"x": 1, "y": 0},
+    "startDirection": "right",
+    "goal": {"x": 5, "y": 0},
+    "switches": [
+      {
+        "switchAt": {"x": 2, "y": 2},
+        "gateAt": {"x": 3, "y": 0}
+      }
+    ],
+    "portals": [
+      {
+        "a": {"x": 0, "y": 0},
+        "b": {"x": 0, "y": 2}
+      }
+    ]
+  },
+  "availableBlocks": ["moveForward", "moveBackward", "repeat", "activateSwitch"],
+  "starThresholds": {"threeStar": 5, "twoStar": 13}
+}

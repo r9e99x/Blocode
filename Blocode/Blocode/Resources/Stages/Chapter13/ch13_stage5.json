@@ -1,0 +1,36 @@
+{
+  "id": "ch13_stage5",
+  "chapter": 13,
+  "stageNumber": 5,
+  "name": "네 방향",
+  "mapData": {
+    "grid": [
+      [0, 0, 0, 1, 0, 0, 0],
+      [0, 0, 0, 1, 0, 0, 0],
+      [0, 0, 0, 0, 0, 0, 0],
+      [1, 1, 1, 1, 0, 1, 1],
+      [0, 0, 0, 0, 0, 0, 0],
+      [0, 0, 0, 1, 0, 0, 0],
+      [0, 0, 0, 1, 0, 0, 0]
+    ],
+    "start": {"x": 3, "y": 3},
+    "startDirection": "up",
+    "goal": {"x": 3, "y": 6},
+    "switches": [
+      {
+        "switchAt": {"x": 0, "y": 3},
+        "gateAt": {"x": 3, "y": 2}
+      },
+      {
+        "switchAt": {"x": 3, "y": 0},
+        "gateAt": {"x": 4, "y": 3}
+      },
+      {
+        "switchAt": {"x": 6, "y": 3},
+        "gateAt": {"x": 3, "y": 4}
+      }
+    ]
+  },
+  "availableBlocks": ["moveForward", "moveBackward", "turnLeft", "turnRight", "repeat", "if", "activateSwitch"],
+  "starThresholds": {"threeStar": 5, "twoStar": 30}
+}

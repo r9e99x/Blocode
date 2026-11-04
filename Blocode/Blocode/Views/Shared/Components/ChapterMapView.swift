@@ -32,7 +32,7 @@ struct ChapterMapView: View {
     @Environment(\.colorScheme) private var colorScheme  // 잠긴 카드 자물쇠 밝기를 다크에서만 높이는 데 사용
 
     /// 각 챕터 카드 중심의 X 비율 — 화면 너비 기준 0.0~1.0
-    /// 챕터 수(10개)만큼 값을 다 채워둠 — 5개만 두고 순환시키면 인덱스4→5 전환에서
+    /// 10개를 순환 — 5개만 두고 순환시키면 인덱스4→5 전환에서
     /// 좌우 진폭이 거의 없어져(0.30→0.26) 지그재그가 끊겨 보이는 문제가 있었음
     private let xCenterFracs: [CGFloat] = [0.26, 0.70, 0.22, 0.68, 0.30, 0.72, 0.24, 0.66, 0.28, 0.74]
     private let topPad: CGFloat = 8  // 지도 상단 패딩

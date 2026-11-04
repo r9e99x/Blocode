@@ -1,0 +1,30 @@
+{
+  "id": "ch13_stage1",
+  "chapter": 13,
+  "stageNumber": 1,
+  "name": "문 세 개",
+  "mapData": {
+    "grid": [
+      [1, 1, 0, 1, 0, 1, 0, 1]
+    ],
+    "start": {"x": 0, "y": 0},
+    "startDirection": "right",
+    "goal": {"x": 7, "y": 0},
+    "switches": [
+      {
+        "switchAt": {"x": 1, "y": 0},
+        "gateAt": {"x": 2, "y": 0}
+      },
+      {
+        "switchAt": {"x": 3, "y": 0},
+        "gateAt": {"x": 4, "y": 0}
+      },
+      {
+        "switchAt": {"x": 5, "y": 0},
+        "gateAt": {"x": 6, "y": 0}
+      }
+    ]
+  },
+  "availableBlocks": ["moveForward", "repeat", "activateSwitch"],
+  "starThresholds": {"threeStar": 3, "twoStar": 12}
+}

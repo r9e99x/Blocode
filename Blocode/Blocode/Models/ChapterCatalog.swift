@@ -45,9 +45,24 @@ enum ChapterCatalog {
         ChapterInfo(id: 9, title: "미궁",   description: "여러 기믹이 뒤섞인 종합 미궁이에요", stageCount: 7,
                     rgb: (red: 0.38, green: 0.56, blue: 0.74), // 스틸블루
                     requiredStarsFromPrev: 14),      // 챕터 8 최대 21개 중 14개 (67%)
-        ChapterInfo(id: 10, title: "정복",  description: "모든 기술을 총동원하는 최종 관문", stageCount: 6,
+        ChapterInfo(id: 10, title: "정복",  description: "모든 기술을 총동원해 정복해요", stageCount: 6,
                     rgb: (red: 0.85, green: 0.68, blue: 0.30), // 골드
                     requiredStarsFromPrev: 14),      // 챕터 9 최대 21개 중 14개 (67%)
+        ChapterInfo(id: 11, title: "압축",  description: "반복을 겹쳐 긴 길을 짧게 압축해요", stageCount: 7,
+                    rgb: (red: 0.62, green: 0.70, blue: 0.36), // 올리브
+                    requiredStarsFromPrev: 12),      // 챕터 10 최대 18개 중 12개 (67%)
+        ChapterInfo(id: 12, title: "자동 주행", description: "조건 하나로 미로를 스스로 달려요", stageCount: 7,
+                    rgb: (red: 0.46, green: 0.50, blue: 0.85), // 인디고
+                    requiredStarsFromPrev: 14),      // 챕터 11 최대 21개 중 14개 (67%)
+        ChapterInfo(id: 13, title: "연쇄",  description: "스위치를 차례로 눌러 문을 열어요", stageCount: 7,
+                    rgb: (red: 0.78, green: 0.50, blue: 0.38), // 테라코타
+                    requiredStarsFromPrev: 14),      // 챕터 12 최대 21개 중 14개 (67%)
+        ChapterInfo(id: 14, title: "차원",  description: "포탈로 공간을 건너뛰어요", stageCount: 7,
+                    rgb: (red: 0.62, green: 0.42, blue: 0.72), // 플럼
+                    requiredStarsFromPrev: 14),      // 챕터 13 최대 21개 중 14개 (67%)
+        ChapterInfo(id: 15, title: "전설",  description: "모든 기믹을 섞은 최종 관문", stageCount: 7,
+                    rgb: (red: 0.80, green: 0.32, blue: 0.38), // 크림슨
+                    requiredStarsFromPrev: 14),      // 챕터 14 최대 21개 중 14개 (67%)
     ]
 
     /// 챕터 번호로 메타데이터 조회 (없으면 nil)

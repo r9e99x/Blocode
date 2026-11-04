@@ -57,9 +57,9 @@ struct ChapterCatalogTests {
 
     @Test("전체 스테이지 수가 알려진 총합과 일치")
     func stageCounts_sumToKnownTotal() {
-        // 2026-07-18 챕터 6~10 신설 이후 총 69개 스테이지 — 값이 바뀌면 의도적인지 확인 필요
+        // 2026-11-02 챕터 11~15 신설 이후 총 104개 스테이지 — 값이 바뀌면 의도적인지 확인 필요
         let total = ChapterCatalog.all.reduce(0) { $0 + $1.stageCount }
-        #expect(total == 69, "전체 스테이지 수가 69개가 아님 — 챕터 구성이 변경됐다면 이 숫자도 함께 갱신할 것")
+        #expect(total == 104, "전체 스테이지 수가 104개가 아님 — 챕터 구성이 변경됐다면 이 숫자도 함께 갱신할 것")
     }
 
     @Test("모든 챕터가 제목/설명/스테이지 수를 갖춤")

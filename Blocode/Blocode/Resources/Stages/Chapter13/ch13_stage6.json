@@ -1,0 +1,38 @@
+{
+  "id": "ch13_stage6",
+  "chapter": 13,
+  "stageNumber": 6,
+  "name": "보석 사슬",
+  "mapData": {
+    "grid": [
+      [1, 1, 1, 0],
+      [0, 0, 0, 1],
+      [1, 0, 0, 1],
+      [0, 1, 1, 0]
+    ],
+    "start": {"x": 0, "y": 0},
+    "startDirection": "right",
+    "goal": {"x": 0, "y": 2},
+    "items": [
+      {"x": 1, "y": 0},
+      {"x": 3, "y": 1},
+      {"x": 2, "y": 3}
+    ],
+    "switches": [
+      {
+        "switchAt": {"x": 2, "y": 0},
+        "gateAt": {"x": 3, "y": 0}
+      },
+      {
+        "switchAt": {"x": 3, "y": 2},
+        "gateAt": {"x": 3, "y": 3}
+      },
+      {
+        "switchAt": {"x": 1, "y": 3},
+        "gateAt": {"x": 0, "y": 3}
+      }
+    ]
+  },
+  "availableBlocks": ["moveForward", "turnLeft", "turnRight", "repeat", "collectItem", "activateSwitch"],
+  "starThresholds": {"threeStar": 6, "twoStar": 21}
+}

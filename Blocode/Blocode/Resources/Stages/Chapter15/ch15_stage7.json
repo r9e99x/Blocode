@@ -1,0 +1,44 @@
+{
+  "id": "ch15_stage7",
+  "chapter": 15,
+  "stageNumber": 7,
+  "name": "전설",
+  "mapData": {
+    "grid": [
+      [0, 0, 0, 0, 1, 1, 1, 1, 1],
+      [0, 0, 0, 0, 0, 0, 0, 0, 1],
+      [0, 0, 1, 1, 1, 1, 1, 0, 1],
+      [0, 0, 1, 0, 0, 0, 0, 0, 1],
+      [0, 0, 1, 1, 1, 1, 1, 0, 1],
+      [0, 0, 0, 0, 0, 0, 0, 0, 0],
+      [0, 0, 1, 0, 1, 0, 1, 0, 0],
+      [0, 0, 1, 0, 1, 0, 0, 0, 0],
+      [1, 1, 1, 1, 1, 1, 1, 0, 0]
+    ],
+    "start": {"x": 0, "y": 8},
+    "startDirection": "right",
+    "goal": {"x": 6, "y": 6},
+    "items": [
+      {"x": 2, "y": 6},
+      {"x": 4, "y": 6}
+    ],
+    "switches": [
+      {
+        "switchAt": {"x": 8, "y": 4},
+        "gateAt": {"x": 7, "y": 4}
+      },
+      {
+        "switchAt": {"x": 6, "y": 2},
+        "gateAt": {"x": 6, "y": 7}
+      }
+    ],
+    "portals": [
+      {
+        "a": {"x": 4, "y": 0},
+        "b": {"x": 6, "y": 8}
+      }
+    ]
+  },
+  "availableBlocks": ["moveForward", "moveBackward", "turnLeft", "turnRight", "repeat", "if", "collectItem", "activateSwitch"],
+  "starThresholds": {"threeStar": 17, "twoStar": 75}
+}
