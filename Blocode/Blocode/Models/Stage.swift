@@ -63,8 +63,17 @@ struct Stage: Codable, Identifiable {
         "ch\(chapter)_stage\(number)"
     }
 
-    /// 사용자가 만든 맵(또는 에디터 테스트 플레이)인지 — 진행도·별·연속 기록에 남기지 않음
+    /// 사용자가 만든 맵(또는 에디터 테스트 플레이)인지
     var isCustomMap: Bool { id.hasPrefix(CustomMap.stageIDPrefix) }
+
+    /// 하루에 한 판 나오는 일일 퍼즐인지 — 클리어하면 진행도와 연속 일수에 기록됨
+    var isDailyPuzzle: Bool { id.hasPrefix(PuzzleGenerator.dailyIDPrefix) }
+
+    /// 연습용 랜덤 퍼즐인지
+    var isRandomPuzzle: Bool { id.hasPrefix(PuzzleGenerator.randomIDPrefix) }
+
+    /// 클리어를 진행도·별·연속 기록에 남기는 스테이지인지 — 사용자 맵과 랜덤 퍼즐은 남기지 않음
+    var recordsProgress: Bool { !isCustomMap && !isRandomPuzzle }
 
     /// 팔레트에 실제로 표시할 블럭 목록
     /// availableBlocks가 nil이면 전체 블럭 (BlockType.allCases) 반환

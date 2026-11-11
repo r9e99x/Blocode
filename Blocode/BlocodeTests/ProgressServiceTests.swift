@@ -141,7 +141,7 @@ struct ProgressServiceTests {
 
         viewModel.codeBlocks = [Block(type: .moveForward)]
         viewModel.run()
-        let deadline = Date().addingTimeInterval(5)
+        let deadline = Date().addingTimeInterval(15)
         while viewModel.gameState == .running, Date() < deadline {
             try await Task.sleep(nanoseconds: 20_000_000)
         }

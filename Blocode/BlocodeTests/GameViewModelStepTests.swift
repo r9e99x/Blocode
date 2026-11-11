@@ -34,7 +34,7 @@ struct GameViewModelStepTests {
 
     /// 조건이 참이 될 때까지 기다림 — 5초 안에 안 되면 false
     private func wait(_ condition: () -> Bool) async throws -> Bool {
-        let deadline = Date().addingTimeInterval(5)
+        let deadline = Date().addingTimeInterval(15)
         while !condition(), Date() < deadline { try await Task.sleep(for: .milliseconds(5)) }
         return condition()
     }

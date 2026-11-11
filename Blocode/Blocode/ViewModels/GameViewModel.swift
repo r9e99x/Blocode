@@ -538,8 +538,8 @@ final class GameViewModel: ObservableObject {
         gameState = .success
         SoundService.shared.play(stars == 3 ? .clearThreeStar : .clearLowStar)
 
-        // 클리어 기록 저장 (더 좋은 기록이면 갱신) — 사용자 맵은 별·진행도·연속 기록에 남기지 않음
-        if !stage.isCustomMap {
+        // 클리어 기록 저장 (더 좋은 기록이면 갱신) — 사용자 맵과 랜덤 퍼즐은 별·진행도·연속 기록에 남기지 않음
+        if stage.recordsProgress {
             progress.recordClear(
                 stageId: stage.id,
                 stars: stars,

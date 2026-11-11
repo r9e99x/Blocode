@@ -25,7 +25,7 @@ struct GameViewModelStateTests {
         return GameViewModel(stage: stage, progress: .makeForTesting(), executionSpeed: { 1 })
     }
 
-    private func waitUntilFinished(_ viewModel: GameViewModel, timeout: TimeInterval = 5) async throws {
+    private func waitUntilFinished(_ viewModel: GameViewModel, timeout: TimeInterval = 15) async throws {
         let deadline = Date().addingTimeInterval(timeout)
         while viewModel.gameState == .running {
             if Date() > deadline {

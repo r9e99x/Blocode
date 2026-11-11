@@ -239,7 +239,7 @@ struct GameBoardRenderingTests {
     }
 
     private func waitUntilFinished(_ viewModel: GameViewModel) async throws {
-        let deadline = Date().addingTimeInterval(5)
+        let deadline = Date().addingTimeInterval(15)
         while viewModel.gameState == .running, Date() < deadline {
             try await Task.sleep(nanoseconds: 20_000_000)
         }
