@@ -45,7 +45,7 @@ struct SidebarShell: View {
 
     /// 사이드바 최상위 섹션
     private enum Section: Hashable {
-        case home, chapters, myMaps, settings
+        case home, chapters, myMaps, library, settings
     }
 
     @State private var section: Section = .home
@@ -188,6 +188,7 @@ struct SidebarShell: View {
             }
             return "Blocode — 챕터"
         case .myMaps: return "Blocode — 내 맵"
+        case .library: return "Blocode — 개념 카드"
         case .settings: return "Blocode — 설정"
         }
     }
@@ -221,6 +222,9 @@ struct SidebarShell: View {
                 } else {
                     showLockInfo(for: .customMaps)
                 }
+            }
+            sidebarItem(icon: "books.vertical", title: "개념 카드", isSelected: section == .library) {
+                withAnimation(.easeInOut(duration: 0.2)) { section = .library }
             }
             sidebarItem(icon: "gearshape", title: "설정", isSelected: section == .settings) {
                 withAnimation(.easeInOut(duration: 0.2)) { section = .settings }
@@ -312,6 +316,8 @@ struct SidebarShell: View {
                     onPlay: { navPath.append(AppRoute.customMapPlay($0)) },
                     onEdit: { navPath.append(AppRoute.mapEditor($0)) }
                 )
+            case .library:
+                LearningLibraryView()
             case .settings:
                 SettingsView(isEmbedded: true)
             }

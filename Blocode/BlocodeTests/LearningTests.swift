@@ -1,0 +1,100 @@
+//
+//  LearningTests.swift
+//  BlocodeTests
+//
+//  Created by 조준희 on 11/12/26.
+//
+
+import Testing
+@testable import Blocode
+
+/// 학습 보관함 — 카드 목록·수집·처음 등장 계산 검증
+@MainActor
+@Suite("학습 보관함")
+struct LearningTests {
+
+    @Test("카드 id가 겹치지 않고 모든 필드가 채워져 있음")
+    func catalogIsValid() {
+        let ids = LearningCatalog.all.map(\.id)
+        #expect(Set(ids).count == ids.count)
+        #expect(LearningCatalog.all.allSatisfy { !$0.title.isEmpty && !$0.summary.isEmpty && !$0.body.isEmpty })
+    }
+
+    @Test("모든 블럭 종류에 그 블럭을 설명하는 카드가 있음")
+    func everyBlockHasCard() {
+        for block in BlockType.allCases {
+            #expect(LearningCatalog.card(for: block) != nil, "\(block) 카드 없음")
+        }
+    }
+
+    @Test("블럭 개념 카드는 12장")
+    func blockCardCount() {
+        #expect(LearningCatalog.cards(in: .block).count == 12)
+    }
+
+    @Test("블럭 카드의 코드 예시가 다섯 언어 모두로 만들어짐")
+    func examplesRender() {
+        for card in LearningCatalog.cards(in: .block) {
+            guard card.example != nil else { continue }
+            for language in CodeLanguage.allCases {
+                #expect(!(card.exampleCode(in: language) ?? "").isEmpty, "\(card.id) \(language)")
+            }
+        }
+    }
+
+    @Test("블럭이 처음 나오는 챕터가 진도 순서와 맞음")
+    func firstAppearanceMatchesProgression() {
+        #expect(FirstAppearance.stage(of: .moveForward) == FirstAppearance.Position(chapter: 1, stage: 1))
+        #expect((FirstAppearance.stage(of: .repeatBlock)?.chapter ?? 99) <= 2)
+        #expect((FirstAppearance.stage(of: .ifBlock)?.chapter ?? 99) <= 3)
+        #expect((FirstAppearance.stage(of: .functionBlock)?.chapter ?? 99) <= 4)
+        #expect(FirstAppearance.stage(of: .collectItem)?.chapter == 6)
+        #expect(FirstAppearance.stage(of: .activateSwitch)?.chapter == 7)
+        for block in BlockType.allCases {
+            #expect(FirstAppearance.stage(of: block) != nil, "\(block)이 어느 스테이지에도 안 나옴")
+        }
+    }
+
+    @Test("처음 만난 블럭은 한 번만 true, 저장되어 다시 불러와도 유지됨")
+    func markSeenPersists() {
+        let defaults = isolatedDefaults()
+        let service = LearningService(defaults: defaults)
+        #expect(service.markSeen(.repeatBlock))
+        #expect(!service.markSeen(.repeatBlock))
+        let reloaded = LearningService(defaults: defaults)
+        #expect(reloaded.seenBlocks == [.repeatBlock])
+    }
+
+    @Test("블럭 개념 카드는 그 블럭을 만나야 열리고 코딩·CS 카드는 처음부터 열림")
+    func unlockRules() throws {
+        let service = LearningService(defaults: isolatedDefaults())
+        let repeatCard = try #require(LearningCatalog.card(for: .repeatBlock))
+        #expect(!service.isUnlocked(repeatCard))
+        service.markSeen(.repeatBlock)
+        #expect(service.isUnlocked(repeatCard))
+        let open = LearningCard(id: "x", category: .coding, title: "t", summary: "s", body: "b",
+                                tip: nil, unlock: .alwaysOpen, example: nil)
+        #expect(service.isUnlocked(open))
+    }
+
+    @Test("이미 진행한 사용자는 클리어한 스테이지까지 나온 블럭이 채워짐")
+    func syncFromProgress() {
+        let progress = ProgressService.makeForTesting()
+        let service = LearningService(defaults: isolatedDefaults())
+        service.syncFromProgress(progress)
+        #expect(service.seenBlocks.isEmpty)  // 아무것도 안 깼으면 비어 있음 (첫 등장 설명이 정상으로 뜸)
+
+        progress.recordClear(stageId: Stage.makeID(chapter: 1, number: 1), stars: 3, blockCount: 1)
+        service.syncFromProgress(progress)
+        #expect(service.seenBlocks.contains(.moveForward))
+        #expect(!service.seenBlocks.contains(.collectItem))
+    }
+
+    @Test("초기화하면 수집이 비워짐")
+    func resetClears() {
+        let service = LearningService(defaults: isolatedDefaults())
+        service.markSeen(.ifBlock)
+        service.reset()
+        #expect(service.seenBlocks.isEmpty)
+    }
+}

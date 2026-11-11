@@ -22,15 +22,18 @@ final class SettingsViewModel: ObservableObject {
     /// 배경음악 켜기/끄기를 실제 재생에 반영 — 테스트는 소리가 나지 않도록 주입
     private let applyMusicEnabled: (Bool) -> Void
     private let reminder: ReminderService
+    private let learning: LearningService  // 진행도를 지우면 학습 보관함 수집도 함께 비움
     private var cancellables = Set<AnyCancellable>()
 
     init(settings: SettingsService = .shared,
          progress: ProgressService = .shared,
          reminder: ReminderService? = nil,
+         learning: LearningService? = nil,
          applyMusicEnabled: @escaping (Bool) -> Void = { SoundService.shared.setMusicEnabled($0) }) {
         self.settings = settings
         self.progress = progress
         self.reminder = reminder ?? .shared
+        self.learning = learning ?? .shared
         self.applyMusicEnabled = applyMusicEnabled
 
         // SettingsService 변경을 그대로 전파 → 뷰 자동 갱신 유지
@@ -124,6 +127,7 @@ final class SettingsViewModel: ObservableObject {
     /// 앱 진입점이 같은 키를 관찰하므로 화면은 자동으로 온보딩으로 바뀌고, 설정·게임 화면도 함께 사라짐
     func resetProgress() {
         progress.resetAll()
+        learning.reset()
         settings.resetOnboarding()
     }
 

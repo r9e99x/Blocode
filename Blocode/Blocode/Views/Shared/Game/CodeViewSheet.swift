@@ -100,27 +100,7 @@ struct CodeViewSheet: View {
     // MARK: - 언어 선택
 
     private var languagePicker: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 8) {
-                ForEach(CodeLanguage.allCases) { language in
-                    let selected = language == settings.codeLanguage
-                    Button {
-                        SoundService.shared.play(.buttonTap)
-                        settings.codeLanguage = language
-                    } label: {
-                        Text(language.title)
-                            .font(.system(size: 14, weight: .semibold))
-                            .foregroundStyle(selected ? Color.white : Color.primary)
-                            .padding(.horizontal, 14)
-                            .padding(.vertical, 8)
-                            .background(selected ? Color.slateButtonFace : Color.statCardBackground)
-                            .clipShape(Capsule())
-                    }
-                    .buttonStyle(.plain)
-                }
-            }
-            .padding(.horizontal, 20)
-        }
+        CodeLanguageChips(selection: $settings.codeLanguage)
     }
 
     /// 클립보드에 복사 (iOS·맥 공용)
@@ -139,4 +119,35 @@ struct CodeViewSheet: View {
         Block(type: .repeatBlock, repeatCount: 3, children: [Block(type: .moveForward), Block(type: .turnRight)]),
         Block(type: .ifBlock, children: [Block(type: .turnLeft)], ifCondition: .pathBlocked)
     ])
+}
+
+// MARK: - CodeLanguageChips
+/// 코드 언어를 고르는 칩 한 줄 — "코드로 보기"와 학습 카드 상세가 함께 씀 (고른 언어는 설정에 저장됨)
+struct CodeLanguageChips: View {
+
+    @Binding var selection: CodeLanguage
+
+    var body: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                ForEach(CodeLanguage.allCases) { language in
+                    let selected = language == selection
+                    Button {
+                        SoundService.shared.play(.buttonTap)
+                        selection = language
+                    } label: {
+                        Text(language.title)
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundStyle(selected ? Color.white : Color.primary)
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 8)
+                            .background(selected ? Color.slateButtonFace : Color.statCardBackground)
+                            .clipShape(Capsule())
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(.horizontal, 20)
+        }
+    }
 }

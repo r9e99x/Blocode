@@ -67,6 +67,9 @@ struct ContentView: View {
                     StageView(chapter: chapter, number: number, navPath: $navPath)
                         .id("stage-\(chapter)-\(number)")
 
+                case .library:
+                    LearningLibraryView(onBack: { if !navPath.isEmpty { navPath.removeLast() } })
+
                 case .customMaps:
                     CustomMapListView(
                         onBack: { if !navPath.isEmpty { navPath.removeLast() } },
@@ -162,8 +165,11 @@ struct ContentView: View {
 
             Spacer()
 
-            // 오른쪽: 설정 버튼
-            settingsButton
+            // 오른쪽: 학습 보관함 + 설정 버튼
+            HStack(spacing: 10) {
+                libraryButton
+                settingsButton
+            }
         }
     }
 
@@ -177,6 +183,24 @@ struct ContentView: View {
                 .font(.system(size: 22, weight: .bold, design: .rounded))
                 .foregroundStyle(.primary)
         }
+    }
+
+    /// 학습 보관함 버튼 — 설정 버튼과 같은 모양 (개념 카드 모음으로 이동)
+    private var libraryButton: some View {
+        Button {
+            SoundService.shared.play(.buttonTap)
+            navPath.append(AppRoute.library)
+        } label: {
+            Image(systemName: "books.vertical")
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(Color.secondary)
+                .frame(width: 36, height: 36)
+                .background(Color.cardBackground)
+                .clipShape(RoundedRectangle(cornerRadius: 10))
+                .shadow(color: Color.black.opacity(0.08), radius: 8, x: 0, y: 2)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("개념 카드 모음")
     }
 
     /// 설정 버튼 — 챕터 선택 화면 홈 버튼과 동일한 스타일
@@ -228,9 +252,12 @@ struct ContentView: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity)  // 화면 중앙 정렬
 
             // 우상단 설정 버튼 (컴팩트 헤더의 버튼과 동일)
-            settingsButton
-                .padding(.trailing, 24)
-                .padding(.top, 20)
+            HStack(spacing: 10) {
+                libraryButton
+                settingsButton
+            }
+            .padding(.trailing, 24)
+            .padding(.top, 20)
         }
         .background(Color.appBackground.ignoresSafeArea())
         .hideNavigationBar()  // iOS 전용 API 래퍼 (macOS no-op)

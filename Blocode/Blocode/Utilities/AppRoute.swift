@@ -38,4 +38,7 @@ enum AppRoute: Hashable {
 
     /// 랜덤 퍼즐 — 씨앗으로 식별
     case randomPuzzle(UInt64)
+
+    /// 학습 보관함 (개념 카드 모음)
+    case library
 }
