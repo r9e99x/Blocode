@@ -134,7 +134,7 @@ struct ContentView: View {
                         .padding(.top, 28)
 
                     // 오늘의 퍼즐 카드
-                    dailyCard
+                    dailyCard(compact: false)
                         .padding(.top, 14)
                 }
                 .padding(.horizontal, 24)
@@ -217,7 +217,7 @@ struct ContentView: View {
                 // ── 오른쪽 열: 통계 카드 + 시작/둘러보기 버튼 ──
                 VStack(spacing: 14) {
                     statsRow
-                    dailyCard
+                    dailyCard(compact: true)  // 가로 화면은 세로가 모자라 두 카드를 반 크기로 한 줄에
                     buttonSection
                         .padding(.top, 8)
                 }
@@ -237,9 +237,10 @@ struct ContentView: View {
     }
 
     /// 오늘의 퍼즐 카드 — 누르면 일일 퍼즐, 주사위는 랜덤 퍼즐
-    private var dailyCard: some View {
+    private func dailyCard(compact: Bool) -> some View {
         DailyPuzzleCard(info: vm.dailyPuzzle,
                         isLocked: !vm.isUnlocked(.dailyPuzzle),
+                        isCompact: compact,
                         onDaily: { openIfUnlocked(.dailyPuzzle, AppRoute.dailyPuzzle(vm.dailyPuzzle.key)) },
                         onRandom: { openIfUnlocked(.dailyPuzzle, AppRoute.randomPuzzle(.random(in: 1...UInt64.max))) })
     }
