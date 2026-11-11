@@ -20,6 +20,8 @@ struct ClearOverlayView: View {
     let stageName: String        // 스테이지 이름 (예: "지그재그")
     let threeStarCut: Int        // 별 3개 기준 블럭 수
     let isLastStage: Bool        // 챕터 마지막 스테이지 여부 (다음 버튼 레이블 결정)
+    var heading: String? = nil   // "STAGE 1-5" 자리에 쓸 제목 (사용자 맵은 "MY MAP") — nil이면 스테이지 레이블 사용
+    var lastStageButtonTitle = "챕터 목록으로"  // 마지막 스테이지에서 주 버튼 글자
     var itemHint: String? = nil  // 보석을 다 못 모아서 별 3개를 놓쳤을 때 안내 문구 (nil이면 표시 안 함, 기존 호출부는 무수정으로 컴파일)
     let onClose: () -> Void      // 닫기 버튼 — 스테이지 선택으로
     let onRetry: () -> Void      // 다시 도전
@@ -81,7 +83,7 @@ struct ClearOverlayView: View {
             Spacer(minLength: 0)
 
             // 스테이지 레이블 (예: "STAGE 1-5 CLEARED")
-            Text("STAGE \(stageLabel) CLEARED")
+            Text("\(heading ?? "STAGE \(stageLabel)") CLEARED")
                 .font(.system(size: 12, weight: .semibold))
                 .foregroundStyle(.secondary)
                 .tracking(2.5)
@@ -135,7 +137,7 @@ struct ClearOverlayView: View {
                     SoundService.shared.play(.buttonTap)
                     onNext()
                 } label: {
-                    Text(isLastStage ? "챕터 목록으로" : "다음 스테이지로")
+                    Text(isLastStage ? lastStageButtonTitle : "다음 스테이지로")
                         .font(.system(size: 17, weight: .bold))
                         .foregroundStyle(.white)
                         .frame(maxWidth: .infinity)
@@ -170,7 +172,7 @@ struct ClearOverlayView: View {
 
             // 상단 — 스테이지 레이블 + 닫기 버튼
             HStack {
-                Text("STAGE \(stageLabel)  —  \(stageName)")
+                Text("\(heading ?? "STAGE \(stageLabel)")  —  \(stageName)")
                     .font(.system(size: 12, weight: .medium))
                     .foregroundStyle(.secondary)
                     .tracking(0.5)

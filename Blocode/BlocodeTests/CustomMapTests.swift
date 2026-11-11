@@ -397,3 +397,83 @@ struct CustomMapServiceTests {
         _ = progress
     }
 }
+
+// MARK: - 내 맵 목록·플레이 연결
+
+@MainActor
+@Suite("내 맵 목록과 플레이 연결")
+struct CustomMapListTests {
+
+    private let thresholds = StarThresholds(threeStar: 4, twoStar: 8)
+
+    private func makeService() -> (service: CustomMapService, progress: ProgressService) {
+        let progress = ProgressService.makeForTesting()
+        return (CustomMapService(container: progress.modelContainer), progress)
+    }
+
+    @Test("저장하면 목록 한 줄이 생기고 크기와 요소가 요약됨")
+    func rowsFollowService() throws {
+        let (service, progress) = makeService()
+        let vm = CustomMapListViewModel(service: service)
+        #expect(vm.isEmpty)
+
+        _ = try service.save(name: "기본", map: makeMap(straightRows), palette: [.moveForward], thresholds: thresholds)
+        _ = try service.save(name: "기믹", map: makeMap(["S.aA*G", "######", "######"]),
+                             palette: [.moveForward, .activateSwitch, .collectItem], thresholds: thresholds)
+        #expect(vm.rows.count == 2)
+        let gimmick = try #require(vm.rows.first { $0.name == "기믹" })
+        #expect(gimmick.sizeText == "6×3")
+        #expect(gimmick.elementsText == "보석 1 · 스위치 1")
+        #expect(gimmick.starText == "별 3개 4블럭 이하")
+        #expect(gimmick.isPlayable)
+        let plain = try #require(vm.rows.first { $0.name == "기본" })
+        #expect(plain.elementsText == "기본 맵")
+        _ = progress
+    }
+
+    @Test("삭제하면 목록에서 사라지고 손상된 맵은 열 수 없다고 표시")
+    func deleteAndCorrupted() throws {
+        let (service, progress) = makeService()
+        let saved = try service.save(name: "지울 맵", map: makeMap(straightRows), palette: [.moveForward], thresholds: thresholds)
+        let broken = try service.save(name: "깨질 맵", map: makeMap(straightRows), palette: [.moveForward], thresholds: thresholds)
+        broken.mapJSON = Data("x".utf8)
+        service.reload()
+        let vm = CustomMapListViewModel(service: service)
+        let brokenRow = try #require(vm.rows.first { $0.name == "깨질 맵" })
+        #expect(!brokenRow.isPlayable)
+        #expect(brokenRow.sizeText == "손상된 맵")
+
+        vm.delete(id: saved.id)
+        #expect(vm.rows.map(\.name) == ["깨질 맵"])
+        vm.delete(id: UUID())  // 없는 번호는 무시
+        #expect(vm.rows.count == 1)
+        _ = progress
+    }
+
+    @Test("내 맵은 클리어해도 진행도·별·연속 기록에 남지 않음")
+    func customMapDoesNotRecordProgress() async throws {
+        let (service, progress) = makeService()
+        let saved = try service.save(name: "기록 안 함", map: makeMap(straightRows), palette: [.moveForward], thresholds: thresholds)
+        let stage = try #require(saved.stage)
+        #expect(stage.isCustomMap)
+
+        let vm = GameViewModel(stage: stage, progress: progress, executionSpeed: { 1000 })
+        vm.codeBlocks = Array(repeating: Block(type: .moveForward), count: 4)
+        vm.run()
+        let deadline = Date().addingTimeInterval(10)
+        while vm.gameState == .running, Date() < deadline {
+            try await Task.sleep(for: .milliseconds(5))
+        }
+        #expect(vm.gameState == .success)
+        #expect(vm.clearedStars == 3)
+        #expect(progress.results.isEmpty)
+        #expect(progress.streak == 0)
+    }
+
+    @Test("기본 스테이지는 사용자 맵으로 취급되지 않음")
+    func normalStageIsNotCustom() throws {
+        let stage = try #require(StageLoader.load(chapter: 1, stage: 1))
+        #expect(!stage.isCustomMap)
+        #expect(Stage.placeholder(chapter: 1, stageNumber: 1).isCustomMap == false)
+    }
+}

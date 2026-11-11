@@ -31,6 +31,12 @@ struct StageView: View {
     /// 기본값 true로 iOS/아이패드는 그대로 유지. 맥은 NavigationStack 툴바에 자체 뒤로가기를 따로 두므로 false로 숨김
     var showsOwnBackButton: Bool = true
 
+    /// 화면을 나가는 동작을 직접 지정 — 사용자 맵 플레이·테스트 플레이용 (nil이면 기존처럼 navPath로 뒤로 이동)
+    var onExit: (() -> Void)? = nil
+
+    /// 클리어했을 때 사용한 블럭 수를 알림 — 에디터의 테스트 플레이가 별 기준을 정하는 데 사용
+    var onCleared: ((Int) -> Void)? = nil
+
     /// 드래그 상태 — 고스트 오버레이가 최상위 ZStack에 렌더링되므로 StageView에서 관리
     @State private var drag = BlockDragState()
 
@@ -53,10 +59,14 @@ struct StageView: View {
     /// 프리뷰/테스트용 — Stage를 직접 주입 (#Preview 전용)
     init(stage: Stage, navPath: Binding<NavigationPath>,
          showsOwnBackButton: Bool = true,
-         onReturnToChapterList: (() -> Void)? = nil) {
+         onReturnToChapterList: (() -> Void)? = nil,
+         onExit: (() -> Void)? = nil,
+         onCleared: ((Int) -> Void)? = nil) {
         self._navPath = navPath
         self.showsOwnBackButton = showsOwnBackButton
         self.onReturnToChapterList = onReturnToChapterList
+        self.onExit = onExit
+        self.onCleared = onCleared
         _viewModel = StateObject(wrappedValue: GameViewModel(stage: stage))
     }
 
@@ -86,7 +96,7 @@ struct StageView: View {
                 .multilineTextAlignment(.center)
 
             Button {
-                if !navPath.isEmpty { navPath.removeLast() }  // 이전 화면으로 복귀
+                exitStage()  // 이전 화면으로 복귀
             } label: {
                 Text("돌아가기")
                     .font(.system(size: 16, weight: .semibold))
@@ -145,10 +155,12 @@ struct StageView: View {
                     stageName: stage.name,
                     threeStarCut: stage.starThresholds.threeStar,
                     isLastStage: viewModel.nextStageNumber == nil,
+                    heading: stage.isCustomMap ? "MY MAP" : nil,
+                    lastStageButtonTitle: stage.isCustomMap ? "내 맵으로" : "챕터 목록으로",
                     itemHint: viewModel.itemHint,
                     onClose: {
                         // 닫기 → 챕터 화면으로 이동 (빈 스택이면 무시 — 언더플로우 방지)
-                        if !navPath.isEmpty { navPath.removeLast() }
+                        exitStage()
                     },
                     onRetry: {
                         // 다시 도전 → 블럭 유지, 캐릭터·도전 횟수·걸린 시간만 새 판으로 리셋
@@ -207,6 +219,7 @@ struct StageView: View {
             if newState == .running {
                 withAnimation(.spring(duration: 0.3)) { isPanelExpanded = false }
             }
+            if newState == .success { onCleared?(viewModel.totalBlockCount) }
         }
         .hideNavigationBar()  // iOS 전용 API 래퍼 (macOS no-op)
         }  // GeometryReader 끝
@@ -355,7 +368,7 @@ struct StageView: View {
             if showsOwnBackButton {
                 Button {
                     SoundService.shared.play(.buttonTap)
-                    if !navPath.isEmpty { navPath.removeLast() }
+                    exitStage()
                 } label: {
                     Image(systemName: "chevron.left")
                         .font(.system(size: 15, weight: .semibold))
@@ -371,7 +384,7 @@ struct StageView: View {
             // 스테이지 제목 — 스테이지 번호 + 이름
             VStack(alignment: .leading, spacing: 2) {
                 // "STAGE 1-3" 형식 서브타이틀
-                Text("STAGE \(stage.chapter)-\(stage.stageNumber)")
+                Text(stage.isCustomMap ? "MY MAP" : "STAGE \(stage.chapter)-\(stage.stageNumber)")
                     .font(.system(size: 11, weight: .semibold))
                     .foregroundStyle(.secondary)
                     .tracking(1.2)
@@ -612,11 +625,22 @@ struct StageView: View {
         .padding(.horizontal, 16)
     }
 
-    // MARK: - 챕터 목록 복귀
+    // MARK: - 나가기·챕터 목록 복귀
+
+    /// 화면 나가기 — onExit이 있으면 그 동작, 없으면 navPath 뒤로 (빈 스택이면 무시 — 언더플로우 방지)
+    private func exitStage() {
+        if let onExit {
+            onExit()
+        } else if !navPath.isEmpty {
+            navPath.removeLast()
+        }
+    }
 
     /// 챕터 선택 화면으로 이동 — onReturnToChapterList가 주입되면(맥 사이드바 셸) 그쪽 동작 사용
     private func returnToChapterList() {
-        if let onReturnToChapterList {
+        if onExit != nil {
+            exitStage()  // 사용자 맵은 챕터 목록이 없어 나가기 동작으로 복귀
+        } else if let onReturnToChapterList {
             onReturnToChapterList()
         } else {
             navPath = NavigationPath()

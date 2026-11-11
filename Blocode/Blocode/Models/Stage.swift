@@ -63,6 +63,9 @@ struct Stage: Codable, Identifiable {
         "ch\(chapter)_stage\(number)"
     }
 
+    /// 사용자가 만든 맵(또는 에디터 테스트 플레이)인지 — 진행도·별·연속 기록에 남기지 않음
+    var isCustomMap: Bool { id.hasPrefix(CustomMap.stageIDPrefix) }
+
     /// 팔레트에 실제로 표시할 블럭 목록
     /// availableBlocks가 nil이면 전체 블럭 (BlockType.allCases) 반환
     var paletteBlocks: [BlockType] {

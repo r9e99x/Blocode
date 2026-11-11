@@ -477,12 +477,14 @@ final class GameViewModel: ObservableObject {
         gameState = .success
         SoundService.shared.play(stars == 3 ? .clearThreeStar : .clearLowStar)
 
-        // 클리어 기록 저장 (더 좋은 기록이면 갱신)
-        progress.recordClear(
-            stageId: stage.id,
-            stars: stars,
-            blockCount: totalBlockCount
-        )
+        // 클리어 기록 저장 (더 좋은 기록이면 갱신) — 사용자 맵은 별·진행도·연속 기록에 남기지 않음
+        if !stage.isCustomMap {
+            progress.recordClear(
+                stageId: stage.id,
+                stars: stars,
+                blockCount: totalBlockCount
+            )
+        }
     }
 
     /// 실패 처리 (벽 충돌 등) — 실패 블럭 경로와 메시지 설정 (@MainActor라 동기 처리)
