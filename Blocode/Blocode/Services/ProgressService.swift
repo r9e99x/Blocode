@@ -270,6 +270,12 @@ final class ProgressService: ObservableObject {
         updateStreak()
     }
 
+    /// 해당 날짜에 스테이지를 하나라도 클리어했는지 — 복습 알림이 오늘 알릴지 정하는 데 사용
+    func hasCleared(on date: Date, calendar: Calendar = .current) -> Bool {
+        guard let last = defaults.object(forKey: lastClearDateKey) as? Date else { return false }
+        return calendar.isDate(last, inSameDayAs: date)
+    }
+
     /// 오늘 처음 클리어 시 streak 증가, 하루 넘기면 리셋
     private func updateStreak() {
         let today = Calendar.current.startOfDay(for: Date())

@@ -56,11 +56,16 @@ struct BlocodeApp: App {
             .frame(minWidth: 1080, minHeight: 720)
             #endif
             // 앱 실행 시 배경음악 재생 시작 (설정에서 꺼져 있으면 내부적으로 무시됨)
-            .onAppear { SoundService.shared.startBackgroundMusic() }
+            .onAppear {
+                SoundService.shared.startBackgroundMusic()
+                Task { await ReminderService.shared.refresh() }
+            }
             // 홈 화면으로 나가면 일시정지, 돌아오면 재생 (onAppear는 최초 1회뿐이라 복귀 시 음악이 다시 안 나오던 문제)
             // 재생 시 설정 꺼짐·다른 앱 음악 재생 중 조건은 startBackgroundMusic이 그 순간 기준으로 판단
             // (맥은 다른 앱으로 전환해도 background가 되지 않아 기존처럼 계속 재생)
             .onChange(of: scenePhase) { _, phase in
+                // 복습 알림 예약을 지금 상태(오늘 클리어 여부, 연속 일수)에 맞춰 다시 계산
+                Task { await ReminderService.shared.refresh() }
                 switch phase {
                 case .background: SoundService.shared.pauseBackgroundMusic()
                 case .active:     SoundService.shared.startBackgroundMusic()

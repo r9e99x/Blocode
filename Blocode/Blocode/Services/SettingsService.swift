@@ -57,6 +57,16 @@ final class SettingsService: ObservableObject {
         didSet { defaults.set(executionSpeed, forKey: "executionSpeed") }
     }
 
+    /// 복습 알림 사용 여부 — 기본은 꺼짐, 켤 때 알림 권한을 물음
+    @Published var reminderEnabled: Bool {
+        didSet { defaults.set(reminderEnabled, forKey: "reminderEnabled") }
+    }
+
+    /// 복습 알림 시각 — 자정부터의 분 (기본 오후 8시 = 1200)
+    @Published var reminderMinutes: Int {
+        didSet { defaults.set(reminderMinutes, forKey: "reminderMinutes") }
+    }
+
     // MARK: - Init
 
     /// 앱은 항상 `shared`(UserDefaults.standard)를 쓰고, 테스트만 격리된 UserDefaults를 주입
@@ -72,6 +82,9 @@ final class SettingsService: ObservableObject {
         self.musicEnabled   = ud.object(forKey: "musicEnabled")  as? Bool   ?? true
         // 저장된 실행 속도 로드 (없으면 기본값 1.0배속)
         self.executionSpeed = ud.object(forKey: "executionSpeed") as? Double ?? 1.0
+        // 저장된 복습 알림 설정 로드 (없으면 꺼짐, 오후 8시)
+        self.reminderEnabled = ud.object(forKey: "reminderEnabled") as? Bool ?? false
+        self.reminderMinutes = ud.object(forKey: "reminderMinutes") as? Int ?? 20 * 60
     }
 
     // MARK: - 온보딩

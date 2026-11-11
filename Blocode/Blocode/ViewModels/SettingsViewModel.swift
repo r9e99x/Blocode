@@ -21,13 +21,16 @@ final class SettingsViewModel: ObservableObject {
     private let progress: ProgressService
     /// 배경음악 켜기/끄기를 실제 재생에 반영 — 테스트는 소리가 나지 않도록 주입
     private let applyMusicEnabled: (Bool) -> Void
+    private let reminder: ReminderService
     private var cancellables = Set<AnyCancellable>()
 
     init(settings: SettingsService = .shared,
          progress: ProgressService = .shared,
+         reminder: ReminderService? = nil,
          applyMusicEnabled: @escaping (Bool) -> Void = { SoundService.shared.setMusicEnabled($0) }) {
         self.settings = settings
         self.progress = progress
+        self.reminder = reminder ?? .shared
         self.applyMusicEnabled = applyMusicEnabled
 
         // SettingsService 변경을 그대로 전파 → 뷰 자동 갱신 유지
@@ -64,6 +67,41 @@ final class SettingsViewModel: ObservableObject {
         set {
             settings.musicEnabled = newValue
             applyMusicEnabled(newValue)
+        }
+    }
+
+    // MARK: - 복습 알림
+
+    /// 알림 권한이 거부돼 켜지 못한 상태 — 화면이 기기 설정 안내를 보여 줌
+    @Published private(set) var reminderDenied = false
+
+    var reminderEnabled: Bool { settings.reminderEnabled }
+
+    /// 알림 시각 — 화면의 시간 선택기가 쓰는 Date(날짜는 오늘)와 저장값(자정부터의 분) 사이를 변환
+    var reminderTime: Date {
+        get {
+            Calendar.current.date(bySettingHour: settings.reminderMinutes / 60, minute: settings.reminderMinutes % 60,
+                                  second: 0, of: Date()) ?? Date()
+        }
+        set {
+            let parts = Calendar.current.dateComponents([.hour, .minute], from: newValue)
+            settings.reminderMinutes = (parts.hour ?? 20) * 60 + (parts.minute ?? 0)
+            Task { await reminder.refresh() }
+        }
+    }
+
+    /// 알림 켜기/끄기 — 켤 때 권한을 묻고, 거부되면 꺼진 채로 두고 안내 상태를 켬
+    func setReminderEnabled(_ enabled: Bool) {
+        if enabled {
+            Task {
+                let permission = await reminder.enable()
+                reminderDenied = (permission != .authorized)
+                objectWillChange.send()
+            }
+        } else {
+            settings.reminderEnabled = false
+            reminderDenied = false
+            Task { await reminder.refresh() }
         }
     }
 

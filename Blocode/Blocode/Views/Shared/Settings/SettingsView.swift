@@ -18,6 +18,7 @@ struct SettingsView: View {
     @StateObject private var vm = SettingsViewModel()              // 설정 상태/로직
     @Environment(\.dismiss) private var dismiss                    // fullScreenCover 닫기
     @Environment(\.colorScheme) private var colorScheme            // 현재 색상 모드
+    @Environment(\.openURL) private var openURL                    // 기기 알림 설정 열기
 
     @State private var showResetAlert   = false  // 진행도 초기화 확인 알럿 표시 여부
     @State private var isScrolled       = false  // 스크롤 여부 (헤더 그림자 표시용)
@@ -77,6 +78,7 @@ struct SettingsView: View {
                     VStack(spacing: 28) {
                         themeSection      // 테마 선택 섹션
                         feedbackSection   // 효과음/배경음악 섹션
+                        reminderSection   // 복습 알림 섹션
                         gameSection       // 실행 속도 섹션
                         dataSection       // 진행도 초기화 섹션
                         developerSection  // 챕터 강제 해금(테스트 편의) — 임시, 정식 배포 전 제거 예정
@@ -261,6 +263,63 @@ struct SettingsView: View {
                 }
             }
         }
+    }
+
+    // MARK: - 복습 알림 섹션
+
+    /// 정해 둔 시각에 한 판 풀도록 알려 주는 알림 — 켤 때 권한을 묻고, 거부되면 기기 설정 안내를 보여 줌
+    private var reminderSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            sectionLabel("알림")
+            settingsCard {
+                VStack(spacing: 0) {
+                    settingsRow(
+                        icon: "bell.fill",
+                        iconColor: Color(red: 0.93, green: 0.50, blue: 0.40),  // 코랄 계열
+                        title: "복습 알림"
+                    ) {
+                        Toggle("", isOn: Binding(get: { vm.reminderEnabled },
+                                                 set: { vm.setReminderEnabled($0) }))
+                            .labelsHidden()
+                            .tint(toggleTint)
+                    }
+
+                    if vm.reminderEnabled {
+                        rowDivider
+                        settingsRow(
+                            icon: "clock.fill",
+                            iconColor: Color(red: 0.45, green: 0.62, blue: 0.85),  // 파랑 계열
+                            title: "알림 시간"
+                        ) {
+                            DatePicker("", selection: $vm.reminderTime, displayedComponents: .hourAndMinute)
+                                .labelsHidden()
+                        }
+                    }
+                }
+            }
+            if vm.reminderDenied {
+                HStack(spacing: 8) {
+                    Text("알림이 꺼져 있어요. 기기 설정에서 Blocode 알림을 허용해 주세요.")
+                        .font(.system(size: 12))
+                        .foregroundStyle(Color.failureRed)
+                    if let url = notificationSettingsURL {
+                        Button("설정 열기") { openURL(url) }
+                            .font(.system(size: 12, weight: .semibold))
+                            .buttonStyle(.plain)
+                    }
+                }
+                .padding(.horizontal, 4)
+            }
+        }
+    }
+
+    /// 기기의 알림 설정 화면 주소
+    private var notificationSettingsURL: URL? {
+        #if os(iOS)
+        URL(string: UIApplication.openNotificationSettingsURLString)
+        #else
+        URL(string: "x-apple.systempreferences:com.apple.Notifications-Settings.extension")
+        #endif
     }
 
     // MARK: - 게임 섹션
