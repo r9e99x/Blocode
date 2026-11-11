@@ -85,6 +85,15 @@ final class GameViewModel: ObservableObject {
     /// 진행 중인 실행 Task — reset()에서 취소해 이전 실행이 새 실행과 겹치지 않게 함
     private var runTask: Task<Void, Never>?
 
+    /// 이번 실행이 단계별 실행인지 — 블럭 하나를 실행하기 전마다 사용자의 다음 단계를 기다림
+    private var isStepMode = false
+
+    /// 단계별 실행에서 다음 단계를 기다리는 지점 — step()·continueRun()·reset()이 깨움
+    private var stepContinuation: CheckedContinuation<Void, Never>?
+
+    /// 다음 블럭을 실행하기 전에 멈춰 있는지 — 이때 강조된 블럭이 "다음에 실행할 블럭"
+    @Published private(set) var isWaitingForStep = false
+
     /// 이 Task의 실행이 아직 유효한지 — 상태만 보면 리셋 후 재실행 때 이전 실행도 running으로 착각함
     private var isRunActive: Bool { gameState == .running && !Task.isCancelled }
 
@@ -241,10 +250,40 @@ final class GameViewModel: ObservableObject {
         if characterMoved { reset() } else { fullReset() }
     }
 
+    /// 단계별 실행 중인지 (다음 단계를 기다리는 중이거나 한 블럭을 실행하는 중)
+    var isStepping: Bool { isStepMode && gameState == .running }
+
+    /// 한 칸씩 버튼을 누를 수 있는 상태인지 — 시작 전이거나 다음 단계를 기다리는 중일 때
+    var canStep: Bool {
+        isStepping ? isWaitingForStep : (!codeBlocks.isEmpty && gameState == .idle)
+    }
+
     /// 코드 블럭 실행 시작 — idle 상태이고 블럭이 있을 때만 동작
     func run() {
+        startRun(stepping: false)
+    }
+
+    /// 한 칸씩 실행 — 시작 전이면 첫 블럭을 강조한 채 멈추고, 멈춰 있으면 강조된 블럭 하나를 실행
+    func step() {
+        if gameState == .idle {
+            startRun(stepping: true)
+        } else if isStepping, isWaitingForStep {
+            resumeStep()
+        }
+    }
+
+    /// 단계별 실행을 풀고 남은 블럭을 한 번에 실행
+    func continueRun() {
+        guard isStepping else { return }
+        isStepMode = false
+        resumeStep()
+    }
+
+    private func startRun(stepping: Bool) {
         guard gameState == .idle, !codeBlocks.isEmpty else { return }
 
+        isStepMode = stepping
+        isWaitingForStep = false
         gameState = .running
         failedBlockPath = nil
         failureMessage = ""
@@ -266,6 +305,8 @@ final class GameViewModel: ObservableObject {
     /// 캐릭터만 리셋 — 블럭 목록은 유지
     func reset() {
         runTask?.cancel()
+        isStepMode = false
+        resumeStep()  // 다음 단계를 기다리던 실행이 깨어나 취소를 확인하고 끝나도록
         gameState = .idle
         currentBlockPath = nil
         failedBlockPath = nil
@@ -310,6 +351,10 @@ final class GameViewModel: ObservableObject {
 
             // 현재 실행 중인 블럭 하이라이트 갱신 (경로 기반)
             currentBlockPath = path
+
+            // 단계별 실행이면 사용자가 다음 단계를 누를 때까지 이 블럭 앞에서 멈춤
+            await waitForStepIfNeeded()
+            guard isRunActive else { return }
 
             // 블럭 종류에 따라 실행
             switch block.type {
@@ -410,6 +455,22 @@ final class GameViewModel: ObservableObject {
     /// 현재 판 상태를 화면에 알림
     private func render(_ event: BoardEvent) {
         renderer?.update(board: board, event: event, speed: executionSpeed)
+    }
+
+    /// 단계별 실행 중이면 다음 단계를 누를 때까지 기다림 (리셋으로 취소되면 바로 깨어남)
+    private func waitForStepIfNeeded() async {
+        guard isStepMode, isRunActive else { return }
+        isWaitingForStep = true
+        await withCheckedContinuation { stepContinuation = $0 }
+        isWaitingForStep = false
+    }
+
+    /// 기다리던 단계를 풀어 줌 — 다시 누르는 중복 입력은 무시되도록 대기 표시도 바로 내림
+    private func resumeStep() {
+        isWaitingForStep = false
+        let continuation = stepContinuation
+        stepContinuation = nil
+        continuation?.resume()
     }
 
     /// 애니메이션이 끝날 때까지 대기 (속도 배율 적용) — 리셋으로 실행이 취소되면 바로 깨어남

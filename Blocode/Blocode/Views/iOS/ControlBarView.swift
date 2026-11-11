@@ -22,6 +22,7 @@ struct ControlBarView: View {
     // 각 버튼의 눌림 상태 (3D 효과용)
     @State private var isResetPressed    = false
     @State private var isRunPressed      = false
+    @State private var isStepPressed     = false
     @State private var isSettingsPressed = false
 
     /// 설정 시트 표시 여부
@@ -31,7 +32,7 @@ struct ControlBarView: View {
 
     /// 실행 버튼 색상 — 비활성/실행 중: 따뜻한 회색(모드 무관 기존 값 유지) / 활성: 민트 그린(다크에서만 톤 다운)
     private var runButtonColor: Color {
-        viewModel.canPressRun
+        (viewModel.canPressRun || viewModel.isStepping)
             ? Color.runButtonActiveMint  // 활성 민트 (라이트: 기존 accentMint / 다크: 딥 민트)
             : Color.runButtonInactiveGray  // 솔리드 따뜻한 회색 — 값은 기존과 동일 (AppColors로 단일화)
     }
@@ -57,19 +58,19 @@ struct ControlBarView: View {
                 }
             }
             .buttonStyle(.plain)
-            .disabled(viewModel.gameState == .running)
+            .disabled(viewModel.gameState == .running && !viewModel.isStepping)  // 단계별 실행 중에는 리셋으로 멈출 수 있음
             .onPressState(isPressed: $isResetPressed)
             .frame(maxWidth: .infinity)
 
             // 가운데: 실행 버튼
             Button {
                 SoundService.shared.play(.buttonTap)
-                viewModel.run()
+                if viewModel.isStepping { viewModel.continueRun() } else { viewModel.run() }  // 단계별 중에는 남은 블럭을 이어서 실행
             } label: {
                 Bevel3DButtonLabel(color: runButtonColor, width: 152, height: 54, cornerRadius: 27,
                                    isPressed: isRunPressed) {
                     HStack(spacing: 8) {
-                        if viewModel.gameState == .running {
+                        if viewModel.gameState == .running && !viewModel.isStepping {
                             ProgressView()
                                 .progressViewStyle(.circular)
                                 .tint(.white)
@@ -78,16 +79,37 @@ struct ControlBarView: View {
                             Image(systemName: "play.fill")
                                 .font(.system(size: 15, weight: .bold))
                         }
-                        Text(viewModel.gameState == .running ? "실행 중" : "실행")
+                        Text(viewModel.isStepping ? "계속" : (viewModel.gameState == .running ? "실행 중" : "실행"))
                             .font(.system(size: 16, weight: .bold))
                     }
                     .foregroundStyle(.white)
                 }
             }
             .buttonStyle(.plain)
-            .allowsHitTesting(viewModel.canPressRun)
+            .allowsHitTesting(viewModel.canPressRun || viewModel.isStepping)
             .onPressState(isPressed: $isRunPressed)
             .animation(.easeInOut(duration: 0.15), value: viewModel.gameState)
+
+            // 한 칸씩 실행 — 누를 때마다 강조된 블럭 하나만 실행
+            Button {
+                SoundService.shared.play(.buttonTap)
+                viewModel.step()
+            } label: {
+                Bevel3DButtonLabel(color: Color.controlIconButtonFace, width: 54, height: 54, cornerRadius: 17,
+                                   topOverlayOpacity: colorScheme == .dark ? 0.12 : 0.28,
+                                   bottomOverlayOpacity: colorScheme == .dark ? 0.30 : 0.22,
+                                   isPressed: isStepPressed) {
+                    Image(systemName: "forward.end.fill")
+                        .font(.system(size: 18, weight: .medium))
+                        .foregroundStyle(viewModel.isStepping ? Color.runButtonActiveMint : Color.secondary)
+                }
+            }
+            .buttonStyle(.plain)
+            .disabled(!viewModel.canStep)
+            .opacity(viewModel.canStep ? 1 : 0.45)
+            .onPressState(isPressed: $isStepPressed)
+            .frame(maxWidth: .infinity)
+            .accessibilityLabel(viewModel.isStepping ? "다음 블럭 실행" : "한 칸씩 실행")
 
             // 오른쪽: 설정 버튼
             // 앞면/베벨 색상 규칙은 리셋 버튼과 동일 (다크에서만 조정, 라이트는 기존 그대로)

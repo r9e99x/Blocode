@@ -435,6 +435,7 @@ struct StageView: View {
 
     @State private var isMacResetPressed = false
     @State private var isMacRunPressed = false
+    @State private var isMacStepPressed = false
     @State private var isMacSettingsPressed = false
     @State private var showMacSettings = false
 
@@ -444,9 +445,16 @@ struct StageView: View {
                           isPressed: $isMacResetPressed) {
                 viewModel.resetOrClear()
             }
-            .disabled(viewModel.gameState == .running)
+            .disabled(viewModel.gameState == .running && !viewModel.isStepping)  // 단계별 실행 중에는 리셋으로 멈출 수 있음
 
             macRunButton
+
+            // 한 칸씩 실행 — 누를 때마다 강조된 블럭 하나만 실행
+            macIconButton(icon: "forward.end.fill", isPressed: $isMacStepPressed) {
+                viewModel.step()
+            }
+            .disabled(!viewModel.canStep)
+            .opacity(viewModel.canStep ? 1 : 0.45)
 
             macIconButton(icon: "gearshape", isPressed: $isMacSettingsPressed) {
                 showMacSettings = true
@@ -482,29 +490,29 @@ struct StageView: View {
 
     /// 상단바용 실행 버튼 — 비활성/실행중은 회색, 활성은 민트 (iOS ControlBarView.runButtonColor와 동일 규칙)
     private var macRunButton: some View {
-        let color: Color = viewModel.canPressRun ? Color.runButtonActiveMint : Color.runButtonInactiveGray
+        let color: Color = (viewModel.canPressRun || viewModel.isStepping) ? Color.runButtonActiveMint : Color.runButtonInactiveGray
 
         return Button {
             SoundService.shared.play(.buttonTap)
-            viewModel.run()
+            if viewModel.isStepping { viewModel.continueRun() } else { viewModel.run() }  // 단계별 중에는 남은 블럭을 이어서 실행
         } label: {
             Bevel3DButtonLabel(color: color, width: 84, height: 34, cornerRadius: 10,
                                topDepth: 1.5, botDepth: 2,
                                isPressed: isMacRunPressed) {
                 HStack(spacing: 5) {
-                    if viewModel.gameState == .running {
+                    if viewModel.gameState == .running && !viewModel.isStepping {
                         ProgressView().progressViewStyle(.circular).tint(.white).scaleEffect(0.6)
                     } else {
                         Image(systemName: "play.fill").font(.system(size: 11, weight: .bold))
                     }
-                    Text(viewModel.gameState == .running ? "실행 중" : "실행")
+                    Text(viewModel.isStepping ? "계속" : (viewModel.gameState == .running ? "실행 중" : "실행"))
                         .font(.system(size: 13, weight: .bold))
                 }
                 .foregroundStyle(.white)
             }
         }
         .buttonStyle(.plain)
-        .allowsHitTesting(viewModel.canPressRun)
+        .allowsHitTesting(viewModel.canPressRun || viewModel.isStepping)
         .onPressState(isPressed: $isMacRunPressed)
     }
     #endif
