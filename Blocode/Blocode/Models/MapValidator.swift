@@ -102,11 +102,12 @@ enum MapValidator {
         guard issues.isEmpty else { return MapValidation(issues: issues) }
 
         // 실제로 깰 수 있는지 — 보석은 전부 모아야 별 3개가 되므로 전부 모으는 풀이를 찾음
-        switch MapSolver.solve(map, palette: palette, collectingAllItems: true) {
+        let search = MapSolver.search(map, palette: palette, collectingAllItems: true)
+        switch search.outcome {
         case .solved(let path):
             return MapValidation(issues: [], shortestSolution: path)
         case .unsolvable:
-            if !items.isEmpty, case .solved = MapSolver.solve(map, palette: palette) {
+            if !items.isEmpty, search.reachesGoalWithoutAllItems {
                 return MapValidation(issues: ["보석을 전부 모으고 목표에 도착할 수 없어요."])
             }
             return MapValidation(issues: ["선택한 블럭으로는 목표에 도착할 수 없어요."])
