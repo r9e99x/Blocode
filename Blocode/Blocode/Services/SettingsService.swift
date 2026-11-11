@@ -67,6 +67,11 @@ final class SettingsService: ObservableObject {
         didSet { defaults.set(reminderMinutes, forKey: "reminderMinutes") }
     }
 
+    /// "코드로 보기"에서 마지막에 고른 언어 — 기본은 Swift
+    @Published var codeLanguage: CodeLanguage {
+        didSet { defaults.set(codeLanguage.rawValue, forKey: "codeLanguage") }
+    }
+
     // MARK: - Init
 
     /// 앱은 항상 `shared`(UserDefaults.standard)를 쓰고, 테스트만 격리된 UserDefaults를 주입
@@ -85,6 +90,8 @@ final class SettingsService: ObservableObject {
         // 저장된 복습 알림 설정 로드 (없으면 꺼짐, 오후 8시)
         self.reminderEnabled = ud.object(forKey: "reminderEnabled") as? Bool ?? false
         self.reminderMinutes = ud.object(forKey: "reminderMinutes") as? Int ?? 20 * 60
+        // 저장된 코드 보기 언어 로드 (없거나 알 수 없는 값이면 Swift)
+        self.codeLanguage = CodeLanguage(rawValue: ud.string(forKey: "codeLanguage") ?? "") ?? .swift
     }
 
     // MARK: - 온보딩

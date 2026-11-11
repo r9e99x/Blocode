@@ -23,6 +23,7 @@ struct ClearOverlayView: View {
     var heading: String? = nil   // "STAGE 1-5" 자리에 쓸 제목 (사용자 맵은 "MY MAP") — nil이면 스테이지 레이블 사용
     var lastStageButtonTitle = "챕터 목록으로"  // 마지막 스테이지에서 주 버튼 글자
     var itemHint: String? = nil  // 보석을 다 못 모아서 별 3개를 놓쳤을 때 안내 문구 (nil이면 표시 안 함, 기존 호출부는 무수정으로 컴파일)
+    var codeBlocks: [Block] = []  // 내가 푼 풀이 — 있으면 "코드로 보기" 버튼 표시 (기존 호출부는 무수정)
     let onClose: () -> Void      // 닫기 버튼 — 스테이지 선택으로
     let onRetry: () -> Void      // 다시 도전
     let onNext: () -> Void       // 다음 스테이지 or 챕터 목록 (별 3개용)
@@ -32,6 +33,7 @@ struct ClearOverlayView: View {
     @State private var starVisible    = [false, false, false]  // 별 1~3 개별 애니메이션
     @State private var contentVisible = false                   // 메인 콘텐츠 표시 여부
     @State private var buttonsVisible = false                   // 버튼 영역 표시 여부
+    @State private var showCodeView = false                     // "코드로 보기" 시트 표시 여부
 
     // MARK: - Body
 
@@ -51,6 +53,7 @@ struct ClearOverlayView: View {
             }
             .frame(maxWidth: 560)
             .frame(maxWidth: .infinity)
+            .sheet(isPresented: $showCodeView) { CodeViewSheet(blocks: codeBlocks) }
 
             #if os(macOS)
             // 맥 전용: 콘텐츠가 창 가운데 560pt로 좁혀지므로, X버튼만 창 전체 기준 우상단에 별도 고정
@@ -157,6 +160,8 @@ struct ClearOverlayView: View {
                         .foregroundStyle(.secondary)
                 }
                 .buttonStyle(.plain)
+
+                codeViewButton
             }
             .padding(.horizontal, 24)
             .padding(.bottom, 40)
@@ -222,7 +227,9 @@ struct ClearOverlayView: View {
 
             Spacer(minLength: 0)
 
-            // 하단 버튼 2개
+            // 하단 버튼 2개 (+ 코드로 보기)
+            VStack(spacing: 14) {
+            codeViewButton
             HStack(spacing: 12) {
                 // 왼쪽 — 다시 (라이트: 기존 다크 브라운 / 다크: 슬레이트)
                 Button {
@@ -259,10 +266,27 @@ struct ClearOverlayView: View {
                 }
                 .buttonStyle(.plain)
             }
+            }
             .padding(.horizontal, 24)
             .padding(.bottom, 40)
             .opacity(buttonsVisible ? 1 : 0)
             .offset(y: buttonsVisible ? 0 : 8)
+        }
+    }
+
+    /// "코드로 보기" 텍스트 버튼 — 내 풀이가 있을 때만 (다시 도전하기와 같은 보조 버튼 톤)
+    @ViewBuilder
+    private var codeViewButton: some View {
+        if !codeBlocks.isEmpty {
+            Button {
+                SoundService.shared.play(.buttonTap)
+                showCodeView = true
+            } label: {
+                Label("코드로 보기", systemImage: "chevron.left.forwardslash.chevron.right")
+                    .font(.system(size: 15))
+                    .foregroundStyle(.secondary)
+            }
+            .buttonStyle(.plain)
         }
     }
 

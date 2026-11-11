@@ -37,6 +37,9 @@ struct CodePanelView: View {
     /// 스크롤할 때마다 바뀌므로 BlockDragState에 넣지 않음 — 넣으면 스크롤 중 StageView 전체가 다시 그려짐
     @State private var rowMidYs: [Int: CGFloat] = [:]
 
+    /// "코드로 보기" 시트 표시 여부
+    @State private var showCodeView = false
+
     @Binding var isPanelExpanded: Bool        // 패널 확장/최소화 — StageView와 공유 (stageInfoBar·맵 크기와 연동)
 
     /// true면 확장/축소 토글 자체를 없애고 코드 리스트를 항상 펼친 상태로 고정
@@ -196,6 +199,24 @@ struct CodePanelView: View {
                 .background(Color.tertiaryBackground)
                 .clipShape(Capsule())
 
+            // 코드로 보기 — 블럭이 하나라도 있을 때만 (텍스트 코드로 바꿔 보여 주는 시트)
+            if viewModel.totalBlockCount > 0 {
+                Button {
+                    SoundService.shared.play(.buttonTap)
+                    showCodeView = true
+                } label: {
+                    Image(systemName: "chevron.left.forwardslash.chevron.right")
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundStyle(.secondary)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 3)
+                        .background(Color.tertiaryBackground)
+                        .clipShape(Capsule())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("코드로 보기")
+            }
+
             Spacer()
 
             // 별 3개 기준 블럭 수 표시
@@ -211,6 +232,7 @@ struct CodePanelView: View {
         .padding(.horizontal, 16)
         .padding(.top, 4)
         .padding(.bottom, 6)
+        .sheet(isPresented: $showCodeView) { CodeViewSheet(blocks: viewModel.codeBlocks) }
     }
 
     // MARK: - 코드 블럭 리스트

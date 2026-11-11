@@ -163,6 +163,7 @@ struct StageView: View {
                     heading: stage.specialHeading,
                     lastStageButtonTitle: stage.lastButtonTitle,
                     itemHint: viewModel.itemHint,
+                    codeBlocks: viewModel.codeBlocks,
                     onClose: {
                         // 닫기 → 챕터 화면으로 이동 (빈 스택이면 무시 — 언더플로우 방지)
                         exitStage()
