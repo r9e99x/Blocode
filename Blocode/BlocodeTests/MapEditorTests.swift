@@ -559,3 +559,42 @@ struct MapEditorTests {
         #expect(MapEditorViewModel(editing: broken) == nil)
     }
 }
+
+// MARK: - 격자 좌표 계산
+
+@Suite("에디터 격자 좌표")
+struct EditorGridLayoutTests {
+
+    @Test("터치 좌표를 칸으로 바꾸고 격자 밖은 nil")
+    func positionAtPoint() {
+        let layout = EditorGridLayout(size: CGSize(width: 400, height: 400), cols: 7, rows: 7)
+        for position in [Position(x: 0, y: 0), Position(x: 3, y: 2), Position(x: 6, y: 6)] {
+            let rect = layout.rect(of: position)
+            #expect(layout.position(at: CGPoint(x: rect.midX, y: rect.midY)) == position)
+        }
+        #expect(layout.position(at: CGPoint(x: 2, y: 200)) == nil)     // 왼쪽 여백
+        #expect(layout.position(at: CGPoint(x: 200, y: 398)) == nil)   // 아래 여백
+        #expect(layout.position(at: CGPoint(x: -5, y: -5)) == nil)
+    }
+
+    @Test("가로세로가 다른 맵은 짧은 쪽에 맞춰 가운데 정렬")
+    func nonSquareMapIsCentered() {
+        let layout = EditorGridLayout(size: CGSize(width: 300, height: 600), cols: 5, rows: 9)
+        #expect(abs(layout.cell - 55.2) < 0.01)   // 가로 기준 (300 - 24) / 5
+        let first = layout.rect(of: Position(x: 0, y: 0))
+        let last = layout.rect(of: Position(x: 4, y: 8))
+        #expect(abs(first.minX - (300 - last.maxX)) < 0.01)   // 좌우 여백이 같음
+        #expect(abs(first.minY - (600 - last.maxY)) < 0.01)   // 위아래 여백이 같음
+    }
+
+    @Test("끌기 중 건너뛴 칸을 이어 줌")
+    func cellsBetween() {
+        #expect(EditorGridLayout.cells(from: Position(x: 0, y: 0), to: Position(x: 4, y: 0))
+                == [1, 2, 3, 4].map { Position(x: $0, y: 0) })
+        #expect(EditorGridLayout.cells(from: Position(x: 2, y: 2), to: Position(x: 2, y: 2)) == [Position(x: 2, y: 2)])
+        #expect(EditorGridLayout.cells(from: Position(x: 0, y: 0), to: Position(x: 3, y: 3))
+                == [Position(x: 1, y: 1), Position(x: 2, y: 2), Position(x: 3, y: 3)])
+        #expect(EditorGridLayout.cells(from: Position(x: 3, y: 1), to: Position(x: 1, y: 1))
+                == [Position(x: 2, y: 1), Position(x: 1, y: 1)])
+    }
+}

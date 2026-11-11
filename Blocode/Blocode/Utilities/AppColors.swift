@@ -141,6 +141,23 @@ extension Color {
     static let switchOrange = Color(red: 0.93, green: 0.62, blue: 0.28)
     /// 포탈 보라
     static let portalPurple = Color(red: 0.62, green: 0.45, blue: 0.85)
+    /// 목표 지점 주황 (맵의 목표 원)
+    static let mapGoal = Color(red: 0.93, green: 0.67, blue: 0.24)
+
+    // MARK: - 맵 타일 색상 (맵 에디터 격자용 — GameScene.Palette와 같은 값, 라이트는 기존 고정값)
+
+    /// 바닥(길) 타일
+    static var mapTileFloor: Color {
+        Color.dynamic(light: (232/255, 221/255, 194/255), dark: (0.24, 0.27, 0.36))
+    }
+    /// 바닥 타일 테두리
+    static var mapTileFloorStroke: Color {
+        Color.dynamic(light: (210/255, 198/255, 172/255), dark: (0.33, 0.37, 0.47))
+    }
+    /// 벽 타일
+    static var mapTileWall: Color {
+        Color.dynamic(light: (187/255, 167/255, 126/255), dark: (0.11, 0.12, 0.16))
+    }
 
     // MARK: - 다크모드 전용 파생 색상
     // 다크 배경(네이비)과 따뜻한 탄색 트림이 충돌하는 화면에서만 쓰는 다이나믹 컬러 모음.
