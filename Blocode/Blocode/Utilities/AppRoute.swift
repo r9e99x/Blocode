@@ -32,4 +32,10 @@ enum AppRoute: Hashable {
 
     /// 맵 에디터 화면 — 고칠 저장된 맵의 번호 (nil이면 새 맵)
     case mapEditor(UUID?)
+
+    /// 일일 퍼즐 — 날짜 숫자(yyyyMMdd)로 식별해 자정을 넘겨도 같은 퍼즐을 유지
+    case dailyPuzzle(Int)
+
+    /// 랜덤 퍼즐 — 씨앗으로 식별
+    case randomPuzzle(UInt64)
 }

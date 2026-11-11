@@ -37,6 +37,9 @@ struct StageView: View {
     /// 클리어했을 때 사용한 블럭 수를 알림 — 에디터의 테스트 플레이가 별 기준을 정하는 데 사용
     var onCleared: ((Int) -> Void)? = nil
 
+    /// 랜덤 퍼즐 클리어 후 "한 판 더"로 새 퍼즐을 여는 동작 — 있으면 마지막 버튼이 이 동작을 함
+    var onNewPuzzle: (() -> Void)? = nil
+
     /// 드래그 상태 — 고스트 오버레이가 최상위 ZStack에 렌더링되므로 StageView에서 관리
     @State private var drag = BlockDragState()
 
@@ -61,12 +64,14 @@ struct StageView: View {
          showsOwnBackButton: Bool = true,
          onReturnToChapterList: (() -> Void)? = nil,
          onExit: (() -> Void)? = nil,
-         onCleared: ((Int) -> Void)? = nil) {
+         onCleared: ((Int) -> Void)? = nil,
+         onNewPuzzle: (() -> Void)? = nil) {
         self._navPath = navPath
         self.showsOwnBackButton = showsOwnBackButton
         self.onReturnToChapterList = onReturnToChapterList
         self.onExit = onExit
         self.onCleared = onCleared
+        self.onNewPuzzle = onNewPuzzle
         _viewModel = StateObject(wrappedValue: GameViewModel(stage: stage))
     }
 
@@ -155,8 +160,8 @@ struct StageView: View {
                     stageName: stage.name,
                     threeStarCut: stage.starThresholds.threeStar,
                     isLastStage: viewModel.nextStageNumber == nil,
-                    heading: stage.isCustomMap ? "MY MAP" : nil,
-                    lastStageButtonTitle: stage.isCustomMap ? "내 맵으로" : "챕터 목록으로",
+                    heading: stage.specialHeading,
+                    lastStageButtonTitle: stage.lastButtonTitle,
                     itemHint: viewModel.itemHint,
                     onClose: {
                         // 닫기 → 챕터 화면으로 이동 (빈 스택이면 무시 — 언더플로우 방지)
@@ -384,7 +389,7 @@ struct StageView: View {
             // 스테이지 제목 — 스테이지 번호 + 이름
             VStack(alignment: .leading, spacing: 2) {
                 // "STAGE 1-3" 형식 서브타이틀
-                Text(stage.isCustomMap ? "MY MAP" : "STAGE \(stage.chapter)-\(stage.stageNumber)")
+                Text(stage.navCaption)
                     .font(.system(size: 11, weight: .semibold))
                     .foregroundStyle(.secondary)
                     .tracking(1.2)
@@ -646,7 +651,9 @@ struct StageView: View {
 
     /// 챕터 선택 화면으로 이동 — onReturnToChapterList가 주입되면(맥 사이드바 셸) 그쪽 동작 사용
     private func returnToChapterList() {
-        if onExit != nil {
+        if let onNewPuzzle {
+            onNewPuzzle()  // 랜덤 퍼즐은 한 판 더
+        } else if onExit != nil {
             exitStage()  // 사용자 맵은 챕터 목록이 없어 나가기 동작으로 복귀
         } else if let onReturnToChapterList {
             onReturnToChapterList()
@@ -669,6 +676,34 @@ struct StageView: View {
         // 씬을 그리기 담당으로 연결 (VM은 판이 바뀔 때 알리기만 함)
         viewModel.renderer = gameScene
         self.scene = gameScene
+    }
+}
+
+// MARK: - 특별 스테이지 표기
+extension Stage {
+
+    /// 내 맵·일일 퍼즐·랜덤 퍼즐의 상단 이름 — 기본 스테이지는 "STAGE 1-1"
+    var navCaption: String {
+        if isCustomMap { return "MY MAP" }
+        if isDailyPuzzle { return "DAILY" }
+        if isRandomPuzzle { return "RANDOM" }
+        return "STAGE \(chapter)-\(stageNumber)"
+    }
+
+    /// 클리어 화면 제목 — nil이면 기본 스테이지 레이블
+    var specialHeading: String? {
+        if isCustomMap { return "MY MAP" }
+        if isDailyPuzzle { return "DAILY PUZZLE" }
+        if isRandomPuzzle { return "RANDOM PUZZLE" }
+        return nil
+    }
+
+    /// 클리어 화면 마지막 버튼 글자
+    var lastButtonTitle: String {
+        if isCustomMap { return "내 맵으로" }
+        if isDailyPuzzle { return "홈으로" }
+        if isRandomPuzzle { return "한 판 더" }
+        return "챕터 목록으로"
     }
 }
 

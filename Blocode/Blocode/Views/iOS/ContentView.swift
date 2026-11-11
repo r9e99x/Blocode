@@ -76,6 +76,16 @@ struct ContentView: View {
                     MapEditorView(editing: id.flatMap { CustomMapService.shared.map(withID: $0) }) {
                         if !navPath.isEmpty { navPath.removeLast() }
                     }
+
+                case .dailyPuzzle(let key):
+                    PuzzlePlayView(kind: .daily(key)) { if !navPath.isEmpty { navPath.removeLast() } }
+
+                case .randomPuzzle(let seed):
+                    PuzzlePlayView(kind: .random(seed), onNewPuzzle: {
+                        // 한 판 더 — 지금 퍼즐을 빼고 새 씨앗의 퍼즐로 교체
+                        if !navPath.isEmpty { navPath.removeLast() }
+                        navPath.append(AppRoute.randomPuzzle(.random(in: 1...UInt64.max)))
+                    }) { if !navPath.isEmpty { navPath.removeLast() } }
                 }
             }
         }
@@ -106,6 +116,10 @@ struct ContentView: View {
                     // 통계 카드 3종 (별 / 챕터 / 연속)
                     statsRow
                         .padding(.top, 28)
+
+                    // 오늘의 퍼즐 카드
+                    dailyCard
+                        .padding(.top, 14)
                 }
                 .padding(.horizontal, 24)
                 .padding(.top, 20)
@@ -187,6 +201,7 @@ struct ContentView: View {
                 // ── 오른쪽 열: 통계 카드 + 시작/둘러보기 버튼 ──
                 VStack(spacing: 14) {
                     statsRow
+                    dailyCard
                     buttonSection
                         .padding(.top, 8)
                 }
@@ -203,6 +218,13 @@ struct ContentView: View {
         }
         .background(Color.appBackground.ignoresSafeArea())
         .hideNavigationBar()  // iOS 전용 API 래퍼 (macOS no-op)
+    }
+
+    /// 오늘의 퍼즐 카드 — 누르면 일일 퍼즐, 주사위는 랜덤 퍼즐
+    private var dailyCard: some View {
+        DailyPuzzleCard(info: vm.dailyPuzzle,
+                        onDaily: { navPath.append(AppRoute.dailyPuzzle(vm.dailyPuzzle.key)) },
+                        onRandom: { navPath.append(AppRoute.randomPuzzle(.random(in: 1...UInt64.max))) })
     }
 
     // MARK: - 인용구 섹션

@@ -81,6 +81,13 @@ enum PuzzleGenerator {
         return stage(id: "\(dailyIDPrefix)\(key)", name: "오늘의 퍼즐", seed: UInt64(key), theme: theme)
     }
 
+    /// 날짜 숫자(yyyyMMdd)로 그날의 퍼즐 — 숫자가 날짜가 아니면 nil (플레이 화면이 자정을 넘겨도 같은 퍼즐을 유지하려고 사용)
+    static func dailyStage(forKey key: Int, calendar: Calendar = .current) -> Stage? {
+        let components = DateComponents(year: key / 10_000, month: key / 100 % 100, day: key % 100, hour: 12)
+        guard let date = calendar.date(from: components), dailyKey(for: date, calendar: calendar) == key else { return nil }
+        return dailyStage(for: date, calendar: calendar)
+    }
+
     // MARK: - 랜덤 퍼즐
 
     /// 씨앗에 해당하는 랜덤 퍼즐 — 테마도 씨앗으로 정해짐

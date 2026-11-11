@@ -121,6 +121,20 @@ struct SidebarShell: View {
                         if !navPath.isEmpty { navPath.removeLast() }
                     }
                     .macBackToolbar(navPath: $navPath)
+                } else if case .dailyPuzzle(let key) = route {
+                    PuzzlePlayView(kind: .daily(key), showsOwnBackButton: showsOwnBackButton) {
+                        if !navPath.isEmpty { navPath.removeLast() }
+                    }
+                    .macBackToolbar(navPath: $navPath)
+                } else if case .randomPuzzle(let seed) = route {
+                    PuzzlePlayView(kind: .random(seed), showsOwnBackButton: showsOwnBackButton, onNewPuzzle: {
+                        // 한 판 더 — 지금 퍼즐을 빼고 새 씨앗의 퍼즐로 교체
+                        if !navPath.isEmpty { navPath.removeLast() }
+                        navPath.append(AppRoute.randomPuzzle(.random(in: 1...UInt64.max)))
+                    }) {
+                        if !navPath.isEmpty { navPath.removeLast() }
+                    }
+                    .macBackToolbar(navPath: $navPath)
                 } else if case .mapEditor(let id) = route {
                     // 맵 에디터 — 자체 뒤로가기(저장 확인 포함)를 쓰므로 시스템 뒤로가기는 숨김
                     MapEditorView(editing: id.flatMap { CustomMapService.shared.map(withID: $0) }) {
@@ -298,6 +312,12 @@ struct SidebarShell: View {
                                  value: "\(homeVM.streak)일째", label: "연속")
                     }
                     .padding(.top, 32)
+
+                    // 오늘의 퍼즐 카드 — 누르면 일일 퍼즐, 주사위는 랜덤 퍼즐
+                    DailyPuzzleCard(info: homeVM.dailyPuzzle,
+                                    onDaily: { navPath.append(AppRoute.dailyPuzzle(homeVM.dailyPuzzle.key)) },
+                                    onRandom: { navPath.append(AppRoute.randomPuzzle(.random(in: 1...UInt64.max))) })
+                        .padding(.top, 14)
                 }
                 .padding(48)
                 .frame(maxWidth: 640, alignment: .leading)

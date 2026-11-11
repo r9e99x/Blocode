@@ -157,6 +157,51 @@ struct PuzzleGeneratorTests {
         }
     }
 
+    @Test("특별 스테이지의 상단 이름·클리어 제목·마지막 버튼 글자")
+    func specialStageTexts() {
+        let daily = PuzzleGenerator.dailyStage(for: date(2026, 11, 12), calendar: calendar)
+        #expect(daily.navCaption == "DAILY" && daily.specialHeading == "DAILY PUZZLE" && daily.lastButtonTitle == "홈으로")
+        let random = PuzzleGenerator.randomStage(seed: 3)
+        #expect(random.navCaption == "RANDOM" && random.specialHeading == "RANDOM PUZZLE" && random.lastButtonTitle == "한 판 더")
+        let custom = Stage(id: "custom_x", chapter: 0, stageNumber: 0, name: "c", mapData: daily.mapData, starThresholds: daily.starThresholds)
+        #expect(custom.navCaption == "MY MAP" && custom.specialHeading == "MY MAP" && custom.lastButtonTitle == "내 맵으로")
+        let normal = Stage.placeholder(chapter: 2, stageNumber: 5)
+        #expect(normal.navCaption == "STAGE 2-5" && normal.specialHeading == nil && normal.lastButtonTitle == "챕터 목록으로")
+    }
+
+    @Test("날짜 숫자로 그날의 퍼즐을 다시 만들 수 있고 날짜가 아닌 숫자는 거부")
+    func dailyStageFromKey() throws {
+        let day = date(2026, 11, 12)
+        let fromKey = try #require(PuzzleGenerator.dailyStage(forKey: 20261112, calendar: calendar))
+        #expect(fingerprint(fromKey) == fingerprint(PuzzleGenerator.dailyStage(for: day, calendar: calendar)))
+        #expect(fromKey.id == "daily_20261112")
+        for invalid in [0, 20261340, 20260230, 20261301, 99999999] {
+            #expect(PuzzleGenerator.dailyStage(forKey: invalid, calendar: calendar) == nil, "\(invalid)")
+        }
+    }
+
+    @Test("홈 카드 정보 — 날짜 글자, 요일 테마, 완료와 별")
+    func homeDailyInfo() {
+        let progress = ProgressService.makeForTesting()
+        let thursday = HomeViewModel(progress: progress, now: { self.date(2026, 11, 12) }, calendar: calendar)
+        let info = thursday.dailyPuzzle
+        #expect(info.key == 20261112)
+        #expect(info.dateText == "11월 12일 목요일")
+        #expect(info.themeTitle == "스위치와 문")
+        #expect(!info.isCleared && info.stars == 0)
+
+        progress.recordClear(stageId: "daily_20261112", stars: 2, blockCount: 9)
+        #expect(thursday.dailyPuzzle.isCleared)
+        #expect(thursday.dailyPuzzle.stars == 2)
+
+        // 다른 날은 따로 — 어제 클리어가 오늘을 완료로 만들지 않음
+        let saturday = HomeViewModel(progress: progress, now: { self.date(2026, 11, 14) }, calendar: calendar)
+        #expect(saturday.dailyPuzzle.themeTitle == "기믹 섞기")
+        #expect(!saturday.dailyPuzzle.isCleared)
+        let monday = HomeViewModel(progress: progress, now: { self.date(2026, 11, 16) }, calendar: calendar)
+        #expect(monday.dailyPuzzle.themeTitle == "미로 길 찾기")
+    }
+
     // MARK: - 기록 규칙
 
     @Test("일일 퍼즐만 진행도에 기록하고 랜덤·내 맵은 기록하지 않음")

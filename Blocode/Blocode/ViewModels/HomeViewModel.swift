@@ -8,6 +8,16 @@
 import Foundation
 import Combine
 
+// MARK: - DailyPuzzleInfo
+/// 홈 카드에 보여 줄 오늘의 퍼즐 정보
+struct DailyPuzzleInfo: Equatable {
+    let key: Int            // yyyyMMdd — 플레이 경로에 실리는 값
+    let dateText: String    // 예: "11월 12일 목요일"
+    let themeTitle: String  // 예: "보석 수집"
+    let isCleared: Bool
+    let stars: Int
+}
+
 // MARK: - HomeViewModel
 /// 홈 화면(ContentView)의 상태/로직을 담당하는 ViewModel
 /// 진행도(ProgressService)를 읽어 통계·다음 스테이지·동적 문구를 가공한다.
@@ -19,6 +29,9 @@ final class HomeViewModel: ObservableObject {
 
     // 진행도 서비스 (데이터 소스) — 테스트는 메모리 저장소를 주입
     private let progress: ProgressService
+    /// 현재 시각 — 테스트는 날짜를 고정해 주입
+    private let now: () -> Date
+    private let calendar: Calendar
     // ProgressService 변경 구독 해제용
     private var cancellables = Set<AnyCancellable>()
 
@@ -28,8 +41,10 @@ final class HomeViewModel: ObservableObject {
         (id: $0.number, stageCount: $0.stageCount)
     }
 
-    init(progress: ProgressService = .shared) {
+    init(progress: ProgressService = .shared, now: @escaping () -> Date = Date.init, calendar: Calendar = .current) {
         self.progress = progress
+        self.now = now
+        self.calendar = calendar
         // ProgressService가 바뀌면 이 VM도 변경 알림을 그대로 전파 → 뷰 자동 갱신 유지
         progress.objectWillChange
             .sink { [weak self] _ in self?.objectWillChange.send() }
@@ -61,6 +76,35 @@ final class HomeViewModel: ObservableObject {
     /// 연속 학습 일수
     var streak: Int {
         progress.streak
+    }
+
+    // MARK: - 오늘의 퍼즐
+
+    /// 홈 "오늘의 퍼즐" 카드에 보여 줄 정보
+    var dailyPuzzle: DailyPuzzleInfo {
+        let date = now()
+        let key = PuzzleGenerator.dailyKey(for: date, calendar: calendar)
+        let theme = PuzzleGenerator.theme(forWeekday: calendar.component(.weekday, from: date))
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "ko_KR")
+        formatter.calendar = calendar
+        formatter.dateFormat = "M월 d일 EEEE"
+        let stageID = "\(PuzzleGenerator.dailyIDPrefix)\(key)"
+        return DailyPuzzleInfo(key: key,
+                               dateText: formatter.string(from: date),
+                               themeTitle: Self.title(of: theme),
+                               isCleared: progress.isCleared(stageID),
+                               stars: progress.stars(for: stageID))
+    }
+
+    private static func title(of theme: PuzzleTheme) -> String {
+        switch theme {
+        case .basic: return "미로 길 찾기"
+        case .gems: return "보석 수집"
+        case .switches: return "스위치와 문"
+        case .portals: return "포탈 지름길"
+        case .mixed: return "기믹 섞기"
+        }
     }
 
     /// 진행 기록이 전혀 없는 첫 실행 상태인지 여부
