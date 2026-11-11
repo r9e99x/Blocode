@@ -108,14 +108,18 @@ struct ReminderServiceTests {
                              grantsRequest: Bool = true) -> Fixture {
         let now = Date()
         let defaults = isolatedDefaults()
-        defaults.set(3, forKey: "blocode_streak")
         let day = Calendar.current.startOfDay(for: now)
-        defaults.set(clearedToday ? day : Calendar.current.date(byAdding: .day, value: -1, to: day)!,
-                     forKey: "blocode_last_clear_date")
+        let yesterday = Calendar.current.date(byAdding: .day, value: -1, to: day)!
+        // 일일 퍼즐이 열려야 알림이 예약되므로 챕터 3까지 클리어 처리 — 어제 연속 2일이면 이 클리어로 3일이 됨
+        defaults.set(clearedToday ? 3 : 2, forKey: "blocode_streak")
+        defaults.set(clearedToday ? day : yesterday, forKey: "blocode_last_clear_date")
         let settings = SettingsService(defaults: isolatedDefaults())
         settings.reminderEnabled = enabled
         settings.reminderMinutes = minutes
         let progress = ProgressService.makeForTesting(defaults: defaults)
+        progress.devUnlock(throughChapter: UnlockableFeature.dailyPuzzle.requiredChapter,
+                           chapters: ChapterCatalog.all.map { (id: $0.number, stageCount: $0.stageCount) })
+        defaults.set(clearedToday ? day : yesterday, forKey: "blocode_last_clear_date")  // 클리어 처리가 바꾼 날짜 복원
         let center = FakeNotificationCenter(permission: permission, grantsRequest: grantsRequest)
         let service = ReminderService(center: center, settings: settings, progress: progress, now: { now })
         return Fixture(center: center, settings: settings, progress: progress, service: service, now: now)
@@ -287,5 +291,53 @@ struct NotificationRoutingTests {
         #expect(router.consumeDailyPuzzle())
         #expect(!router.pendingDailyPuzzle)
         #expect(!router.consumeDailyPuzzle())
+    }
+}
+
+// MARK: - 기능 해금
+
+@MainActor
+@Suite("기능 해금")
+struct FeatureUnlockTests {
+
+    /// 지정 챕터까지 모든 스테이지를 클리어한 진행도
+    private func results(throughChapter n: Int) -> [String: StageResult] {
+        var r: [String: StageResult] = [:]
+        for ch in ChapterCatalog.all where ch.number <= n {
+            for s in 1...ch.stageCount { r[Stage.makeID(chapter: ch.number, number: s)] = StageResult(isCleared: true, stars: 1, bestBlockCount: 1) }
+        }
+        return r
+    }
+
+    @Test("챕터 3을 다 깨야 일일 퍼즐, 챕터 5를 다 깨야 내 맵이 열림")
+    func requiredChapters() {
+        let all = ChapterCatalog.all
+        #expect(!ProgressService.isChapterCompleted(3, chapters: all, results: results(throughChapter: 2)))
+        #expect(ProgressService.isChapterCompleted(3, chapters: all, results: results(throughChapter: 3)))
+        #expect(!ProgressService.isChapterCompleted(5, chapters: all, results: results(throughChapter: 4)))
+        #expect(ProgressService.isChapterCompleted(5, chapters: all, results: results(throughChapter: 5)))
+        #expect(UnlockableFeature.dailyPuzzle.requiredChapter == 3)
+        #expect(UnlockableFeature.customMaps.requiredChapter == 5)
+    }
+
+    @Test("마지막 스테이지 하나만 비어도 안 열림")
+    func oneMissingStageKeepsLocked() {
+        var r = results(throughChapter: 3)
+        r.removeValue(forKey: Stage.makeID(chapter: 3, number: 2))
+        #expect(!ProgressService.isChapterCompleted(3, chapters: ChapterCatalog.all, results: r))
+    }
+}
+
+@MainActor
+@Suite("일일 퍼즐 잠금과 알림")
+struct ReminderLockedTests {
+    @Test("일일 퍼즐이 잠겨 있으면 켜 두어도 알림을 예약하지 않음")
+    func lockedSchedulesNothing() async {
+        let settings = SettingsService(defaults: isolatedDefaults())
+        settings.reminderEnabled = true
+        let center = FakeNotificationCenter(permission: .authorized, grantsRequest: true)
+        let service = ReminderService(center: center, settings: settings, progress: .makeForTesting())
+        await service.refresh()
+        #expect(center.pending.isEmpty)
     }
 }

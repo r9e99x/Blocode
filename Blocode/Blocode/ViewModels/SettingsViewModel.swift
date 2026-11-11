@@ -76,6 +76,8 @@ final class SettingsViewModel: ObservableObject {
     @Published private(set) var reminderDenied = false
 
     var reminderEnabled: Bool { settings.reminderEnabled }
+    /// 일일 퍼즐이 열렸는지 — 잠긴 동안은 복습 알림 설정을 숨김
+    var dailyPuzzleUnlocked: Bool { progress.isUnlocked(.dailyPuzzle) }
 
     /// 알림 시각 — 화면의 시간 선택기가 쓰는 Date(날짜는 오늘)와 저장값(자정부터의 분) 사이를 변환
     var reminderTime: Date {

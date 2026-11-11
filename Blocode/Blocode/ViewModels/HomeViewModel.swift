@@ -80,6 +80,16 @@ final class HomeViewModel: ObservableObject {
 
     // MARK: - 오늘의 퍼즐
 
+    /// 기능이 열렸는지 — 필요한 챕터를 모두 클리어했는지
+    func isUnlocked(_ feature: UnlockableFeature) -> Bool { progress.isUnlocked(feature) }
+
+    /// 잠긴 기능을 눌렀을 때 보여 줄 해금 조건 문구와 강조할 챕터
+    func lockHint(for feature: UnlockableFeature) -> (message: String, chapter: ChapterInfo?) {
+        let chapter = ChapterCatalog.all.first { $0.number == feature.requiredChapter }
+        let name = chapter.map { "챕터 \($0.number) \"\($0.title)\"" } ?? "챕터 \(feature.requiredChapter)"
+        return ("\(name)의 모든 스테이지를\n클리어하면 열려요", chapter)
+    }
+
     /// 홈 "오늘의 퍼즐" 카드에 보여 줄 정보
     var dailyPuzzle: DailyPuzzleInfo {
         let date = now()

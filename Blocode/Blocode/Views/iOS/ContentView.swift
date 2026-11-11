@@ -26,6 +26,9 @@ struct ContentView: View {
     /// 홈 화면 상태/로직 — 진행도 가공은 ViewModel이 담당 (MVVM)
     @StateObject private var vm = HomeViewModel()
 
+    /// 잠긴 기능을 눌렀을 때 띄우는 해금 조건 팝업
+    @State private var lockInfo: LockInfo?
+
     /// 알림을 눌러 앱이 열렸을 때의 이동 요청 — 오늘의 퍼즐 열기
     @ObservedObject private var router = NotificationRouter.shared
 
@@ -95,6 +98,7 @@ struct ContentView: View {
         // 복습 알림을 눌렀으면 오늘의 퍼즐로 (앱이 꺼진 채 눌렀을 때는 화면이 준비된 뒤 onAppear에서 처리)
         .onAppear { openPendingDailyPuzzle() }
         .onChange(of: router.pendingDailyPuzzle) { _, _ in openPendingDailyPuzzle() }
+        .lockInfoPopup($lockInfo)
         // 설정에 따라 라이트/다크/시스템 테마 적용
         .preferredColorScheme(settings.theme.colorScheme)
         // 설정 화면 — 모달 표시 (iOS: fullScreenCover / macOS: sheet)
@@ -105,7 +109,7 @@ struct ContentView: View {
 
     /// 대기 중인 알림 이동 요청이 있으면 오늘의 퍼즐만 남기고 이동 — 뒤로가면 홈
     private func openPendingDailyPuzzle() {
-        guard router.consumeDailyPuzzle() else { return }
+        guard router.consumeDailyPuzzle(), vm.isUnlocked(.dailyPuzzle) else { return }
         navPath = NavigationPath([AppRoute.dailyPuzzle(vm.dailyPuzzle.key)])
     }
 
@@ -235,8 +239,22 @@ struct ContentView: View {
     /// 오늘의 퍼즐 카드 — 누르면 일일 퍼즐, 주사위는 랜덤 퍼즐
     private var dailyCard: some View {
         DailyPuzzleCard(info: vm.dailyPuzzle,
-                        onDaily: { navPath.append(AppRoute.dailyPuzzle(vm.dailyPuzzle.key)) },
-                        onRandom: { navPath.append(AppRoute.randomPuzzle(.random(in: 1...UInt64.max))) })
+                        isLocked: !vm.isUnlocked(.dailyPuzzle),
+                        onDaily: { openIfUnlocked(.dailyPuzzle, AppRoute.dailyPuzzle(vm.dailyPuzzle.key)) },
+                        onRandom: { openIfUnlocked(.dailyPuzzle, AppRoute.randomPuzzle(.random(in: 1...UInt64.max))) })
+    }
+
+    /// 열려 있으면 해당 화면으로 이동, 잠겨 있으면 해금 조건 팝업 (잠금 사운드 포함)
+    private func openIfUnlocked(_ feature: UnlockableFeature, _ route: AppRoute) {
+        if vm.isUnlocked(feature) {
+            navPath.append(route)
+        } else {
+            let hint = vm.lockHint(for: feature)
+            SoundService.shared.play(.lockButton)
+            withAnimation(.easeInOut(duration: 0.2)) {
+                lockInfo = LockInfo(message: hint.message, accentColor: hint.chapter?.color ?? .gray)
+            }
+        }
     }
 
     // MARK: - 인용구 섹션
@@ -349,7 +367,7 @@ struct ContentView: View {
             HomeBrowseButton { navPath.append(AppRoute.chapterSelect) }
 
             // "내 맵" 크림 버튼 — 직접 만든 퍼즐 목록으로
-            HomeBrowseButton(title: "내 맵") { navPath.append(AppRoute.customMaps) }
+            HomeBrowseButton(title: "내 맵", isLocked: !vm.isUnlocked(.customMaps)) { openIfUnlocked(.customMaps, AppRoute.customMaps) }
         }
     }
 }

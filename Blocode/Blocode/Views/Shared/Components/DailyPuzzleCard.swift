@@ -13,17 +13,18 @@ import SwiftUI
 struct DailyPuzzleCard: View {
 
     let info: DailyPuzzleInfo
+    var isLocked = false  // 잠금 상태 — 흐리게 + 자물쇠, 눌러도 호출부가 팝업을 띄움
     let onDaily: () -> Void
     let onRandom: () -> Void
 
     var body: some View {
         HStack(spacing: 10) {
             Button {
-                SoundService.shared.play(.buttonTap)
+                if !isLocked { SoundService.shared.play(.buttonTap) }  // 잠겼으면 호출부가 잠금 사운드
                 onDaily()
             } label: {
                 HStack(spacing: 12) {
-                    Image(systemName: info.isCleared ? "checkmark.seal.fill" : "sparkles")
+                    Image(systemName: isLocked ? "lock.fill" : (info.isCleared ? "checkmark.seal.fill" : "sparkles"))
                         .font(.system(size: 20, weight: .semibold))
                         .foregroundStyle(info.isCleared ? Color.gemMint : Color.starGold)
                         .frame(width: 28)
@@ -54,7 +55,7 @@ struct DailyPuzzleCard: View {
             .accessibilityLabel("오늘의 퍼즐, \(info.isCleared ? "완료" : "도전하기")")
 
             Button {
-                SoundService.shared.play(.buttonTap)
+                if !isLocked { SoundService.shared.play(.buttonTap) }
                 onRandom()
             } label: {
                 Image(systemName: "dice.fill")
@@ -72,5 +73,6 @@ struct DailyPuzzleCard: View {
         .background(Color.statCardBackground)
         .clipShape(RoundedRectangle(cornerRadius: 16))
         .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 2)
+        .opacity(isLocked ? 0.5 : 1)  // 잠긴 동안만 흐리게 (열리면 기존 그대로)
     }
 }

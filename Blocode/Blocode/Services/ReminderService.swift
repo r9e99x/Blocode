@@ -113,7 +113,9 @@ final class ReminderService {
     /// 설정과 진행 상태에 맞춰 알림을 다시 예약 — 꺼져 있거나 권한이 없으면 예약을 모두 지움
     func refresh() async {
         await center.cancel(ids: Self.identifiers)
-        guard settings.reminderEnabled, await center.permission() == .authorized else { return }
+        // 일일 퍼즐이 아직 잠겨 있으면 알릴 내용이 없으므로 예약하지 않음
+        guard settings.reminderEnabled, progress.isUnlocked(.dailyPuzzle),
+              await center.permission() == .authorized else { return }
 
         let current = now()
         let dates = Self.fireDates(now: current, minutes: settings.reminderMinutes,

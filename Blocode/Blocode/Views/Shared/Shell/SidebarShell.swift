@@ -151,12 +151,27 @@ struct SidebarShell: View {
         // 복습 알림을 눌렀으면 오늘의 퍼즐로 (앱이 꺼진 채 눌렀을 때는 화면이 준비된 뒤 onAppear에서 처리)
         .onAppear { openPendingDailyPuzzle() }
         .onChange(of: router.pendingDailyPuzzle) { _, _ in openPendingDailyPuzzle() }
+        .lockInfoPopup($lockInfo)
         .preferredColorScheme(settings.theme.colorScheme)
+    }
+
+    /// 열려 있으면 해당 화면으로 이동, 잠겨 있으면 해금 조건 팝업
+    private func openIfUnlocked(_ feature: UnlockableFeature, _ route: AppRoute) {
+        if homeVM.isUnlocked(feature) { navPath.append(route) } else { showLockInfo(for: feature) }
+    }
+
+    /// 해금 조건 팝업 표시 (잠금 사운드 포함)
+    private func showLockInfo(for feature: UnlockableFeature) {
+        let hint = homeVM.lockHint(for: feature)
+        SoundService.shared.play(.lockButton)
+        withAnimation(.easeInOut(duration: 0.2)) {
+            lockInfo = LockInfo(message: hint.message, accentColor: hint.chapter?.color ?? .gray)
+        }
     }
 
     /// 대기 중인 알림 이동 요청이 있으면 홈에서 오늘의 퍼즐만 열린 상태로 이동 — 뒤로가면 홈
     private func openPendingDailyPuzzle() {
-        guard router.consumeDailyPuzzle() else { return }
+        guard router.consumeDailyPuzzle(), homeVM.isUnlocked(.dailyPuzzle) else { return }
         section = .home
         browsingChapter = nil
         navPath = NavigationPath([AppRoute.dailyPuzzle(homeVM.dailyPuzzle.key)])
@@ -199,8 +214,13 @@ struct SidebarShell: View {
             sidebarItem(icon: "square.grid.2x2", title: "챕터", isSelected: section == .chapters) {
                 withAnimation(.easeInOut(duration: 0.2)) { section = .chapters }
             }
-            sidebarItem(icon: "pencil.and.ruler", title: "내 맵", isSelected: section == .myMaps) {
-                withAnimation(.easeInOut(duration: 0.2)) { section = .myMaps }
+            sidebarItem(icon: homeVM.isUnlocked(.customMaps) ? "pencil.and.ruler" : "lock.fill",
+                        title: "내 맵", isSelected: section == .myMaps) {
+                if homeVM.isUnlocked(.customMaps) {
+                    withAnimation(.easeInOut(duration: 0.2)) { section = .myMaps }
+                } else {
+                    showLockInfo(for: .customMaps)
+                }
             }
             sidebarItem(icon: "gearshape", title: "설정", isSelected: section == .settings) {
                 withAnimation(.easeInOut(duration: 0.2)) { section = .settings }
@@ -328,8 +348,9 @@ struct SidebarShell: View {
 
                     // 오늘의 퍼즐 카드 — 누르면 일일 퍼즐, 주사위는 랜덤 퍼즐
                     DailyPuzzleCard(info: homeVM.dailyPuzzle,
-                                    onDaily: { navPath.append(AppRoute.dailyPuzzle(homeVM.dailyPuzzle.key)) },
-                                    onRandom: { navPath.append(AppRoute.randomPuzzle(.random(in: 1...UInt64.max))) })
+                                    isLocked: !homeVM.isUnlocked(.dailyPuzzle),
+                                    onDaily: { openIfUnlocked(.dailyPuzzle, AppRoute.dailyPuzzle(homeVM.dailyPuzzle.key)) },
+                                    onRandom: { openIfUnlocked(.dailyPuzzle, AppRoute.randomPuzzle(.random(in: 1...UInt64.max))) })
                         .padding(.top, 14)
                 }
                 .padding(48)
@@ -373,6 +394,7 @@ struct SidebarShell: View {
 
     // MARK: - 챕터 지도 (지그재그 + 3D + 눌림 + 잠금 팝업)
 
+    /// 잠긴 챕터·잠긴 기능(내 맵, 일일 퍼즐)을 눌렀을 때의 해금 조건 팝업 — 셸 전체에서 하나를 공유
     @State private var lockInfo: LockInfo? = nil
 
     private var chapterMapContent: some View {
@@ -397,8 +419,6 @@ struct SidebarShell: View {
                     .padding(.horizontal, 40)
             }
         }
-        // 잠긴 챕터 탭 시 해금 조건 팝업 (표시 패턴은 공용 모디파이어)
-        .lockInfoPopup($lockInfo)
     }
 }
 

@@ -78,7 +78,7 @@ struct SettingsView: View {
                     VStack(spacing: 28) {
                         themeSection      // 테마 선택 섹션
                         feedbackSection   // 효과음/배경음악 섹션
-                        reminderSection   // 복습 알림 섹션
+                        if vm.dailyPuzzleUnlocked { reminderSection }   // 복습 알림 섹션 (일일 퍼즐이 열린 뒤에만)
                         gameSection       // 실행 속도 섹션
                         dataSection       // 진행도 초기화 섹션
                         developerSection  // 챕터 강제 해금(테스트 편의) — 임시, 정식 배포 전 제거 예정

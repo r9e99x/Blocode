@@ -186,6 +186,20 @@ final class ProgressService: ObservableObject {
         Self.isChapterUnlocked(chapter, chapters: chapters, results: results)
     }
 
+    /// 기능 해금 여부 — 필요한 챕터를 모두 클리어했는지
+    func isUnlocked(_ feature: UnlockableFeature, chapters: [ChapterInfo] = ChapterCatalog.all) -> Bool {
+        Self.isChapterCompleted(feature.requiredChapter, chapters: chapters, results: results)
+    }
+
+    /// 챕터의 모든 스테이지를 클리어했는지 (별 수 무관, 스테이지가 없는 챕터는 false)
+    static func isChapterCompleted(_ number: Int, chapters: [ChapterInfo],
+                                   results: [String: StageResult]) -> Bool {
+        guard let chapter = chapters.first(where: { $0.number == number }), chapter.stageCount > 0 else { return false }
+        return (1...chapter.stageCount).allSatisfy {
+            results[Stage.makeID(chapter: number, number: $0)]?.isCleared ?? false
+        }
+    }
+
     /// 홈 "이어서 하기"가 보낼 스테이지 — 진행 규칙(아래 static 함수)에 현재 진행도를 넘겨 계산
     func nextStage(chapters: [ChapterInfo] = ChapterCatalog.all) -> (chapter: Int, stage: Int)? {
         Self.nextStage(chapters: chapters, results: results)
@@ -326,5 +340,20 @@ final class ProgressService: ObservableObject {
         }
         // 메모리 미러 비우기 → @Published 변경으로 뷰 자동 갱신
         results = [:]
+    }
+}
+
+// MARK: - UnlockableFeature
+/// 처음엔 잠겨 있다가 특정 챕터를 모두 클리어하면 열리는 기능
+enum UnlockableFeature {
+    case dailyPuzzle  // 일일·랜덤 퍼즐 (+ 복습 알림)
+    case customMaps   // 내 맵 (맵 만들기)
+
+    /// 모든 스테이지를 클리어해야 하는 챕터 번호
+    var requiredChapter: Int {
+        switch self {
+        case .dailyPuzzle: return 3
+        case .customMaps: return 5
+        }
     }
 }
