@@ -272,13 +272,16 @@ struct ContentView: View {
             // 메인 인용구 — Georgia Italic 폰트로 감성적 표현
             // (한국어는 시스템 폰트 폴백 + 기울임 변환으로 이탤릭 효과 구현)
             VStack(alignment: .leading, spacing: 0) {
-                Text("적은 블럭이")
+                // 매일 바뀌는 문구 — 길면 한 줄 안에서 글자를 줄여 줄바꿈을 막음
+                Text(vm.dailyQuote.first)
                     .font(.custom("Georgia-Italic", size: 38))
                     .foregroundStyle(.primary)
+                    .lineLimit(1).minimumScaleFactor(0.6)
                     .transformEffect(CGAffineTransform(a: 1, b: 0, c: -0.12, d: 1, tx: 0, ty: 0))
-                Text("좋은 코드.")
+                Text(vm.dailyQuote.second)
                     .font(.custom("Georgia-Italic", size: 38))
                     .foregroundStyle(.primary)
+                    .lineLimit(1).minimumScaleFactor(0.6)
                     .transformEffect(CGAffineTransform(a: 1, b: 0, c: -0.12, d: 1, tx: 0, ty: 0))
             }
 

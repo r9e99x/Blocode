@@ -127,6 +127,9 @@ final class HomeViewModel: ObservableObject {
         progress.nextStage()  // 챕터 잠금까지 반영 (ChapterCatalog 기준)
     }
 
+    /// 오늘의 한 줄 — 날짜마다 바뀜
+    var dailyQuote: DailyQuote { DailyQuote.quote(for: now(), calendar: calendar) }
+
     /// 진행 상황에 따라 달라지는 서브타이틀 문구
     var dynamicSubtitle: String {
         let earned    = earnedStars

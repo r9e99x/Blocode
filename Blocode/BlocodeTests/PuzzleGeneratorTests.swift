@@ -245,3 +245,37 @@ struct PuzzleGeneratorTests {
         #expect(home.earnedStars == starsBefore)
     }
 }
+
+// MARK: - 오늘의 한 줄
+
+@MainActor
+@Suite("오늘의 한 줄")
+struct DailyQuoteTests {
+    private func date(_ y: Int, _ m: Int, _ d: Int) -> Date {
+        Calendar.current.date(from: DateComponents(year: y, month: m, day: d, hour: 15))!
+    }
+
+    @Test("같은 날은 시각이 달라도 같은 문구, 다음 날은 다른 문구")
+    func changesDaily() {
+        let morning = Calendar.current.date(from: DateComponents(year: 2026, month: 11, day: 12, hour: 1))!
+        #expect(DailyQuote.quote(for: morning) == DailyQuote.quote(for: date(2026, 11, 12)))
+        #expect(DailyQuote.quote(for: date(2026, 11, 12)) != DailyQuote.quote(for: date(2026, 11, 13)))
+    }
+
+    @Test("연속된 날은 모두 달라서 목록 길이만큼 지나야 반복됨")
+    func cyclesThroughAll() {
+        let start = date(2026, 1, 1)
+        let quotes = (0..<DailyQuote.all.count).map {
+            DailyQuote.quote(for: Calendar.current.date(byAdding: .day, value: $0, to: start)!)
+        }
+        #expect(Set(quotes.map(\.joined)).count == DailyQuote.all.count)
+        let again = DailyQuote.quote(for: Calendar.current.date(byAdding: .day, value: DailyQuote.all.count, to: start)!)
+        #expect(again == quotes[0])
+    }
+
+    @Test("문구 목록에 빈 줄이나 중복이 없음")
+    func quotesAreValid() {
+        #expect(DailyQuote.all.allSatisfy { !$0.first.isEmpty && !$0.second.isEmpty })
+        #expect(Set(DailyQuote.all.map(\.joined)).count == DailyQuote.all.count)
+    }
+}

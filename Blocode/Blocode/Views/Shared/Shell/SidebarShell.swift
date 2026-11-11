@@ -329,7 +329,7 @@ struct SidebarShell: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
                     Text("오늘의 한 줄").font(.system(size: 13)).foregroundStyle(.secondary)
-                    Text("적은 블럭이 좋은 코드.")
+                    Text(homeVM.dailyQuote.joined)  // 매일 바뀌는 문구
                         .font(.system(size: 34, weight: .bold, design: .serif))
                         .italic()
                     Text(homeVM.dynamicSubtitle)
