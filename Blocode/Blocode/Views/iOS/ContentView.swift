@@ -394,11 +394,11 @@ struct ContentView: View {
                 }
             }
 
-            // "챕터 둘러보기" 크림 버튼 (아이패드·맥 셸과 공용 부품)
-            HomeBrowseButton { navPath.append(AppRoute.chapterSelect) }
-
-            // "내 맵" 크림 버튼 — 직접 만든 퍼즐 목록으로
-            HomeBrowseButton(title: "내 맵", isLocked: !vm.isUnlocked(.customMaps)) { openIfUnlocked(.customMaps, AppRoute.customMaps) }
+            // 크림 버튼 두 개를 반 폭씩 한 줄에 — "챕터 둘러보기"(아이패드·맥 셸과 공용 부품)와 "내 맵"(직접 만든 퍼즐 목록)
+            HStack(spacing: 12) {
+                HomeBrowseButton { navPath.append(AppRoute.chapterSelect) }
+                HomeBrowseButton(title: "나만의 맵", isLocked: !vm.isUnlocked(.customMaps)) { openIfUnlocked(.customMaps, AppRoute.customMaps) }
+            }
         }
     }
 }
