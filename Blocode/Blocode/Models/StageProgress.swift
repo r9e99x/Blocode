@@ -13,10 +13,8 @@ import SwiftData
 /// ProgressService가 이 모델을 읽고 쓰며, 뷰에는 StageResult 미러로 전달함.
 /// 앱이 종료되어도 유지되며, Apple Developer 등록 후 iCloud(CloudKit) 동기화 연동 예정.
 ///
-/// 참고 — 커스텀 맵/블럭(유저 제작 콘텐츠)은 추후 구현 예정:
-///   기본 스테이지는 계속 JSON(Resources/Stages)으로 관리하고,
-///   유저가 만든 커스텀 맵은 별도의 @Model(예: CustomMap)을 새로 추가해
-///   동일한 ModelContainer 스키마에 등록하는 방식으로 확장할 것.
+/// 참고 — 기본 스테이지는 JSON(Resources/Stages)으로 관리하고,
+///   유저가 만든 맵은 별도의 @Model(CustomMap)로 같은 ModelContainer에 저장함.
 @Model
 final class StageProgress {
     /// 스테이지 고유 ID (예: "ch1_stage1") — ProgressService와 동일한 키 형식 사용

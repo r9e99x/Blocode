@@ -22,9 +22,7 @@ struct BlocodeApp: App {
     /// 등록 완료 후 ProgressService의 ModelConfiguration에 CloudKit을
     /// 연결하면 활성화됨 (설정 화면의 "iCloud 동기화" 행도 그때 다시 추가할 것).
     ///
-    /// 커스텀 맵/블럭(유저 제작): 추후 구현 예정. 기본 스테이지는 계속
-    /// JSON(Resources/Stages)으로 관리하고, 유저가 만든 커스텀 맵만
-    /// 별도 SwiftData 모델(@Model)을 추가해 이 컨테이너 스키마에 등록할 것.
+    /// 유저가 만든 맵(CustomMap)도 이 컨테이너에 저장됨. 기본 스테이지는 계속 JSON(Resources/Stages)으로 관리.
 
     // MARK: - 온보딩 표시 여부
     /// 앱 최초 설치 시 false → 온보딩 표시 후 true로 저장

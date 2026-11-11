@@ -74,8 +74,8 @@ final class ProgressService: ObservableObject {
     /// 앱은 항상 기본값(영구 저장)인 `shared`를 쓰고, 테스트만 메모리 저장소와 격리된 UserDefaults를 주입
     init(isStoredInMemoryOnly: Bool = false, defaults: UserDefaults = .standard) {
         self.defaults = defaults
-        // 진행도 모델 스키마로 컨테이너 생성
-        let schema = Schema([StageProgress.self])
+        // 진행도와 사용자 맵 모델을 한 스키마로 컨테이너 생성 (진행도 초기화는 StageProgress만 지움)
+        let schema = Schema([StageProgress.self, CustomMap.self])
         let config = ModelConfiguration(
             schema: schema,
             isStoredInMemoryOnly: isStoredInMemoryOnly  // 기본값 false = 영구 저장 (앱 종료 후에도 유지)

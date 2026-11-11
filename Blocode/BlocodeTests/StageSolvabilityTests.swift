@@ -5,7 +5,7 @@
 //  Created by 조준희 on 11/2/26.
 //
 //  앱에 들어 있는 모든 스테이지를 실제로 깰 수 있는지 검증.
-//  JSON에 정답이 없으므로 팔레트의 기본 블럭으로 갈 수 있는 상태를 전부 탐색해 풀이를 찾고,
+//  JSON에 정답이 없으므로 팔레트의 기본 블럭으로 갈 수 있는 상태를 전부 탐색(앱의 MapSolver)해 풀이를 찾고,
 //  찾은 풀이를 실제 실행 엔진(GameViewModel)에 넣어 클리어되는지 확인한다.
 //  별 3개 기준(블럭 수)을 달성할 수 있는지와 난이도는 검증하지 않는다.
 
@@ -17,77 +17,17 @@ import Foundation
 @Suite("스테이지 풀이 가능 여부")
 struct StageSolvabilityTests {
 
-    /// 탐색 중 같은 상태를 다시 보지 않기 위한 열쇠 — 판의 상태 전부
-    private struct BoardKey: Hashable {
-        let position: Position
-        let direction: Direction
-        let collectedItems: Set<Position>
-        let openedGates: Set<Position>
-
-        init(_ board: GameBoard) {
-            position = board.position
-            direction = board.direction
-            collectedItems = board.collectedItems
-            openedGates = board.openedGates
-        }
-    }
-
     /// 앱에 들어 있는 모든 스테이지 (개수는 StageDataIntegrityTests가 따로 검증)
     private var allStages: [Stage] {
         ChapterCatalog.all.flatMap { StageLoader.loadChapter($0.number, stageCount: $0.stageCount) }
     }
 
-    /// 블럭 하나를 실행한 뒤의 판 — 실패하는 블럭이면 nil (GameViewModel.executeBlocks와 같은 순서)
-    private func apply(_ type: BlockType, to board: GameBoard) -> GameBoard? {
-        var next = board
-        switch type {
-        case .moveForward:
-            guard next.move(.forward) else { return nil }
-            _ = next.enterPortal()
-        case .moveBackward:
-            guard next.move(.backward) else { return nil }
-            _ = next.enterPortal()
-        case .turnLeft:
-            next.turn(left: true)
-        case .turnRight:
-            next.turn(left: false)
-        case .collectItem:
-            guard next.collectItem() else { return nil }
-        case .activateSwitch:
-            guard next.activateSwitch() != .noSwitch else { return nil }
-        case .repeatBlock, .ifBlock, .functionBlock:
-            // 컨테이너는 안에 넣은 기본 블럭을 실행할 뿐이라, 기본 블럭만 탐색해도 갈 수 있는 곳이 같음
-            return nil
-        }
-        return next
-    }
-
-    /// 가장 짧은 풀이를 너비 우선 탐색으로 찾음 — 없으면 nil
+    /// 가장 짧은 풀이 — 없으면 nil (탐색 규칙은 앱의 MapSolver)
     /// - Parameter collectingAllItems: true면 보석을 전부 모은 뒤 목표에 도착하는 풀이만 인정
     private func shortestSolution(for stage: Stage, collectingAllItems: Bool = false) -> [BlockType]? {
-        let itemCount = stage.mapData.items?.count ?? 0
-        let start = GameBoard(map: stage.mapData)
-        var queue: [(board: GameBoard, path: [BlockType])] = [(start, [])]
-        var visited: Set<BoardKey> = [BoardKey(start)]
-        var head = 0  // removeFirst는 매번 배열을 당겨 느리므로 위치만 옮김
-
-        while head < queue.count {
-            let (board, path) = queue[head]
-            head += 1
-            for type in stage.paletteBlocks {
-                guard let next = apply(type, to: board) else { continue }
-                if next.isAtGoal {
-                    // 실제 게임은 목표에 닿는 순간 끝나므로, 조건이 안 맞아도 여기서 더 나아가지 않음
-                    if !collectingAllItems || next.collectedItems.count == itemCount {
-                        return path + [type]
-                    }
-                    continue
-                }
-                if visited.insert(BoardKey(next)).inserted {
-                    queue.append((next, path + [type]))
-                }
-            }
-        }
+        let outcome = MapSolver.solve(stage.mapData, palette: stage.paletteBlocks,
+                                      collectingAllItems: collectingAllItems)
+        if case .solved(let path) = outcome { return path }
         return nil
     }
 
