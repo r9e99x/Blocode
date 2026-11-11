@@ -23,4 +23,13 @@ enum AppRoute: Hashable {
     ///   - chapter: 챕터 번호
     ///   - number: 스테이지 번호
     case stage(chapter: Int, number: Int)
+
+    /// 내 맵 목록 화면 (사용자가 만든 맵)
+    case customMaps
+
+    /// 내 맵 플레이 화면 — 저장된 맵의 번호
+    case customMapPlay(UUID)
+
+    /// 맵 에디터 화면 — 고칠 저장된 맵의 번호 (nil이면 새 맵)
+    case mapEditor(UUID?)
 }

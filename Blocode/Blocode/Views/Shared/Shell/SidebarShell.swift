@@ -45,7 +45,7 @@ struct SidebarShell: View {
 
     /// 사이드바 최상위 섹션
     private enum Section: Hashable {
-        case home, chapters, settings
+        case home, chapters, myMaps, settings
     }
 
     @State private var section: Section = .home
@@ -115,6 +115,20 @@ struct SidebarShell: View {
                     }
                     .navigationBarBackButtonHidden(true)
                     #endif
+                } else if case .customMapPlay(let id) = route {
+                    // 내 맵 플레이 — 게임 화면과 같은 뒤로가기 규칙
+                    CustomMapPlayView(id: id, showsOwnBackButton: showsOwnBackButton) {
+                        if !navPath.isEmpty { navPath.removeLast() }
+                    }
+                    .macBackToolbar(navPath: $navPath)
+                } else if case .mapEditor(let id) = route {
+                    // 맵 에디터 — 자체 뒤로가기(저장 확인 포함)를 쓰므로 시스템 뒤로가기는 숨김
+                    MapEditorView(editing: id.flatMap { CustomMapService.shared.map(withID: $0) }) {
+                        if !navPath.isEmpty { navPath.removeLast() }
+                    }
+                    #if os(macOS)
+                    .navigationBarBackButtonHidden(true)
+                    #endif
                 }
             }
         }
@@ -131,6 +145,7 @@ struct SidebarShell: View {
                 return "Blocode — \(info.title)"
             }
             return "Blocode — 챕터"
+        case .myMaps: return "Blocode — 내 맵"
         case .settings: return "Blocode — 설정"
         }
     }
@@ -156,6 +171,9 @@ struct SidebarShell: View {
             }
             sidebarItem(icon: "square.grid.2x2", title: "챕터", isSelected: section == .chapters) {
                 withAnimation(.easeInOut(duration: 0.2)) { section = .chapters }
+            }
+            sidebarItem(icon: "pencil.and.ruler", title: "내 맵", isSelected: section == .myMaps) {
+                withAnimation(.easeInOut(duration: 0.2)) { section = .myMaps }
             }
             sidebarItem(icon: "gearshape", title: "설정", isSelected: section == .settings) {
                 withAnimation(.easeInOut(duration: 0.2)) { section = .settings }
@@ -241,6 +259,12 @@ struct SidebarShell: View {
             case .chapters:
                 // browsingChapter가 nil일 때만 이 분기로 오므로 항상 지도
                 chapterMapContent
+            case .myMaps:
+                CustomMapListView(
+                    onNew: { navPath.append(AppRoute.mapEditor(nil)) },
+                    onPlay: { navPath.append(AppRoute.customMapPlay($0)) },
+                    onEdit: { navPath.append(AppRoute.mapEditor($0)) }
+                )
             case .settings:
                 SettingsView(isEmbedded: true)
             }
@@ -357,3 +381,33 @@ struct SidebarShell: View {
     SidebarShell()
 }
 #endif
+
+// MARK: - 맥 게임 화면 뒤로가기 툴바
+/// 맥 NavigationStack 툴바에 사각형 뒤로가기 버튼을 두고 시스템 뒤로가기는 숨김 (iOS·아이패드는 그대로)
+private extension View {
+    @ViewBuilder
+    func macBackToolbar(navPath: Binding<NavigationPath>) -> some View {
+        #if os(macOS)
+        self
+            .toolbar {
+                ToolbarItem(placement: .navigation) {
+                    Button {
+                        SoundService.shared.play(.buttonTap)
+                        if !navPath.wrappedValue.isEmpty { navPath.wrappedValue.removeLast() }
+                    } label: {
+                        Image(systemName: "chevron.left")
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundStyle(Color.secondary)
+                            .frame(width: 30, height: 30)
+                            .background(Color.panelBackground)
+                            .clipShape(RoundedRectangle(cornerRadius: 8))
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .navigationBarBackButtonHidden(true)
+        #else
+        self
+        #endif
+    }
+}

@@ -60,6 +60,22 @@ struct ContentView: View {
                     // 로딩은 StageView의 ViewModel이 담당 (View 계층 데이터 호출 제거)
                     StageView(chapter: chapter, number: number, navPath: $navPath)
                         .id("stage-\(chapter)-\(number)")
+
+                case .customMaps:
+                    CustomMapListView(
+                        onBack: { if !navPath.isEmpty { navPath.removeLast() } },
+                        onNew: { navPath.append(AppRoute.mapEditor(nil)) },
+                        onPlay: { navPath.append(AppRoute.customMapPlay($0)) },
+                        onEdit: { navPath.append(AppRoute.mapEditor($0)) }
+                    )
+
+                case .customMapPlay(let id):
+                    CustomMapPlayView(id: id) { if !navPath.isEmpty { navPath.removeLast() } }
+
+                case .mapEditor(let id):
+                    MapEditorView(editing: id.flatMap { CustomMapService.shared.map(withID: $0) }) {
+                        if !navPath.isEmpty { navPath.removeLast() }
+                    }
                 }
             }
         }
@@ -297,6 +313,9 @@ struct ContentView: View {
 
             // "챕터 둘러보기" 크림 버튼 (아이패드·맥 셸과 공용 부품)
             HomeBrowseButton { navPath.append(AppRoute.chapterSelect) }
+
+            // "내 맵" 크림 버튼 — 직접 만든 퍼즐 목록으로
+            HomeBrowseButton(title: "내 맵") { navPath.append(AppRoute.customMaps) }
         }
     }
 }

@@ -17,14 +17,14 @@ struct MapEditorView: View {
 
     private let service: CustomMapService
     private let onClose: () -> Void
-    /// 테스트 플레이 연결 — nil이면 테스트 플레이 버튼을 보이지 않음
-    private let onTestPlay: ((Stage) -> Void)?
     private let onSaved: ((CustomMap) -> Void)?
     /// 자체 뒤로가기 버튼 표시 여부 (맥은 툴바 버튼을 쓸 수 있도록 끌 수 있음)
     private let showsOwnBackButton: Bool
 
     @State private var showSettings = false
     @State private var showLeaveConfirm = false
+    /// 테스트 플레이 중인 스테이지 — 값이 있으면 게임 화면을 전체 화면으로 띄움
+    @State private var testStage: Stage?
     /// 저장 결과 같은 한 줄 알림 — 맵을 고치거나 이름을 바꾸면 사라짐
     @State private var notice: String?
 
@@ -32,13 +32,12 @@ struct MapEditorView: View {
     @MainActor
     init(editing: CustomMap? = nil, service: CustomMapService? = nil,
          showsOwnBackButton: Bool = true,
-         onTestPlay: ((Stage) -> Void)? = nil, onSaved: ((CustomMap) -> Void)? = nil,
+         onSaved: ((CustomMap) -> Void)? = nil,
          onClose: @escaping () -> Void) {
         let model = editing.flatMap(MapEditorViewModel.init(editing:)) ?? MapEditorViewModel()
         _editor = StateObject(wrappedValue: model)
         self.service = service ?? .shared
         self.showsOwnBackButton = showsOwnBackButton
-        self.onTestPlay = onTestPlay
         self.onSaved = onSaved
         self.onClose = onClose
     }
@@ -61,6 +60,10 @@ struct MapEditorView: View {
             if showLeaveConfirm { leaveConfirm }
         }
         .sheet(isPresented: $showSettings) { settingsSheet }
+        .fullScreenCoverCompat(isPresented: Binding(get: { testStage != nil },
+                                                    set: { if !$0 { testStage = nil } })) {
+            testPlayScreen
+        }
         .onChange(of: editor.name) { _, name in
             if name.count > CustomMapService.maxNameLength {
                 editor.name = String(name.prefix(CustomMapService.maxNameLength))
@@ -203,10 +206,8 @@ struct MapEditorView: View {
             EditorTextButton(title: "확인", icon: "checkmark") {
                 editor.validate()
             }
-            if onTestPlay != nil {
-                EditorTextButton(title: "테스트 플레이", icon: "play.fill", face: .runButtonActiveMint) {
-                    startTestPlay()
-                }
+            EditorTextButton(title: "테스트 플레이", icon: "play.fill", face: .runButtonActiveMint) {
+                startTestPlay()
             }
         }
     }
@@ -232,6 +233,21 @@ struct MapEditorView: View {
         .background(Color.appBackground.ignoresSafeArea())
         .presentationDetents([.medium, .large])
         .preferredColorScheme(SettingsService.shared.theme.colorScheme)
+    }
+
+    /// 만든 맵을 직접 플레이 — 클리어하면 그 블럭 수로 별 3개 기준이 내려감
+    @ViewBuilder
+    private var testPlayScreen: some View {
+        if let stage = testStage {
+            StageView(stage: stage, navPath: .constant(NavigationPath()),
+                      onExit: { testStage = nil },
+                      onCleared: { editor.recordTestClear(blockCount: $0) })
+                .id(stage.id)
+                .preferredColorScheme(SettingsService.shared.theme.colorScheme)
+                #if os(macOS)
+                .frame(minWidth: 960, minHeight: 680)  // 맥 시트는 내용 크기를 따르므로 게임 화면이 충분히 크도록
+                #endif
+        }
     }
 
     private var leaveConfirm: some View {
@@ -277,7 +293,7 @@ struct MapEditorView: View {
     private func startTestPlay() {
         let result = editor.validation ?? editor.validate()
         guard result.isValid, let stage = editor.previewStage else { return }
-        onTestPlay?(stage)
+        testStage = stage
     }
 }
 

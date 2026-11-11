@@ -62,8 +62,9 @@ struct HomeContinueButton: View {
 }
 
 // MARK: - HomeBrowseButton
-/// 홈 "챕터 둘러보기" 크림색 3D 버튼 — 아이폰 홈·아이패드 셸·맥 셸 공용
+/// 홈 "챕터 둘러보기" 크림색 3D 버튼 — 아이폰 홈·아이패드 셸·맥 셸 공용 (제목을 바꿔 "내 맵" 버튼으로도 사용)
 struct HomeBrowseButton: View {
+    var title = "챕터 둘러보기"
     let action: () -> Void  // 탭 동작 (화면 이동은 호출부가 결정)
 
     @State private var isPressed = false
@@ -79,7 +80,7 @@ struct HomeBrowseButton: View {
                               topBack: Color.dynamic(light: (252/255, 249/255, 238/255), dark: (0.18, 0.19, 0.22)),
                               bottomBack: Color.dynamic(light: (196/255, 192/255, 181/255), dark: (0.13, 0.14, 0.17)),
                               pressedOverlayOpacity: 0.06, isPressed: isPressed) {
-                Text("챕터 둘러보기")
+                Text(title)
                     .font(.system(size: 16, weight: .semibold))
                     .foregroundStyle(.primary)
             }
