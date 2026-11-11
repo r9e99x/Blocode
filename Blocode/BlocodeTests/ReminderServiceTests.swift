@@ -262,3 +262,30 @@ struct ReminderServiceTests {
         #expect(!vm.reminderEnabled)
     }
 }
+
+// MARK: - 알림을 눌렀을 때 이동
+
+@MainActor
+@Suite("알림 이동")
+struct NotificationRoutingTests {
+
+    @Test("복습 알림 내용만 오늘의 퍼즐 열기로 인식")
+    func recognizesDestination() {
+        let userInfo: [AnyHashable: Any] = [ReminderNotificationDelegate.destinationKey: ReminderNotificationDelegate.dailyPuzzleDestination]
+        #expect(ReminderNotificationDelegate.opensDailyPuzzle(userInfo))
+        #expect(!ReminderNotificationDelegate.opensDailyPuzzle([:]))
+        #expect(!ReminderNotificationDelegate.opensDailyPuzzle(["destination": "other"]))
+        #expect(!ReminderNotificationDelegate.opensDailyPuzzle(["destination": 1]))
+    }
+
+    @Test("이동 요청은 한 번만 가져갈 수 있음")
+    func requestIsConsumedOnce() {
+        let router = NotificationRouter()
+        #expect(!router.consumeDailyPuzzle())
+        router.requestDailyPuzzle()
+        #expect(router.pendingDailyPuzzle)
+        #expect(router.consumeDailyPuzzle())
+        #expect(!router.pendingDailyPuzzle)
+        #expect(!router.consumeDailyPuzzle())
+    }
+}

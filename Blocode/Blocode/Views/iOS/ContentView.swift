@@ -26,6 +26,9 @@ struct ContentView: View {
     /// 홈 화면 상태/로직 — 진행도 가공은 ViewModel이 담당 (MVVM)
     @StateObject private var vm = HomeViewModel()
 
+    /// 알림을 눌러 앱이 열렸을 때의 이동 요청 — 오늘의 퍼즐 열기
+    @ObservedObject private var router = NotificationRouter.shared
+
     var body: some View {
         // 아이패드는 맥과 같은 사이드바 셸로 분기 (아이폰은 기존 NavigationStack 경로 그대로)
         if isPadIdiom {
@@ -89,12 +92,21 @@ struct ContentView: View {
                 }
             }
         }
+        // 복습 알림을 눌렀으면 오늘의 퍼즐로 (앱이 꺼진 채 눌렀을 때는 화면이 준비된 뒤 onAppear에서 처리)
+        .onAppear { openPendingDailyPuzzle() }
+        .onChange(of: router.pendingDailyPuzzle) { _, _ in openPendingDailyPuzzle() }
         // 설정에 따라 라이트/다크/시스템 테마 적용
         .preferredColorScheme(settings.theme.colorScheme)
         // 설정 화면 — 모달 표시 (iOS: fullScreenCover / macOS: sheet)
         .fullScreenCoverCompat(isPresented: $showSettings) {
             SettingsView()
         }
+    }
+
+    /// 대기 중인 알림 이동 요청이 있으면 오늘의 퍼즐만 남기고 이동 — 뒤로가면 홈
+    private func openPendingDailyPuzzle() {
+        guard router.consumeDailyPuzzle() else { return }
+        navPath = NavigationPath([AppRoute.dailyPuzzle(vm.dailyPuzzle.key)])
     }
 
     // MARK: - 홈 화면 전체 레이아웃

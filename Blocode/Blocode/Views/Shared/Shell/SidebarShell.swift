@@ -58,6 +58,8 @@ struct SidebarShell: View {
     @StateObject private var homeVM = HomeViewModel()
     @StateObject private var chapterSelectVM = ChapterSelectViewModel()
     @ObservedObject private var settings = SettingsService.shared
+    /// 알림을 눌러 앱이 열렸을 때의 이동 요청 — 오늘의 퍼즐 열기
+    @ObservedObject private var router = NotificationRouter.shared
 
     var body: some View {
         NavigationStack(path: $navPath) {
@@ -146,7 +148,18 @@ struct SidebarShell: View {
                 }
             }
         }
+        // 복습 알림을 눌렀으면 오늘의 퍼즐로 (앱이 꺼진 채 눌렀을 때는 화면이 준비된 뒤 onAppear에서 처리)
+        .onAppear { openPendingDailyPuzzle() }
+        .onChange(of: router.pendingDailyPuzzle) { _, _ in openPendingDailyPuzzle() }
         .preferredColorScheme(settings.theme.colorScheme)
+    }
+
+    /// 대기 중인 알림 이동 요청이 있으면 홈에서 오늘의 퍼즐만 열린 상태로 이동 — 뒤로가면 홈
+    private func openPendingDailyPuzzle() {
+        guard router.consumeDailyPuzzle() else { return }
+        section = .home
+        browsingChapter = nil
+        navPath = NavigationPath([AppRoute.dailyPuzzle(homeVM.dailyPuzzle.key)])
     }
 
     #if os(macOS)

@@ -31,6 +31,11 @@ struct BlocodeApp: App {
     /// 앱 활성/백그라운드 상태 — 홈 화면으로 나가면 배경음악을 멈추고, 돌아오면 다시 재생하는 데 사용
     @Environment(\.scenePhase) private var scenePhase
 
+    init() {
+        // 알림을 눌러 앱이 열릴 때 오늘의 퍼즐로 가도록 델리게이트를 앱 시작 때 연결
+        ReminderNotificationDelegate.install()
+    }
+
     // MARK: - 앱 진입점
     var body: some Scene {
         WindowGroup {

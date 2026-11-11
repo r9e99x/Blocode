@@ -46,6 +46,7 @@ struct SystemNotificationCenter: NotificationScheduling {
         content.title = "Blocode"
         content.body = body
         content.sound = .default
+        content.userInfo = [ReminderNotificationDelegate.destinationKey: ReminderNotificationDelegate.dailyPuzzleDestination]  // 누르면 오늘의 퍼즐로
         let parts = calendar.dateComponents([.year, .month, .day, .hour, .minute], from: date)
         let trigger = UNCalendarNotificationTrigger(dateMatching: parts, repeats: false)
         try? await UNUserNotificationCenter.current().add(UNNotificationRequest(identifier: id, content: content, trigger: trigger))
