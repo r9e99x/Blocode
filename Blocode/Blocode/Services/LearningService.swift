@@ -55,6 +55,13 @@ final class LearningService: ObservableObject {
         return true
     }
 
+    /// 이 스테이지에 처음 나오는 블럭들 — 아직 못 만난 블럭만, 팔레트 순서대로
+    /// 사용자가 만든 맵·에디터 테스트는 제외 (거기선 모든 블럭이 한꺼번에 나와서 설명이 쏟아지지 않도록)
+    func unseenBlocks(for stage: Stage) -> [BlockType] {
+        guard !stage.isCustomMap else { return [] }
+        return (stage.availableBlocks ?? []).filter { !seenBlocks.contains($0) }
+    }
+
     /// 이미 진행한 사용자를 위한 채우기 — 어떤 블럭이 처음 나오는 스테이지(또는 그 뒤 스테이지)를 클리어했다면 만난 것으로 침
     func syncFromProgress(_ progress: ProgressService) {
         for block in BlockType.allCases {

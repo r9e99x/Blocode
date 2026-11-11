@@ -98,3 +98,40 @@ struct LearningTests {
         #expect(service.seenBlocks.isEmpty)
     }
 }
+
+// MARK: - 처음 만나는 블럭
+
+@MainActor
+@Suite("처음 만나는 블럭")
+struct FirstEncounterTests {
+
+    private func stage(id: String, blocks: [BlockType]?) -> Stage {
+        let map = MapData(grid: [[1, 1, 1]], start: Position(x: 0, y: 0), startDirection: .right, goal: Position(x: 2, y: 0))
+        return Stage(id: id, chapter: 1, stageNumber: 1, name: "t", mapData: map,
+                     starThresholds: StarThresholds(threeStar: 2, twoStar: 3), availableBlocks: blocks)
+    }
+
+    @Test("아직 못 만난 블럭만 팔레트 순서대로 나옴")
+    func onlyUnseen() {
+        let service = LearningService(defaults: isolatedDefaults())
+        let stage = stage(id: "ch1_stage9", blocks: [.moveForward, .turnRight, .repeatBlock])
+        #expect(service.unseenBlocks(for: stage) == [.moveForward, .turnRight, .repeatBlock])
+        service.markSeen(.moveForward)
+        #expect(service.unseenBlocks(for: stage) == [.turnRight, .repeatBlock])
+    }
+
+    @Test("한 번 보여 준 블럭은 다시 나오지 않음")
+    func onlyOnce() {
+        let service = LearningService(defaults: isolatedDefaults())
+        let stage = stage(id: "ch1_stage9", blocks: [.moveForward])
+        #expect(service.markSeen(.moveForward))
+        #expect(service.unseenBlocks(for: stage).isEmpty)
+    }
+
+    @Test("사용자 맵과 블럭 목록이 없는 스테이지는 설명을 띄우지 않음")
+    func skipsCustomAndUnlisted() {
+        let service = LearningService(defaults: isolatedDefaults())
+        #expect(service.unseenBlocks(for: stage(id: "\(CustomMap.stageIDPrefix)abc", blocks: [.moveForward, .repeatBlock])).isEmpty)
+        #expect(service.unseenBlocks(for: stage(id: "ch1_stage9", blocks: nil)).isEmpty)
+    }
+}

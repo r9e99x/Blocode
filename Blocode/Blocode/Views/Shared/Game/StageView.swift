@@ -48,6 +48,11 @@ struct StageView: View {
 
     @Environment(\.colorScheme) private var colorScheme  // 다크/라이트 모드 감지
 
+    /// 처음 만나는 블럭 설명 — 한 번에 하나씩 차례로 띄움 (대기 줄 + 지금 보이는 것)
+    @State private var introQueue: [BlockType] = []
+    @State private var introBlock: BlockType?
+    @State private var introChecked = false  // 화면이 다시 나타나도 한 번만 확인
+
     /// 프로덕션 진입점 — 챕터/스테이지 번호만 받고 로딩은 ViewModel(VM)이 수행
     /// (View 계층에서 데이터 소스(StageLoader)를 직접 호출하지 않음 = 정석 MVVM)
     init(chapter: Int, number: Int, navPath: Binding<NavigationPath>,
@@ -197,6 +202,15 @@ struct StageView: View {
                 .transition(.opacity)
             }
 
+            // MARK: 처음 만나는 블럭 설명 — 새 블럭이 처음 나오는 스테이지에서 딱 한 번
+            if let block = introBlock, let card = LearningCatalog.card(for: block) {
+                ConfirmCardOverlay(icon: block.iconName, title: "새 블럭 · \(card.title)",
+                                   message: "\(card.summary)\n\n\(card.body)\n\n개념 카드 모음에 저장했어요.",
+                                   accentColor: block.blockColor, primaryTitle: "알겠어요",
+                                   onPrimary: advanceIntro, onDismiss: advanceIntro)
+                    .transition(.opacity)
+            }
+
             // MARK: Ghost drag block — 모든 UI 위에 렌더링
             if let type = drag.paletteType {
                 ghostBlock(type: type, at: drag.palettePosition)
@@ -226,6 +240,13 @@ struct StageView: View {
                 withAnimation(.spring(duration: 0.3)) { isPanelExpanded = false }
             }
             if newState == .success { onCleared?(viewModel.totalBlockCount) }
+        }
+        // 처음 만나는 블럭이 있으면 화면이 자리 잡은 뒤에 설명을 띄움 (진입 전환과 겹치지 않게 잠깐 기다림)
+        .task {
+            guard !introChecked else { return }
+            introChecked = true
+            try? await Task.sleep(for: .milliseconds(400))
+            startIntros()
         }
         .hideNavigationBar()  // iOS 전용 API 래퍼 (macOS no-op)
         }  // GeometryReader 끝
@@ -637,6 +658,30 @@ struct StageView: View {
                 .shadow(color: Color.red.opacity(0.3), radius: 10, y: 4)
         )
         .padding(.horizontal, 16)
+    }
+
+    // MARK: - 처음 만나는 블럭 설명
+
+    /// 이 스테이지에 처음 나오는 블럭을 모아 첫 번째를 띄움
+    private func startIntros() {
+        let learning = LearningService.shared
+        // 이미 진행한 사용자가 지나온 블럭 설명을 다시 보지 않도록 진도에서 먼저 채움
+        learning.syncFromProgress(.shared)
+        introQueue = learning.unseenBlocks(for: stage)
+        advanceIntro()
+    }
+
+    /// 지금 설명을 닫고 다음 것을 띄움 — 보여 주는 순간 수집으로 기록해 한 번만 나오게 함
+    private func advanceIntro() {
+        withAnimation(.easeInOut(duration: 0.2)) {
+            if introQueue.isEmpty {
+                introBlock = nil
+            } else {
+                let next = introQueue.removeFirst()
+                LearningService.shared.markSeen(next)
+                introBlock = next
+            }
+        }
     }
 
     // MARK: - 나가기·챕터 목록 복귀
