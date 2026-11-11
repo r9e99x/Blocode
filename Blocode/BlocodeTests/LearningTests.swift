@@ -5,6 +5,7 @@
 //  Created by 조준희 on 11/12/26.
 //
 
+import Foundation
 import Testing
 @testable import Blocode
 
@@ -38,6 +39,39 @@ struct LearningTests {
             guard card.example != nil else { continue }
             for language in CodeLanguage.allCases {
                 #expect(!(card.exampleCode(in: language) ?? "").isEmpty, "\(card.id) \(language)")
+            }
+        }
+    }
+
+    @Test("코딩 기초 11장, CS 기초 10장이고 처음부터 열려 있음")
+    func basicsCards() {
+        #expect(LearningCatalog.cards(in: .coding).count == 11)
+        #expect(LearningCatalog.cards(in: .cs).count == 10)
+        let service = LearningService(defaults: isolatedDefaults())
+        for card in LearningCatalog.cards(in: .coding) + LearningCatalog.cards(in: .cs) {
+            #expect(card.unlock == .alwaysOpen)
+            #expect(service.isUnlocked(card))
+        }
+        #expect(service.progress(in: .coding) == (11, 11))
+    }
+
+    @Test("모든 카드의 코드 예시가 다섯 언어 모두 비어 있지 않음")
+    func allExamplesCompleteInEveryLanguage() {
+        for card in LearningCatalog.all {
+            guard card.example != nil else { continue }
+            for language in CodeLanguage.allCases {
+                let code = card.exampleCode(in: language) ?? ""
+                #expect(!code.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty, "\(card.id) \(language)")
+            }
+        }
+    }
+
+    @Test("카드 글에 이스케이프가 새거나 앞뒤 공백이 남지 않음")
+    func textIsClean() {
+        for card in LearningCatalog.all {
+            for text in [card.title, card.summary, card.body, card.tip ?? ""] {
+                #expect(!text.contains("\\"), "\(card.id)에 역슬래시")
+                #expect(text == text.trimmingCharacters(in: .whitespacesAndNewlines), "\(card.id) 공백")
             }
         }
     }
@@ -133,5 +167,22 @@ struct FirstEncounterTests {
         let service = LearningService(defaults: isolatedDefaults())
         #expect(service.unseenBlocks(for: stage(id: "\(CustomMap.stageIDPrefix)abc", blocks: [.moveForward, .repeatBlock])).isEmpty)
         #expect(service.unseenBlocks(for: stage(id: "ch1_stage9", blocks: nil)).isEmpty)
+    }
+}
+
+@MainActor
+@Suite("진도에서 채우기")
+struct SyncThroughChaptersTests {
+    @Test("챕터 5까지 클리어하면 반복·조건·함수·뒤로까지 채워지고 보석·스위치는 비어 있음")
+    func throughChapterFive() {
+        let progress = ProgressService.makeForTesting()
+        progress.devUnlock(throughChapter: 5, chapters: ChapterCatalog.all.map { (id: $0.number, stageCount: $0.stageCount) })
+        let service = LearningService(defaults: isolatedDefaults())
+        service.syncFromProgress(progress)
+        for block in [BlockType.moveForward, .moveBackward, .turnLeft, .turnRight, .repeatBlock, .ifBlock, .functionBlock] {
+            #expect(service.seenBlocks.contains(block), "\(block)")
+        }
+        #expect(!service.seenBlocks.contains(.collectItem))
+        #expect(!service.seenBlocks.contains(.activateSwitch))
     }
 }
