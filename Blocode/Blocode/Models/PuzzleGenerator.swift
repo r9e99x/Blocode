@@ -35,6 +35,41 @@ enum PuzzleTheme: CaseIterable {
     case mixed      // 보석 + 스위치 또는 포탈
 }
 
+// MARK: - PuzzleDifficulty
+/// 퍼즐 난이도 — 일일 퍼즐은 표준, 랜덤 퍼즐은 어렵게
+enum PuzzleDifficulty {
+    case standard
+    case hard
+
+    /// 가장 짧은 풀이 블럭 수 범위 — 너무 쉽거나 너무 길지 않게
+    var shortestRange: ClosedRange<Int> {
+        switch self {
+        case .standard: return 10...48
+        case .hard:     return 34...64
+        }
+    }
+
+    /// 테마를 고려한 범위 — 포탈은 지름길이라 풀이가 짧아지므로 어려운 쪽에서도 하한을 낮춤
+    func shortestRange(for theme: PuzzleTheme) -> ClosedRange<Int> {
+        if self == .hard && theme == .portals { return 22...64 }
+        return shortestRange
+    }
+
+    /// 풀이에 들어가는 회전 블럭 최소 개수 — 어려운 쪽은 길이 더 많이 꺾임
+    var minimumTurns: Int { self == .standard ? 3 : 6 }
+
+    /// 조건에 맞는 퍼즐을 찾으려고 씨앗을 바꿔 가며 시도하는 횟수 — 조건이 빡빡한 어려운 쪽은 더 많이
+    var attempts: Int { self == .standard ? 120 : 250 }
+
+    /// 보석 최대 개수
+    func maxItems(mixed: Bool) -> Int {
+        switch self {
+        case .standard: return mixed ? 2 : 3
+        case .hard:     return mixed ? 3 : 4
+        }
+    }
+}
+
 // MARK: - PuzzleGenerator
 /// 일일 퍼즐과 랜덤 퍼즐을 만드는 규칙
 /// 미로를 파서 시작과 목표를 가장 멀리 두고, 테마에 맞는 기믹을 놓은 뒤 MapValidator·MapSolver로
@@ -47,10 +82,6 @@ enum PuzzleGenerator {
 
     /// 맵 한 변 — 4×4 방이 복도로 이어진 미로 (9칸이면 가장자리 벽 포함)
     static let size = 9
-    private static let attemptsPerPuzzle = 120
-    /// 가장 짧은 풀이 블럭 수 범위 — 너무 쉽거나 너무 길지 않게
-    private static let shortestRange = 10...48
-    private static let minimumTurns = 3
 
     /// 퍼즐 기본 팔레트 — 기믹 블럭은 맵 요소에 따라 추가됨
     private static let basePalette: [BlockType] = [.moveForward, .turnLeft, .turnRight, .repeatBlock, .ifBlock]
@@ -90,24 +121,32 @@ enum PuzzleGenerator {
 
     // MARK: - 랜덤 퍼즐
 
-    /// 씨앗에 해당하는 랜덤 퍼즐 — 테마도 씨앗으로 정해짐
+    /// 랜덤 퍼즐이 고르는 테마 — 기믹 없는 기본은 빼고, 기믹이 섞인 쪽을 두 배로 자주
+    private static let randomThemes: [PuzzleTheme] = [.gems, .switches, .portals, .mixed, .mixed]
+
+    /// 씨앗에 해당하는 랜덤 퍼즐 — 테마도 씨앗으로 정해지고, 일일 퍼즐보다 어렵게 만듦
     static func randomStage(seed: UInt64) -> Stage {
         var rng = SeededGenerator(seed: seed)
-        let theme = PuzzleTheme.allCases.randomElement(using: &rng) ?? .basic
-        return stage(id: "\(randomIDPrefix)\(seed)", name: "랜덤 퍼즐", seed: seed, theme: theme)
+        let theme = randomThemes.randomElement(using: &rng) ?? .mixed
+        return stage(id: "\(randomIDPrefix)\(seed)", name: "랜덤 퍼즐", seed: seed, theme: theme, difficulty: .hard)
     }
 
     // MARK: - 만들기
 
     /// 씨앗과 테마로 퍼즐 스테이지를 만듦 — 조건을 맞춘 퍼즐을 못 찾으면 항상 풀 수 있는 기본 맵을 돌려줌
-    static func stage(id: String, name: String, seed: UInt64, theme: PuzzleTheme) -> Stage {
-        for attempt in 0..<attemptsPerPuzzle {
+    static func stage(id: String, name: String, seed: UInt64, theme: PuzzleTheme,
+                      difficulty: PuzzleDifficulty = .standard) -> Stage {
+        for attempt in 0..<difficulty.attempts {
             var rng = SeededGenerator(seed: seed &* 0x2545F4914F6CDD1D &+ UInt64(attempt) &+ 1)
-            if let puzzle = makePuzzle(theme: theme, rng: &rng) {
+            if let puzzle = makePuzzle(theme: theme, difficulty: difficulty, rng: &rng) {
                 return Stage(id: id, chapter: 0, stageNumber: 0, name: name, mapData: puzzle.map,
                              starThresholds: MapValidator.defaultThresholds(shortest: puzzle.shortest),
                              availableBlocks: puzzle.palette)
             }
+        }
+        // 어려운 조건을 못 맞췄으면 표준 난이도로 한 번 더 — 그래도 못 찾을 때만 뱀길
+        if difficulty == .hard {
+            return stage(id: id, name: name, seed: seed, theme: theme, difficulty: .standard)
         }
         return fallbackStage(id: id, name: name)
     }
@@ -221,9 +260,11 @@ enum PuzzleGenerator {
         return b.y > a.y ? .down : .up
     }
 
-    private static func makePuzzle(theme: PuzzleTheme, rng: inout SeededGenerator) -> Puzzle? {
+    private static func makePuzzle(theme: PuzzleTheme, difficulty: PuzzleDifficulty, rng: inout SeededGenerator) -> Puzzle? {
         var grid = carveMaze(rng: &rng)
-        addLoops(&grid, count: Int.random(in: (theme == .basic ? 1 : 0)...2, using: &rng), rng: &rng)
+        // 어려운 쪽은 돌아가는 길을 더 많이 만들어 갈림길을 늘림
+        let loopRange = difficulty == .hard ? 1...3 : (theme == .basic ? 1 : 0)...2
+        addLoops(&grid, count: Int.random(in: loopRange, using: &rng), rng: &rng)
 
         // 시작과 목표 — 미로에서 가장 먼 두 방
         let floors = allCells.filter { isFloor(grid, $0) }
@@ -245,8 +286,10 @@ enum PuzzleGenerator {
         var portals: [PortalPair] = []
 
         let wantsItems = theme == .gems || theme == .mixed
-        let wantsSwitch = theme == .switches || (theme == .mixed && Bool.random(using: &rng))
-        let wantsPortal = theme == .portals || (theme == .mixed && !wantsSwitch)
+        // 어려운 섞기는 스위치와 포탈을 함께 넣음 (표준은 둘 중 하나)
+        let mixedSwitch = theme == .mixed && (difficulty == .hard || Bool.random(using: &rng))
+        let wantsSwitch = theme == .switches || mixedSwitch
+        let wantsPortal = theme == .portals || (theme == .mixed && (difficulty == .hard || !wantsSwitch))
 
         // 문 — 가는 길 가운데의 복도 칸을 벽으로 막고, 스위치는 문 앞쪽의 곁길에 둠
         if wantsSwitch {
@@ -267,7 +310,7 @@ enum PuzzleGenerator {
         if wantsItems {
             let sideCells = floors.filter { isFloor(grid, $0) && !routeSet.contains($0) && !used.contains($0) }
             guard !sideCells.isEmpty else { return nil }
-            let count = min(sideCells.count, Int.random(in: 1...(theme == .mixed ? 2 : 3), using: &rng))
+            let count = min(sideCells.count, Int.random(in: 1...difficulty.maxItems(mixed: theme == .mixed), using: &rng))
             items = Array(sideCells.shuffled(using: &rng).prefix(count))
             used.formUnion(items)
         }
@@ -292,8 +335,8 @@ enum PuzzleGenerator {
         // 풀 수 있고, 적당히 길고, 꺾임이 있어야 함
         let validation = MapValidator.validate(map, palette: palette)
         guard validation.isValid, let solution = validation.shortestSolution,
-              shortestRange.contains(solution.count),
-              solution.filter({ $0 == .turnLeft || $0 == .turnRight }).count >= minimumTurns else { return nil }
+              difficulty.shortestRange(for: theme).contains(solution.count),
+              solution.filter({ $0 == .turnLeft || $0 == .turnRight }).count >= difficulty.minimumTurns else { return nil }
 
         // 기믹이 실제로 필요해야 함 — 문은 스위치 없이 못 지나가고, 포탈은 지름길이고, 보석은 돌아가야 함
         if !switches.isEmpty {
@@ -326,7 +369,9 @@ enum PuzzleGenerator {
         grid[4][1] = 1
         grid[6][size - 2] = 1
         let map = MapData(grid: grid, start: Position(x: 1, y: 1), startDirection: .right, goal: Position(x: 1, y: 7))
+        // 별 기준은 실제 최단 풀이로 계산 (손으로 적은 숫자는 맵을 고치면 어긋남)
+        let shortest = MapValidator.validate(map, palette: basePalette).shortestSolution?.count ?? 36
         return Stage(id: id, chapter: 0, stageNumber: 0, name: name, mapData: map,
-                     starThresholds: MapValidator.defaultThresholds(shortest: 34), availableBlocks: basePalette)
+                     starThresholds: MapValidator.defaultThresholds(shortest: shortest), availableBlocks: basePalette)
     }
 }

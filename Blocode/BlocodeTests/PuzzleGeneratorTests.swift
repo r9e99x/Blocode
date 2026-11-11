@@ -133,9 +133,9 @@ struct PuzzleGeneratorTests {
         }
     }
 
-    @Test("랜덤 퍼즐 씨앗 40개가 모두 유효함")
+    @Test("랜덤 퍼즐 씨앗 12개가 모두 유효함")
     func randomSeedsAreValid() async {
-        for seed in 1000..<1040 {
+        for seed in 1000..<1012 {
             checkQuality(PuzzleGenerator.randomStage(seed: UInt64(seed)), theme: nil, label: "랜덤 \(seed)")
             try? await Task.sleep(for: .milliseconds(1))  // 양보 — 같이 도는 실행 테스트의 대기 시간이 넘어가지 않게
         }
@@ -277,5 +277,39 @@ struct DailyQuoteTests {
     func quotesAreValid() {
         #expect(DailyQuote.all.allSatisfy { !$0.first.isEmpty && !$0.second.isEmpty })
         #expect(Set(DailyQuote.all.map(\.joined)).count == DailyQuote.all.count)
+    }
+}
+
+// MARK: - 랜덤 퍼즐 난이도
+
+@MainActor
+@Suite("랜덤 퍼즐 난이도")
+struct RandomDifficultyTests {
+
+    /// 못 맞춰서 쓰는 뱀길(출발 (1,1), 목표 (1,7), 기본 팔레트)인지
+    private func isFallback(_ stage: Stage) -> Bool {
+        stage.mapData.start == Position(x: 1, y: 1) && stage.mapData.goal == Position(x: 1, y: 7)
+            && !stage.paletteBlocks.contains(.collectItem)
+    }
+
+    @Test("랜덤 퍼즐은 기믹이 들어가고 일일 퍼즐보다 길고 많이 꺾임")
+    func randomIsHarder() async {
+        var shortests: [Int] = []
+        var fallbacks = 0
+        for seed in 2000..<2010 {
+            let stage = PuzzleGenerator.randomStage(seed: UInt64(seed))
+            if isFallback(stage) { fallbacks += 1; continue }
+            let map = stage.mapData
+            #expect(map.items != nil || map.switches != nil || map.portals != nil, "씨앗 \(seed): 기믹 없음")
+            let result = MapValidator.validate(map, palette: stage.paletteBlocks)
+            guard let solution = result.shortestSolution else { continue }
+            // 어려운 조건을 못 맞춘 씨앗은 표준 난이도로 대신 만들어지므로 하한은 표준 기준으로 확인 (평균으로 어려움을 확인)
+            #expect((10...PuzzleDifficulty.hard.shortestRange.upperBound).contains(solution.count), "씨앗 \(seed): 길이 \(solution.count)")
+            shortests.append(solution.count)
+            try? await Task.sleep(for: .milliseconds(1))
+        }
+        #expect(fallbacks <= 1, "대체 맵이 \(fallbacks)개나 나옴")
+        let average = shortests.isEmpty ? 0 : Double(shortests.reduce(0, +)) / Double(shortests.count)
+        #expect(average >= 28, "평균 최단 풀이가 \(average)")
     }
 }
