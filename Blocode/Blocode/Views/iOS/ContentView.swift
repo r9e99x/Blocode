@@ -248,6 +248,7 @@ struct ContentView: View {
                 .frame(width: 400)
             }
             .padding(.horizontal, 64)
+            .padding(.top, 48)  // 오른쪽 위에 겹쳐 놓인 학습 보관함·설정 버튼 아래로 내용을 내림
             .frame(maxWidth: 1120)
             .frame(maxWidth: .infinity, maxHeight: .infinity)  // 화면 중앙 정렬
 
