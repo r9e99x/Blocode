@@ -142,11 +142,7 @@ final class ProgressService: ObservableObject {
     ///   - chapter: 챕터 번호
     ///   - stageCount: 챕터 내 스테이지 총 개수
     func totalStars(chapter: Int, stageCount: Int) -> Int {
-        guard stageCount > 0 else { return 0 }
-        // 1번부터 stageCount까지 각 스테이지 별점 합산
-        return (1...stageCount).reduce(0) { total, stageNum in
-            total + stars(for: Stage.makeID(chapter: chapter, number: stageNum))
-        }
+        Self.stageIDs(chapter: chapter, count: stageCount).reduce(0) { $0 + stars(for: $1) }
     }
 
     // MARK: - 잠금 조건
@@ -174,10 +170,8 @@ final class ProgressService: ObservableObject {
     /// 완료된 챕터 수 (해당 챕터의 모든 스테이지를 클리어한 경우)
     func completedChapterCount(chapters: [(id: Int, stageCount: Int)]) -> Int {
         chapters.filter { ch in
-            guard ch.stageCount > 0 else { return false }
-            return (1...ch.stageCount).allSatisfy { stageNum in
-                isCleared(Stage.makeID(chapter: ch.id, number: stageNum))
-            }
+            let ids = Self.stageIDs(chapter: ch.id, count: ch.stageCount)
+            return !ids.isEmpty && ids.allSatisfy(isCleared)
         }.count
     }
 
@@ -194,15 +188,21 @@ final class ProgressService: ObservableObject {
     /// 챕터의 모든 스테이지를 클리어했는지 (별 수 무관, 스테이지가 없는 챕터는 false)
     static func isChapterCompleted(_ number: Int, chapters: [ChapterInfo],
                                    results: [String: StageResult]) -> Bool {
-        guard let chapter = chapters.first(where: { $0.number == number }), chapter.stageCount > 0 else { return false }
-        return (1...chapter.stageCount).allSatisfy {
-            results[Stage.makeID(chapter: number, number: $0)]?.isCleared ?? false
-        }
+        guard let chapter = chapters.first(where: { $0.number == number }) else { return false }
+        let ids = stageIDs(chapter: number, count: chapter.stageCount)
+        return !ids.isEmpty && ids.allSatisfy { results[$0]?.isCleared ?? false }
     }
 
     /// 홈 "이어서 하기"가 보낼 스테이지 — 진행 규칙(아래 static 함수)에 현재 진행도를 넘겨 계산
     func nextStage(chapters: [ChapterInfo] = ChapterCatalog.all) -> (chapter: Int, stage: Int)? {
         Self.nextStage(chapters: chapters, results: results)
+    }
+
+    /// 챕터에 든 스테이지 ID 목록 (1번부터) — 스테이지가 없으면 빈 목록
+    /// 별 합계·클리어 여부처럼 "챕터의 스테이지를 훑는" 계산이 모두 이 목록을 씀
+    static func stageIDs(chapter: Int, count: Int) -> [String] {
+        guard count > 0 else { return [] }
+        return (1...count).map { Stage.makeID(chapter: chapter, number: $0) }
     }
 
     // MARK: - 진행 규칙 (순수 함수)
@@ -217,9 +217,7 @@ final class ProgressService: ObservableObject {
         guard chapter.stageCount > 0 else { return false }   // 스테이지 없으면 항상 잠김
         guard let prev = chapters.first(where: { $0.number == chapter.number - 1 }),
               prev.stageCount > 0 else { return false }
-        let prevStars = (1...prev.stageCount).reduce(0) { total, stageNum in
-            total + (results[Stage.makeID(chapter: prev.number, number: stageNum)]?.stars ?? 0)
-        }
+        let prevStars = stageIDs(chapter: prev.number, count: prev.stageCount).reduce(0) { $0 + (results[$1]?.stars ?? 0) }
         let finalCleared = results[Stage.makeID(chapter: prev.number, number: prev.stageCount)]?.isCleared ?? false
         return prevStars >= chapter.requiredStarsFromPrev && finalCleared
     }

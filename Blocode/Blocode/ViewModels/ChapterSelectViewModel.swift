@@ -69,9 +69,6 @@ final class ChapterSelectViewModel: ObservableObject {
 
     /// 챕터에서 클리어한 스테이지 수 반환
     func clearedStageCount(_ chapter: ChapterInfo) -> Int {
-        guard chapter.stageCount > 0 else { return 0 }
-        return (1...chapter.stageCount).filter {
-            progress.isCleared(Stage.makeID(chapter: chapter.number, number: $0))
-        }.count
+        ProgressService.stageIDs(chapter: chapter.number, count: chapter.stageCount).filter(progress.isCleared).count
     }
 }
