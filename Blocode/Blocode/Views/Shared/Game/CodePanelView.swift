@@ -29,7 +29,6 @@ struct BlockDragState {
 struct CodePanelView: View {
 
     @ObservedObject var viewModel: GameViewModel  // 게임 상태 / 블럭 관리
-    let stage: Stage                              // 별 기준 표시용
 
     @Binding var drag: BlockDragState  // 드래그 상태 — StageView의 고스트 오버레이와 공유
 
@@ -224,7 +223,7 @@ struct CodePanelView: View {
                 Image(systemName: "star.fill")
                     .font(.system(size: 9))
                     .foregroundStyle(Color.starGold)
-                Text("3 = \(stage.starThresholds.threeStar) blocks")
+                Text("3 = \(viewModel.stage.starThresholds.threeStar) blocks")
                     .font(.system(size: 11, weight: .medium))
                     .foregroundStyle(.secondary)
             }

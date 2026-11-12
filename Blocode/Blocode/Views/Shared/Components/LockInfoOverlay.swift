@@ -16,6 +16,17 @@ struct LockInfo: Identifiable {
     let accentColor: Color   // 강조 색 (챕터 색)
 }
 
+extension Binding where Value == LockInfo? {
+    /// 잠금 안내 팝업 띄우기 — 잠금 사운드와 나타나는 효과까지 한 번에
+    /// 강조 색은 해금 조건이 되는 챕터의 색 (챕터가 없으면 회색)
+    func present(_ hint: (message: String, chapter: ChapterInfo?)) {
+        SoundService.shared.play(.lockButton)
+        withAnimation(.easeInOut(duration: 0.2)) {
+            wrappedValue = LockInfo(message: hint.message, accentColor: hint.chapter?.color ?? .gray)
+        }
+    }
+}
+
 // MARK: - LockInfoOverlay
 /// 잠긴 챕터/스테이지를 탭했을 때 해금 조건을 안내하는 커스텀 팝업
 /// 배경을 어둡게 덮고 가운데 카드로 조건을 보여줌 (배경 탭 또는 확인 버튼으로 닫음)

@@ -150,8 +150,7 @@ struct PuzzleGeneratorTests {
             let vm = GameViewModel(stage: stage, progress: .makeForTesting(), executionSpeed: { 1000 })
             vm.codeBlocks = solution.map { Block(type: $0) }
             vm.run()
-            let deadline = Date().addingTimeInterval(10)
-            while vm.gameState == .running, Date() < deadline { try await Task.sleep(for: .milliseconds(5)) }
+            try await waitWhileRunning(vm)
             #expect(vm.gameState == .success, "\(stage.id): 클리어 못 함")
             #expect(vm.clearedStars == 3, "\(stage.id): 별 \(vm.clearedStars)개")
         }
@@ -228,8 +227,7 @@ struct PuzzleGeneratorTests {
             let vm = GameViewModel(stage: stage, progress: progress, executionSpeed: { 1000 })
             vm.codeBlocks = solution.map { Block(type: $0) }
             vm.run()
-            let deadline = Date().addingTimeInterval(10)
-            while vm.gameState == .running, Date() < deadline { try await Task.sleep(for: .milliseconds(5)) }
+            try await waitWhileRunning(vm)
             #expect(vm.gameState == .success)
         }
 

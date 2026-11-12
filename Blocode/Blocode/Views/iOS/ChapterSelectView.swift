@@ -82,7 +82,7 @@ struct ChapterSelectView: View {
             // 홈 버튼 — NavigationStack에서 한 단계 뒤로
             Button {
                 SoundService.shared.play(.buttonTap)
-                if !navPath.isEmpty { navPath.removeLast() }
+                navPath.pop()
             } label: {
                 Image(systemName: "house")
                     .font(.system(size: 14, weight: .semibold))

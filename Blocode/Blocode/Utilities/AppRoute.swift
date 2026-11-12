@@ -5,7 +5,7 @@
 //  Created by 조준희 on 5/10/26.
 //
 
-import Foundation
+import SwiftUI  // NavigationPath 도우미 때문에 필요 (경로 열거형 자체는 Foundation만 씀)
 
 // MARK: - AppRoute
 /// NavigationStack의 경로를 타입 안전하게 표현하는 열거형
@@ -41,4 +41,17 @@ enum AppRoute: Hashable {
 
     /// 학습 보관함 (개념 카드 모음)
     case library
+
+    /// 새 랜덤 퍼즐 경로 — 부를 때마다 다른 씨앗 (홈 카드와 클리어 화면 "한 판 더"가 함께 씀)
+    static func newRandomPuzzle() -> AppRoute {
+        .randomPuzzle(.random(in: 1...UInt64.max))
+    }
+}
+
+// MARK: - NavigationPath 도우미
+extension NavigationPath {
+    /// 한 화면 뒤로 — 빈 스택이면 아무 일도 하지 않음 (언더플로우 방지)
+    mutating func pop() {
+        if !isEmpty { removeLast() }
+    }
 }

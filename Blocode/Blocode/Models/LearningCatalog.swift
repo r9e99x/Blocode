@@ -8,7 +8,7 @@
 import Foundation
 
 // MARK: - LearningCatalog
-/// 학습 보관함의 모든 카드 — 블럭 개념 12장 (코딩·CS 기초 카드는 이어서 채움)
+/// 학습 보관함의 모든 카드 — 블럭 개념 12장, 코딩 기초 11장, CS 기초 10장
 /// 카드를 늘릴 땐 `all`에 항목만 더하면 됨 (id는 겹치면 안 됨 — 테스트가 확인)
 enum LearningCatalog {
 

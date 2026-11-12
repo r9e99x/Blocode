@@ -18,6 +18,16 @@ extension ProgressService {
     }
 }
 
+/// 실행이 끝날 때까지 기다림 — 여러 테스트 파일이 함께 씀 (예전엔 같은 반복문이 파일마다 있었고 제한 시간도 제각각이었음)
+/// 제한 시간은 무한 대기를 막는 넉넉한 상한일 뿐 — 같이 도는 테스트와 메인 액터를 나눠 써서 부하가 걸리면 오래 걸릴 수 있고, 끝나면 바로 빠져나옴
+@MainActor
+func waitWhileRunning(_ viewModel: GameViewModel, timeout: TimeInterval = 60) async throws {
+    let deadline = Date().addingTimeInterval(timeout)
+    while viewModel.gameState == .running, Date() < deadline {
+        try await Task.sleep(for: .milliseconds(5))
+    }
+}
+
 /// 다른 테스트·실제 앱 설정과 섞이지 않는 UserDefaults
 func isolatedDefaults() -> UserDefaults {
     UserDefaults(suiteName: "test_\(UUID().uuidString)")!
@@ -141,12 +151,27 @@ struct ProgressServiceTests {
 
         viewModel.codeBlocks = [Block(type: .moveForward)]
         viewModel.run()
-        let deadline = Date().addingTimeInterval(15)
-        while viewModel.gameState == .running, Date() < deadline {
-            try await Task.sleep(nanoseconds: 20_000_000)
-        }
+        try await waitWhileRunning(viewModel)
         #expect(viewModel.gameState == .success)
         #expect(progress.stars(for: stage.id) == 3)
         #expect(ProgressService.shared.isCleared(stage.id) == false)
+    }
+}
+
+// MARK: - 스테이지 불러오기 경계
+
+@MainActor
+@Suite("스테이지 불러오기 경계")
+struct StageLoaderEdgeTests {
+
+    @Test("스테이지가 없는 챕터를 불러와도 죽지 않고 빈 목록")
+    func emptyChapterLoadsNothing() {
+        #expect(StageLoader.loadChapter(1, stageCount: 0).isEmpty)
+        #expect(ChapterViewModel(chapter: 999, progress: .makeForTesting()).stages.isEmpty)  // 없는 챕터 번호
+    }
+
+    @Test("컨테이너 블럭은 반복·만약에·함수뿐")
+    func containerTypes() {
+        #expect(BlockType.allCases.filter(\.isContainer) == [.repeatBlock, .ifBlock, .functionBlock])
     }
 }

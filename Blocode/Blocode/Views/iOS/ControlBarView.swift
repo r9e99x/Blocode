@@ -32,7 +32,7 @@ struct ControlBarView: View {
 
     /// 실행 버튼 색상 — 비활성/실행 중: 따뜻한 회색(모드 무관 기존 값 유지) / 활성: 민트 그린(다크에서만 톤 다운)
     private var runButtonColor: Color {
-        (viewModel.canPressRun || viewModel.isStepping)
+        viewModel.isRunButtonActive
             ? Color.runButtonActiveMint  // 활성 민트 (라이트: 기존 accentMint / 다크: 딥 민트)
             : Color.runButtonInactiveGray  // 솔리드 따뜻한 회색 — 값은 기존과 동일 (AppColors로 단일화)
     }
@@ -58,19 +58,19 @@ struct ControlBarView: View {
                 }
             }
             .buttonStyle(.plain)
-            .disabled(viewModel.gameState == .running && !viewModel.isStepping)  // 단계별 실행 중에는 리셋으로 멈출 수 있음
+            .disabled(viewModel.isRunningContinuously)  // 단계별 실행 중에는 리셋으로 멈출 수 있음
             .onPressState(isPressed: $isResetPressed)
             .frame(maxWidth: .infinity)
 
             // 가운데: 실행 버튼
             Button {
                 SoundService.shared.play(.buttonTap)
-                if viewModel.isStepping { viewModel.continueRun() } else { viewModel.run() }  // 단계별 중에는 남은 블럭을 이어서 실행
+                viewModel.runOrContinue()  // 단계별 중에는 남은 블럭을 이어서 실행
             } label: {
                 Bevel3DButtonLabel(color: runButtonColor, width: 152, height: 54, cornerRadius: 27,
                                    isPressed: isRunPressed) {
                     HStack(spacing: 8) {
-                        if viewModel.gameState == .running && !viewModel.isStepping {
+                        if viewModel.isRunningContinuously {
                             ProgressView()
                                 .progressViewStyle(.circular)
                                 .tint(.white)
@@ -79,14 +79,14 @@ struct ControlBarView: View {
                             Image(systemName: "play.fill")
                                 .font(.system(size: 15, weight: .bold))
                         }
-                        Text(viewModel.isStepping ? "계속" : (viewModel.gameState == .running ? "실행 중" : "실행"))
+                        Text(viewModel.runButtonTitle)
                             .font(.system(size: 16, weight: .bold))
                     }
                     .foregroundStyle(.white)
                 }
             }
             .buttonStyle(.plain)
-            .allowsHitTesting(viewModel.canPressRun || viewModel.isStepping)
+            .allowsHitTesting(viewModel.isRunButtonActive)
             .onPressState(isPressed: $isRunPressed)
             .animation(.easeInOut(duration: 0.15), value: viewModel.gameState)
 

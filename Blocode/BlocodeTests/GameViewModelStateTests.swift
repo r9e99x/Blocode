@@ -167,6 +167,6 @@ struct GameViewModelStateTests {
         #expect(vm.canPressRun == false)  // 실행 중
         try await waitUntilFinished(vm)
         #expect(vm.gameState == .failure)
-        #expect(vm.canPressRun == true)   // 기존 버튼 규칙 유지 — 실패 상태에서도 활성 표시
+        #expect(vm.canPressRun == true)   // 실패한 뒤에도 누를 수 있음 — 누르면 캐릭터를 되돌리고 다시 실행
     }
 }

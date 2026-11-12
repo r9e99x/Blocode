@@ -15,12 +15,13 @@ struct LearningLibraryView: View {
     /// 뒤로가기 — nil이면 뒤로가기 버튼을 그리지 않음 (사이드바 셸에 들어갈 때)
     var onBack: (() -> Void)? = nil
 
-    @ObservedObject private var learning = LearningService.shared
+    /// 보관함 화면 상태/로직 — 카드 목록·열림 여부·잠금 안내는 ViewModel이 담당 (MVVM)
+    @StateObject private var vm = LearningLibraryViewModel()
     @State private var category: LearningCategory = .block
     @State private var openedCard: LearningCard?
     @State private var lockInfo: LockInfo?
 
-    private var cards: [LearningCard] { LearningCatalog.cards(in: category) }
+    private var cards: [LearningCard] { vm.cards(in: category) }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -37,7 +38,7 @@ struct LearningLibraryView: View {
         .sheet(item: $openedCard) { LearningCardSheet(card: $0) }
         .hideNavigationBar()
         // 이미 진행한 사용자의 수집을 채움 (화면을 열 때마다 한 번 — 가벼운 계산)
-        .onAppear { learning.syncFromProgress(.shared) }
+        .onAppear { vm.syncCollection() }
     }
 
     // MARK: - 머리글
@@ -85,7 +86,7 @@ struct LearningLibraryView: View {
         HStack(spacing: 8) {
             ForEach(LearningCategory.allCases) { item in
                 let selected = item == category
-                let progress = learning.progress(in: item)
+                let progress = vm.progress(in: item)
                 Button {
                     SoundService.shared.play(.buttonTap)
                     withAnimation(.easeInOut(duration: 0.15)) { category = item }
@@ -129,14 +130,14 @@ struct LearningLibraryView: View {
     }
 
     private func cardRow(_ card: LearningCard) -> some View {
-        let unlocked = learning.isUnlocked(card)
+        let unlocked = vm.isUnlocked(card)
         return Button {
             if unlocked {
                 SoundService.shared.play(.buttonTap)
                 openedCard = card
             } else {
-                SoundService.shared.play(.lockButton)
-                withAnimation(.easeInOut(duration: 0.2)) { lockInfo = lockInfo(for: card) }
+                // 잠긴 카드: 잠금 사운드 + 해금 조건 팝업 (강조 색은 그 블럭이 처음 나오는 챕터 색)
+                $lockInfo.present(vm.lockHint(for: card))
             }
         } label: {
             HStack(spacing: 12) {
@@ -148,7 +149,7 @@ struct LearningLibraryView: View {
                     Text(unlocked ? card.title : "???")
                         .font(.system(size: 16, weight: .bold))
                         .foregroundStyle(.primary)
-                    Text(unlocked ? card.summary : unlockHint(for: card))
+                    Text(unlocked ? card.summary : vm.unlockHint(for: card))
                         .font(.system(size: 12))
                         .foregroundStyle(.secondary)
                         .lineLimit(2)
@@ -171,7 +172,7 @@ struct LearningLibraryView: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .accessibilityLabel(unlocked ? "\(card.title), \(card.summary)" : "잠긴 카드, \(unlockHint(for: card))")
+        .accessibilityLabel(unlocked ? "\(card.title), \(card.summary)" : "잠긴 카드, \(vm.unlockHint(for: card))")
     }
 
     private var emptyState: some View {
@@ -188,25 +189,6 @@ struct LearningLibraryView: View {
             Spacer()
         }
         .frame(maxWidth: .infinity)
-    }
-
-    // MARK: - 잠금 안내
-
-    /// 카드가 열리는 조건 한 줄 — 블럭이 처음 나오는 챕터를 알려 줌
-    private func unlockHint(for card: LearningCard) -> String {
-        guard case .block(let block) = card.unlock, let first = FirstAppearance.stage(of: block),
-              let chapter = ChapterCatalog.chapter(first.chapter) else { return "아직 열리지 않았어요" }
-        return "챕터 \(chapter.number) \"\(chapter.title)\"에서 처음 만나면 열려요"
-    }
-
-    private func lockInfo(for card: LearningCard) -> LockInfo {
-        var accent = Color.gray
-        if case .block(let block) = card.unlock, let first = FirstAppearance.stage(of: block),
-           let chapter = ChapterCatalog.chapter(first.chapter) {
-            accent = chapter.color
-        }
-        return LockInfo(message: unlockHint(for: card).replacingOccurrences(of: "에서 처음 만나면 열려요", with: "에서\n처음 만나면 열려요"),
-                        accentColor: accent)
     }
 }
 

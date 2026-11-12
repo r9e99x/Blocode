@@ -60,8 +60,8 @@ struct CustomMapListView: View {
     @MainActor
     init(service: CustomMapService? = nil, onBack: (() -> Void)? = nil,
          onNew: @escaping () -> Void, onPlay: @escaping (UUID) -> Void, onEdit: @escaping (UUID) -> Void) {
-        let model = CustomMapListViewModel(service: service)
-        _vm = StateObject(wrappedValue: model)
+        // 식을 바로 넘겨야 처음 한 번만 만들어짐 (먼저 만들어 넘기면 화면이 다시 만들어질 때마다 버려질 객체가 생김)
+        _vm = StateObject(wrappedValue: CustomMapListViewModel(service: service))
         self.onBack = onBack
         self.onNew = onNew
         self.onPlay = onPlay

@@ -53,6 +53,8 @@ enum StageLoader {
     ///   - stageCount: 로드할 스테이지 총 개수
     /// - Returns: 로드 성공한 스테이지 배열 (실패한 스테이지는 제외)
     static func loadChapter(_ chapter: Int, stageCount: Int) -> [Stage] {
+        // 스테이지가 없는 챕터는 빈 목록 — 1...0 범위는 실행 중 오류라 먼저 걸러냄
+        guard stageCount > 0 else { return [] }
         // 1번부터 stageCount까지 순서대로 로드, nil은 compactMap으로 제거
         return (1...stageCount).compactMap { load(chapter: chapter, stage: $0) }
     }

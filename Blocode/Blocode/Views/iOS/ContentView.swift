@@ -29,9 +29,6 @@ struct ContentView: View {
     /// 잠긴 기능을 눌렀을 때 띄우는 해금 조건 팝업
     @State private var lockInfo: LockInfo?
 
-    /// 알림을 눌러 앱이 열렸을 때의 이동 요청 — 오늘의 퍼즐 열기
-    @ObservedObject private var router = NotificationRouter.shared
-
     var body: some View {
         // 아이패드는 맥과 같은 사이드바 셸로 분기 (아이폰은 기존 NavigationStack 경로 그대로)
         if isPadIdiom {
@@ -41,7 +38,7 @@ struct ContentView: View {
         }
     }
 
-    /// 아이폰(기존 그대로) · 맥이 함께 쓰는 기본 홈 화면 — NavigationStack 기반
+    /// 아이폰 홈 화면 — NavigationStack 기반 (아이패드·맥은 SidebarShell)
     private var defaultBody: some View {
         // 루트 NavigationStack — path 바인딩으로 화면 전환 관리
         NavigationStack(path: $navPath) {
@@ -62,45 +59,26 @@ struct ContentView: View {
                 case .chapter(let number):
                     ChapterView(navPath: $navPath, chapter: number)
 
-                case .stage(let chapter, let number):
-                    // 로딩은 StageView의 ViewModel이 담당 (View 계층 데이터 호출 제거)
-                    StageView(chapter: chapter, number: number, navPath: $navPath)
-                        .id("stage-\(chapter)-\(number)")
-
                 case .library:
-                    LearningLibraryView(onBack: { if !navPath.isEmpty { navPath.removeLast() } })
+                    LearningLibraryView(onBack: { navPath.pop() })
 
                 case .customMaps:
                     CustomMapListView(
-                        onBack: { if !navPath.isEmpty { navPath.removeLast() } },
+                        onBack: { navPath.pop() },
                         onNew: { navPath.append(AppRoute.mapEditor(nil)) },
                         onPlay: { navPath.append(AppRoute.customMapPlay($0)) },
                         onEdit: { navPath.append(AppRoute.mapEditor($0)) }
                     )
 
-                case .customMapPlay(let id):
-                    CustomMapPlayView(id: id) { if !navPath.isEmpty { navPath.removeLast() } }
-
-                case .mapEditor(let id):
-                    MapEditorView(editing: id.flatMap { CustomMapService.shared.map(withID: $0) }) {
-                        if !navPath.isEmpty { navPath.removeLast() }
-                    }
-
-                case .dailyPuzzle(let key):
-                    PuzzlePlayView(kind: .daily(key)) { if !navPath.isEmpty { navPath.removeLast() } }
-
-                case .randomPuzzle(let seed):
-                    PuzzlePlayView(kind: .random(seed), onNewPuzzle: {
-                        // 한 판 더 — 지금 퍼즐을 빼고 새 씨앗의 퍼즐로 교체
-                        if !navPath.isEmpty { navPath.removeLast() }
-                        navPath.append(AppRoute.randomPuzzle(.random(in: 1...UInt64.max)))
-                    }) { if !navPath.isEmpty { navPath.removeLast() } }
+                case .stage, .customMapPlay, .mapEditor, .dailyPuzzle, .randomPuzzle:
+                    // 게임·에디터 화면 — 아이패드·맥 셸과 같은 연결 코드를 함께 씀
+                    GameRouteDestination(route: route, navPath: $navPath)
                 }
             }
         }
         // 복습 알림을 눌렀으면 오늘의 퍼즐로 (앱이 꺼진 채 눌렀을 때는 화면이 준비된 뒤 onAppear에서 처리)
         .onAppear { openPendingDailyPuzzle() }
-        .onChange(of: router.pendingDailyPuzzle) { _, _ in openPendingDailyPuzzle() }
+        .onChange(of: vm.hasPendingDailyPuzzle) { _, _ in openPendingDailyPuzzle() }
         .lockInfoPopup($lockInfo)
         // 설정에 따라 라이트/다크/시스템 테마 적용
         .preferredColorScheme(settings.theme.colorScheme)
@@ -112,8 +90,8 @@ struct ContentView: View {
 
     /// 대기 중인 알림 이동 요청이 있으면 오늘의 퍼즐만 남기고 이동 — 뒤로가면 홈
     private func openPendingDailyPuzzle() {
-        guard router.consumeDailyPuzzle(), vm.isUnlocked(.dailyPuzzle) else { return }
-        navPath = NavigationPath([AppRoute.dailyPuzzle(vm.dailyPuzzle.key)])
+        guard let route = vm.takePendingDailyPuzzleRoute() else { return }
+        navPath = NavigationPath([route])
     }
 
     // MARK: - 홈 화면 전체 레이아웃
@@ -221,7 +199,7 @@ struct ContentView: View {
         .buttonStyle(.plain)
     }
 
-    // MARK: - 와이드 레이아웃 홈 (아이패드·맥)
+    // MARK: - 와이드 레이아웃 홈 (아이폰 가로)
 
     /// 좌: 브랜딩+인용구 / 우: 통계 카드+시작 버튼 — 큰 화면에서 좌우 분할 배치
     private var wideHomeContent: some View {
@@ -270,7 +248,7 @@ struct ContentView: View {
                         isLocked: !vm.isUnlocked(.dailyPuzzle),
                         isCompact: compact,
                         onDaily: { openIfUnlocked(.dailyPuzzle, AppRoute.dailyPuzzle(vm.dailyPuzzle.key)) },
-                        onRandom: { openIfUnlocked(.dailyPuzzle, AppRoute.randomPuzzle(.random(in: 1...UInt64.max))) })
+                        onRandom: { openIfUnlocked(.dailyPuzzle, AppRoute.newRandomPuzzle()) })
     }
 
     /// 열려 있으면 해당 화면으로 이동, 잠겨 있으면 해금 조건 팝업 (잠금 사운드 포함)
@@ -278,11 +256,7 @@ struct ContentView: View {
         if vm.isUnlocked(feature) {
             navPath.append(route)
         } else {
-            let hint = vm.lockHint(for: feature)
-            SoundService.shared.play(.lockButton)
-            withAnimation(.easeInOut(duration: 0.2)) {
-                lockInfo = LockInfo(message: hint.message, accentColor: hint.chapter?.color ?? .gray)
-            }
+            $lockInfo.present(vm.lockHint(for: feature))
         }
     }
 

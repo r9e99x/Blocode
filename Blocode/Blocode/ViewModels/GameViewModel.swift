@@ -117,6 +117,11 @@ final class GameViewModel: ObservableObject {
         self.executionSpeedProvider = executionSpeed
     }
 
+    /// 일일·랜덤 퍼즐로 ViewModel 초기화 — 퍼즐 생성(무거운 계산)을 화면이 아니라 여기서 한 번만 함
+    convenience init(puzzle: PuzzleKind) {
+        self.init(stage: puzzle.makeStage())
+    }
+
     /// 챕터/스테이지 번호로 ViewModel 초기화 (프로덕션)
     /// 데이터 소스(StageLoader) 접근은 View가 아닌 ViewModel의 책임
     init(chapter: Int, stageNumber: Int) {
@@ -138,8 +143,12 @@ final class GameViewModel: ObservableObject {
         return next <= (ChapterCatalog.chapter(stage.chapter)?.stageCount ?? 0) ? next : nil
     }
 
-    /// 블럭을 편집할 수 있는 상태인지 — 대기 중에만 가능
-    var canEdit: Bool { gameState == .idle }
+    /// 새 실행이나 편집 요청을 받을 수 있는 상태인지 — 대기 중이거나 실패한 뒤
+    /// (실패한 뒤에는 요청을 받으면 캐릭터를 먼저 시작 위치로 되돌림 — 리셋을 따로 누르지 않아도 됨)
+    private var acceptsInput: Bool { gameState == .idle || gameState == .failure }
+
+    /// 블럭을 편집할 수 있는 상태인지 — 실행 중과 클리어 화면에서는 불가
+    var canEdit: Bool { acceptsInput }
 
     // MARK: - 실행·실패 하이라이트 (코드 리스트 행 기준)
 
@@ -171,9 +180,17 @@ final class GameViewModel: ObservableObject {
         stage.paletteBlocks.contains(type)
     }
 
+    /// 편집을 시작 — 실패한 뒤라면 캐릭터를 시작 위치로 되돌린 다음 편집을 허용 (실패한 자리에서 바로 블럭을 고칠 수 있게)
+    /// 실행 중과 클리어 화면에서는 false
+    private func beginEdit() -> Bool {
+        guard canEdit else { return false }
+        if gameState == .failure { reset() }
+        return true
+    }
+
     /// 팔레트에서 블럭 추가 — idle 상태일 때만 허용
     func addBlock(_ type: BlockType) {
-        guard canEdit, isAllowed(type) else { return }
+        guard isAllowed(type), beginEdit() else { return }
         let block = Block(type: type)
         codeBlocks.append(block)
         SoundService.shared.play(.blockAdd)
@@ -182,7 +199,7 @@ final class GameViewModel: ObservableObject {
     /// 블럭 순서 변경 (드래그 앤 드롭) — idle 상태이고 유효한 위치일 때만 허용
     /// destination은 옮기기 전 배열 기준의 삽입 위치 (0...count)
     func moveBlock(from source: Int, to destination: Int) {
-        guard canEdit, codeBlocks.moveBlock(from: source, to: destination) else { return }
+        guard beginEdit(), codeBlocks.moveBlock(from: source, to: destination) else { return }
         SoundService.shared.play(.blockReorder)
     }
 
@@ -201,31 +218,31 @@ final class GameViewModel: ObservableObject {
 
     /// 경로의 컨테이너에 자식 블럭 추가 — 허용되지 않는 블럭은 무시
     func addChildBlock(_ type: BlockType, at path: [Int]) {
-        guard canEdit else { return }
+        guard beginEdit() else { return }
         codeBlocks.addChild(type, at: path, palette: stage.paletteBlocks)
     }
 
     /// 경로의 블럭 삭제 (최상위·중첩 공용)
     func removeBlock(at path: [Int]) {
-        guard canEdit else { return }
+        guard beginEdit() else { return }
         codeBlocks.removeBlock(at: path)
     }
 
     /// 경로의 if 블럭 조건 변경
     func setIfCondition(_ condition: IfCondition, at path: [Int]) {
-        guard canEdit else { return }
+        guard beginEdit() else { return }
         codeBlocks.setIfCondition(condition, at: path)
     }
 
     /// 경로의 repeat 블럭 반복 횟수 변경 (1~10회로 제한)
     func setRepeatCount(_ count: Int, at path: [Int]) {
-        guard canEdit else { return }
+        guard beginEdit() else { return }
         codeBlocks.setRepeatCount(count, at: path)
     }
 
     /// 특정 위치에 블럭 삽입 (팔레트 드래그-앤-드롭 위치 지정 삽입)
     func insertBlock(_ type: BlockType, at index: Int) {
-        guard canEdit, isAllowed(type) else { return }
+        guard isAllowed(type), beginEdit() else { return }
         let block = Block(type: type)
         // 인덱스가 범위를 벗어나지 않도록 클램핑
         let safeIndex = min(max(0, index), codeBlocks.count)
@@ -253,19 +270,38 @@ final class GameViewModel: ObservableObject {
     /// 단계별 실행 중인지 (다음 단계를 기다리는 중이거나 한 블럭을 실행하는 중)
     var isStepping: Bool { isStepMode && gameState == .running }
 
-    /// 한 칸씩 버튼을 누를 수 있는 상태인지 — 시작 전이거나 다음 단계를 기다리는 중일 때
+    /// 한 칸씩 버튼을 누를 수 있는 상태인지 — 시작 전(실패한 뒤 포함)이거나 다음 단계를 기다리는 중일 때
     var canStep: Bool {
-        isStepping ? isWaitingForStep : (!codeBlocks.isEmpty && gameState == .idle)
+        isStepping ? isWaitingForStep : (!codeBlocks.isEmpty && acceptsInput)
     }
 
-    /// 코드 블럭 실행 시작 — idle 상태이고 블럭이 있을 때만 동작
+    // MARK: - 컨트롤 버튼 표시 규칙 (아이폰 컨트롤 바·맥 상단바 공용)
+
+    /// 실행 버튼이 켜져 있는지 — 새로 실행할 수 있거나, 단계별 실행 중이라 "계속"을 누를 수 있을 때
+    var isRunButtonActive: Bool { canPressRun || isStepping }
+
+    /// 멈출 수 없는 연속 실행 중인지 (단계별 실행 제외) — 되돌리기 버튼을 막고 실행 버튼에 진행 표시를 띄우는 기준
+    var isRunningContinuously: Bool { gameState == .running && !isStepping }
+
+    /// 실행 버튼 글자
+    var runButtonTitle: String {
+        if isStepping { return "계속" }
+        return gameState == .running ? "실행 중" : "실행"
+    }
+
+    /// 실행 버튼 동작 — 단계별 실행 중이면 남은 블럭을 이어서, 아니면 처음부터 실행
+    func runOrContinue() {
+        if isStepping { continueRun() } else { run() }
+    }
+
+    /// 코드 블럭 실행 시작 — 대기 중이거나 실패한 뒤이고 블럭이 있을 때만 동작 (실패한 뒤에는 캐릭터를 먼저 되돌림)
     func run() {
         startRun(stepping: false)
     }
 
-    /// 한 칸씩 실행 — 시작 전이면 첫 블럭을 강조한 채 멈추고, 멈춰 있으면 강조된 블럭 하나를 실행
+    /// 한 칸씩 실행 — 시작 전(실패한 뒤 포함)이면 첫 블럭을 강조한 채 멈추고, 멈춰 있으면 강조된 블럭 하나를 실행
     func step() {
-        if gameState == .idle {
+        if acceptsInput {
             startRun(stepping: true)
         } else if isStepping, isWaitingForStep {
             resumeStep()
@@ -280,6 +316,9 @@ final class GameViewModel: ObservableObject {
     }
 
     private func startRun(stepping: Bool) {
+        // 실패한 뒤에 바로 다시 누르면 캐릭터를 시작 위치로 되돌리고 실행 (리셋을 따로 누르지 않아도 됨)
+        let restartsAfterFailure = gameState == .failure
+        if restartsAfterFailure { reset() }
         guard gameState == .idle, !codeBlocks.isEmpty else { return }
 
         isStepMode = stepping
@@ -293,6 +332,8 @@ final class GameViewModel: ObservableObject {
         // 블럭 순서대로 비동기 실행 → 완료 시 idle 복귀
         // (@MainActor 클래스라 Task도 메인에서 실행됨)
         runTask = Task {
+            // 되돌아가는 움직임이 끝난 뒤에 첫 블럭을 실행 — 겹치면 캐릭터가 실패한 자리에서 출발하는 것처럼 보임
+            if restartsAfterFailure { await waitForAnimation(0.3) }
             await executeBlocks(codeBlocks, parentPath: [])
             // 성공/실패 처리가 안 됐으면 (목표 미도달로 자연 종료) idle로 복귀
             if isRunActive {

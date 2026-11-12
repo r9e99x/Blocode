@@ -35,14 +35,6 @@ struct SidebarShell: View {
 
     private let item = ItemMetrics.current
 
-    /// 게임 화면 자체 뒤로가기 버튼 사용 여부 — 맥은 툴바 버튼을 따로 두고,
-    /// 아이패드는 StageView가 시스템 내비 바를 숨겨 툴바 버튼이 안 보이므로 자체 버튼을 사용
-    #if os(macOS)
-    private let showsOwnBackButton = false
-    #else
-    private let showsOwnBackButton = true
-    #endif
-
     /// 사이드바 최상위 섹션
     private enum Section: Hashable {
         case home, chapters, myMaps, library, settings
@@ -58,8 +50,6 @@ struct SidebarShell: View {
     @StateObject private var homeVM = HomeViewModel()
     @StateObject private var chapterSelectVM = ChapterSelectViewModel()
     @ObservedObject private var settings = SettingsService.shared
-    /// 알림을 눌러 앱이 열렸을 때의 이동 요청 — 오늘의 퍼즐 열기
-    @ObservedObject private var router = NotificationRouter.shared
 
     var body: some View {
         NavigationStack(path: $navPath) {
@@ -87,94 +77,37 @@ struct SidebarShell: View {
             #if os(macOS)
             .navigationTitle(windowTitle)
             #endif
+            // 게임·에디터 화면 — 아이폰 홈과 같은 연결 코드를 함께 씀 (맥 툴바 뒤로가기도 그 안에서 처리)
             .navigationDestination(for: AppRoute.self) { route in
-                if case .stage(let chapter, let number) = route {
-                    StageView(chapter: chapter, number: number, navPath: $navPath,
-                              showsOwnBackButton: showsOwnBackButton) {
-                        // "챕터 목록으로" 복귀 — 사이드바 셸의 챕터 브라우저로 이동
-                        if !navPath.isEmpty { navPath.removeLast() }
-                        section = .chapters
-                    }
-                    // 스테이지 번호별로 뷰 정체성을 강제 구분 (iOS ContentView와 동일한 처리)
-                    // 이게 없으면 다음 스테이지로 넘어갈 때 이전 GameViewModel(코드 블럭 포함)이 재사용됨
-                    .id("stage-\(chapter)-\(number)")
-                    #if os(macOS)
-                    .toolbar {
-                        ToolbarItem(placement: .navigation) {
-                            Button {
-                                SoundService.shared.play(.buttonTap)  // iOS StageView 자체 뒤로가기와 동일하게 탭 효과음
-                                if !navPath.isEmpty { navPath.removeLast() }
-                            } label: {
-                                Image(systemName: "chevron.left")
-                                    .font(.system(size: 13, weight: .semibold))
-                                    .foregroundStyle(Color.secondary)
-                                    .frame(width: 30, height: 30)
-                                    .background(Color.panelBackground)
-                                    .clipShape(RoundedRectangle(cornerRadius: 8))
-                            }
-                            .buttonStyle(.plain)
-                        }
-                    }
-                    .navigationBarBackButtonHidden(true)
-                    #endif
-                } else if case .customMapPlay(let id) = route {
-                    // 내 맵 플레이 — 게임 화면과 같은 뒤로가기 규칙
-                    CustomMapPlayView(id: id, showsOwnBackButton: showsOwnBackButton) {
-                        if !navPath.isEmpty { navPath.removeLast() }
-                    }
-                    .macBackToolbar(navPath: $navPath)
-                } else if case .dailyPuzzle(let key) = route {
-                    PuzzlePlayView(kind: .daily(key), showsOwnBackButton: showsOwnBackButton) {
-                        if !navPath.isEmpty { navPath.removeLast() }
-                    }
-                    .macBackToolbar(navPath: $navPath)
-                } else if case .randomPuzzle(let seed) = route {
-                    PuzzlePlayView(kind: .random(seed), showsOwnBackButton: showsOwnBackButton, onNewPuzzle: {
-                        // 한 판 더 — 지금 퍼즐을 빼고 새 씨앗의 퍼즐로 교체
-                        if !navPath.isEmpty { navPath.removeLast() }
-                        navPath.append(AppRoute.randomPuzzle(.random(in: 1...UInt64.max)))
-                    }) {
-                        if !navPath.isEmpty { navPath.removeLast() }
-                    }
-                    .macBackToolbar(navPath: $navPath)
-                } else if case .mapEditor(let id) = route {
-                    // 맵 에디터 — 자체 뒤로가기(저장 확인 포함)를 쓰므로 시스템 뒤로가기는 숨김
-                    MapEditorView(editing: id.flatMap { CustomMapService.shared.map(withID: $0) }) {
-                        if !navPath.isEmpty { navPath.removeLast() }
-                    }
-                    #if os(macOS)
-                    .navigationBarBackButtonHidden(true)
-                    #endif
+                GameRouteDestination(route: route, navPath: $navPath) {
+                    // "챕터 목록으로" 복귀 — 사이드바 셸의 챕터 브라우저로 이동
+                    navPath.pop()
+                    section = .chapters
                 }
             }
         }
         // 복습 알림을 눌렀으면 오늘의 퍼즐로 (앱이 꺼진 채 눌렀을 때는 화면이 준비된 뒤 onAppear에서 처리)
         .onAppear { openPendingDailyPuzzle() }
-        .onChange(of: router.pendingDailyPuzzle) { _, _ in openPendingDailyPuzzle() }
+        .onChange(of: homeVM.hasPendingDailyPuzzle) { _, _ in openPendingDailyPuzzle() }
         .lockInfoPopup($lockInfo)
         .preferredColorScheme(settings.theme.colorScheme)
     }
 
-    /// 열려 있으면 해당 화면으로 이동, 잠겨 있으면 해금 조건 팝업
+    /// 열려 있으면 해당 화면으로 이동, 잠겨 있으면 해금 조건 팝업 (잠금 사운드 포함)
     private func openIfUnlocked(_ feature: UnlockableFeature, _ route: AppRoute) {
-        if homeVM.isUnlocked(feature) { navPath.append(route) } else { showLockInfo(for: feature) }
-    }
-
-    /// 해금 조건 팝업 표시 (잠금 사운드 포함)
-    private func showLockInfo(for feature: UnlockableFeature) {
-        let hint = homeVM.lockHint(for: feature)
-        SoundService.shared.play(.lockButton)
-        withAnimation(.easeInOut(duration: 0.2)) {
-            lockInfo = LockInfo(message: hint.message, accentColor: hint.chapter?.color ?? .gray)
+        if homeVM.isUnlocked(feature) {
+            navPath.append(route)
+        } else {
+            $lockInfo.present(homeVM.lockHint(for: feature))
         }
     }
 
     /// 대기 중인 알림 이동 요청이 있으면 홈에서 오늘의 퍼즐만 열린 상태로 이동 — 뒤로가면 홈
     private func openPendingDailyPuzzle() {
-        guard router.consumeDailyPuzzle(), homeVM.isUnlocked(.dailyPuzzle) else { return }
+        guard let route = homeVM.takePendingDailyPuzzleRoute() else { return }
         section = .home
         browsingChapter = nil
-        navPath = NavigationPath([AppRoute.dailyPuzzle(homeVM.dailyPuzzle.key)])
+        navPath = NavigationPath([route])
     }
 
     #if os(macOS)
@@ -220,7 +153,7 @@ struct SidebarShell: View {
                 if homeVM.isUnlocked(.customMaps) {
                     withAnimation(.easeInOut(duration: 0.2)) { section = .myMaps }
                 } else {
-                    showLockInfo(for: .customMaps)
+                    $lockInfo.present(homeVM.lockHint(for: .customMaps))
                 }
             }
             sidebarItem(icon: "books.vertical", title: "개념 카드", isSelected: section == .library) {
@@ -356,7 +289,7 @@ struct SidebarShell: View {
                     DailyPuzzleCard(info: homeVM.dailyPuzzle,
                                     isLocked: !homeVM.isUnlocked(.dailyPuzzle),
                                     onDaily: { openIfUnlocked(.dailyPuzzle, AppRoute.dailyPuzzle(homeVM.dailyPuzzle.key)) },
-                                    onRandom: { openIfUnlocked(.dailyPuzzle, AppRoute.randomPuzzle(.random(in: 1...UInt64.max))) })
+                                    onRandom: { openIfUnlocked(.dailyPuzzle, AppRoute.newRandomPuzzle()) })
                         .padding(.top, 14)
                 }
                 .padding(48)
@@ -440,33 +373,3 @@ struct SidebarShell: View {
     SidebarShell()
 }
 #endif
-
-// MARK: - 맥 게임 화면 뒤로가기 툴바
-/// 맥 NavigationStack 툴바에 사각형 뒤로가기 버튼을 두고 시스템 뒤로가기는 숨김 (iOS·아이패드는 그대로)
-private extension View {
-    @ViewBuilder
-    func macBackToolbar(navPath: Binding<NavigationPath>) -> some View {
-        #if os(macOS)
-        self
-            .toolbar {
-                ToolbarItem(placement: .navigation) {
-                    Button {
-                        SoundService.shared.play(.buttonTap)
-                        if !navPath.wrappedValue.isEmpty { navPath.wrappedValue.removeLast() }
-                    } label: {
-                        Image(systemName: "chevron.left")
-                            .font(.system(size: 13, weight: .semibold))
-                            .foregroundStyle(Color.secondary)
-                            .frame(width: 30, height: 30)
-                            .background(Color.panelBackground)
-                            .clipShape(RoundedRectangle(cornerRadius: 8))
-                    }
-                    .buttonStyle(.plain)
-                }
-            }
-            .navigationBarBackButtonHidden(true)
-        #else
-        self
-        #endif
-    }
-}

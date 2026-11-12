@@ -558,6 +558,91 @@ struct MapEditorTests {
         let broken = CustomMap(name: "깨진 맵", mapJSON: Data("x".utf8), paletteRaw: [], threeStar: 1, twoStar: 5)
         #expect(MapEditorViewModel(editing: broken) == nil)
     }
+
+    // MARK: - 화면 동작 (저장 버튼·이름·안내 줄·테스트 플레이)
+
+    @Test("번호로 열기 — 저장된 맵이면 고치기, 번호가 없거나 모르는 번호면 새 맵")
+    func openByID() throws {
+        let (service, progress) = makeService()
+        let first = MapEditorViewModel.open(id: nil, service: service)
+        first.name = "열기 맵"
+        let saved = try #require(first.saveAndNotify())
+        #expect(service.maps.count == 1)  // open으로 받은 저장소에 저장됨
+
+        let reopened = MapEditorViewModel.open(id: saved.id, service: service)
+        #expect(reopened.editingID == saved.id && reopened.name == "열기 맵")
+        #expect(MapEditorViewModel.open(id: UUID(), service: service).editingID == nil)
+        _ = progress
+    }
+
+    @Test("이름은 최대 길이에서 잘리고, 저장 알림은 이름을 바꾸거나 맵을 고치면 사라짐")
+    func nameLimitAndNotice() {
+        let (service, progress) = makeService()
+        let editor = MapEditorViewModel.open(id: nil, service: service)
+        editor.name = String(repeating: "가", count: CustomMapService.maxNameLength + 5)
+        #expect(editor.name.count == CustomMapService.maxNameLength)
+
+        #expect(editor.saveAndNotify() != nil)
+        #expect(editor.notice == "저장했어요.")
+        editor.name = "새 이름"
+        #expect(editor.notice == nil)
+
+        editor.saveAndNotify()
+        #expect(editor.notice == "저장했어요.")
+        editor.tap(at: at(1, 1))  // 맵을 고침
+        #expect(editor.notice == nil)
+        _ = progress
+    }
+
+    @Test("저장 실패 — 이름이 없으면 이유를 알림으로, 맵 문제면 알림 없이 확인 결과로 보여 줌")
+    func saveFailureNotice() {
+        let (service, progress) = makeService()
+        let editor = MapEditorViewModel.open(id: nil, service: service)
+        #expect(editor.saveAndNotify() == nil)
+        #expect(editor.notice == CustomMapService.SaveError.invalidName.errorDescription)
+
+        editor.name = "막힌 맵"
+        editor.selectTool(.wall)
+        editor.tap(at: at(3, 3))
+        #expect(editor.saveAndNotify() == nil)
+        #expect(editor.notice == nil)
+        #expect(editor.hint.isProblem)  // 문제 목록이 안내 줄에 보임
+        #expect(service.maps.isEmpty)
+        _ = progress
+    }
+
+    @Test("안내 줄 우선순위 — 거부 안내 > 짝 맺기 > 저장 알림 > 확인 결과 > 도구 사용법")
+    func hintPriority() {
+        let (service, progress) = makeService()
+        let editor = MapEditorViewModel.open(id: nil, service: service)
+        #expect(editor.hint.text == MapEditorTool.floor.hint && !editor.hint.isProblem)
+
+        editor.validate()
+        #expect(editor.hint.text.hasPrefix("확인 완료"))
+
+        editor.name = "안내 맵"
+        editor.saveAndNotify()
+        #expect(editor.hint.text == "저장했어요.")  // 확인 결과보다 저장 알림이 먼저
+
+        editor.selectTool(.portal)
+        editor.tap(at: at(1, 1))
+        #expect(editor.hint.text.hasPrefix("포탈 한쪽을 놓았어요"))
+
+        editor.selectTool(.wall)
+        editor.tap(at: editor.map.start)  // 시작 칸은 벽으로 못 바꿈 → 거부 안내가 가장 먼저
+        #expect(editor.hint.isProblem && editor.hint.text == editor.message)
+        _ = progress
+    }
+
+    @Test("테스트 플레이는 확인을 통과한 맵만 준비됨")
+    func testPlayNeedsValidMap() {
+        let editor = makeEditor()
+        #expect(editor.prepareTestPlay() != nil)  // 기본 맵은 바로 풀 수 있음
+        editor.selectTool(.wall)
+        editor.tap(at: at(3, 3))  // 길을 막음
+        #expect(editor.prepareTestPlay() == nil)
+        #expect(editor.validation?.isValid == false)  // 문제 목록이 남아 안내 줄에 보임
+    }
 }
 
 // MARK: - 격자 좌표 계산

@@ -114,10 +114,7 @@ struct StageSolutionTests {
         let vm = GameViewModel(stage: stage, progress: .makeForTesting(), executionSpeed: { 1000 })
         vm.codeBlocks = solution
         vm.run()
-        let deadline = Date().addingTimeInterval(10)
-        while vm.gameState == .running, Date() < deadline {
-            try await Task.sleep(for: .milliseconds(5))
-        }
+        try await waitWhileRunning(vm)
         return vm
     }
 

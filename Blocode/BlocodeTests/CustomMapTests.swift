@@ -389,10 +389,7 @@ struct CustomMapServiceTests {
         let vm = GameViewModel(stage: stage, progress: .makeForTesting(), executionSpeed: { 1000 })
         vm.codeBlocks = (validation.shortestSolution ?? []).map { Block(type: $0) }
         vm.run()
-        let deadline = Date().addingTimeInterval(10)
-        while vm.gameState == .running, Date() < deadline {
-            try await Task.sleep(for: .milliseconds(5))
-        }
+        try await waitWhileRunning(vm)
         #expect(vm.gameState == .success)
         _ = progress
     }
@@ -460,10 +457,7 @@ struct CustomMapListTests {
         let vm = GameViewModel(stage: stage, progress: progress, executionSpeed: { 1000 })
         vm.codeBlocks = Array(repeating: Block(type: .moveForward), count: 4)
         vm.run()
-        let deadline = Date().addingTimeInterval(10)
-        while vm.gameState == .running, Date() < deadline {
-            try await Task.sleep(for: .milliseconds(5))
-        }
+        try await waitWhileRunning(vm)
         #expect(vm.gameState == .success)
         #expect(vm.clearedStars == 3)
         #expect(progress.results.isEmpty)

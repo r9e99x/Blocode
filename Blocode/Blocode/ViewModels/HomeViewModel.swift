@@ -29,6 +29,8 @@ final class HomeViewModel: ObservableObject {
 
     // 진행도 서비스 (데이터 소스) — 테스트는 메모리 저장소를 주입
     private let progress: ProgressService
+    /// 알림을 눌러 앱이 열렸을 때의 이동 요청 창구 — 테스트는 따로 만든 창구를 주입
+    private let router: NotificationRouter
     /// 현재 시각 — 테스트는 날짜를 고정해 주입
     private let now: () -> Date
     private let calendar: Calendar
@@ -41,12 +43,19 @@ final class HomeViewModel: ObservableObject {
         (id: $0.number, stageCount: $0.stageCount)
     }
 
-    init(progress: ProgressService = .shared, now: @escaping () -> Date = Date.init, calendar: Calendar = .current) {
+    init(progress: ProgressService = .shared, router: NotificationRouter? = nil,
+         now: @escaping () -> Date = Date.init, calendar: Calendar = .current) {
+        let router = router ?? .shared
         self.progress = progress
+        self.router = router
         self.now = now
         self.calendar = calendar
         // ProgressService가 바뀌면 이 VM도 변경 알림을 그대로 전파 → 뷰 자동 갱신 유지
         progress.objectWillChange
+            .sink { [weak self] _ in self?.objectWillChange.send() }
+            .store(in: &cancellables)
+        // 알림 이동 요청이 들어오면 화면이 알아채도록 같은 방식으로 전파
+        router.objectWillChange
             .sink { [weak self] _ in self?.objectWillChange.send() }
             .store(in: &cancellables)
     }
@@ -95,10 +104,8 @@ final class HomeViewModel: ObservableObject {
         let date = now()
         let key = PuzzleGenerator.dailyKey(for: date, calendar: calendar)
         let theme = PuzzleGenerator.theme(forWeekday: calendar.component(.weekday, from: date))
-        let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "ko_KR")
+        let formatter = Self.dayFormatter
         formatter.calendar = calendar
-        formatter.dateFormat = "M월 d일 EEEE"
         let stageID = "\(PuzzleGenerator.dailyIDPrefix)\(key)"
         return DailyPuzzleInfo(key: key,
                                dateText: formatter.string(from: date),
@@ -106,6 +113,26 @@ final class HomeViewModel: ObservableObject {
                                isCleared: progress.isCleared(stageID),
                                stars: progress.stars(for: stageID))
     }
+
+    // MARK: - 알림으로 열기
+
+    /// 알림을 눌러 생긴 "오늘의 퍼즐 열기" 요청이 대기 중인지 — 화면이 이 값의 변화를 보고 이동을 시도
+    var hasPendingDailyPuzzle: Bool { router.pendingDailyPuzzle }
+
+    /// 대기 중인 요청을 한 번만 가져가 이동할 경로로 바꿈 — 요청이 없거나 일일 퍼즐이 아직 잠겨 있으면 nil
+    /// (잠겨 있을 때도 요청은 버려서, 나중에 풀렸을 때 뜬금없이 이동하지 않게 함)
+    func takePendingDailyPuzzleRoute() -> AppRoute? {
+        guard router.consumeDailyPuzzle(), isUnlocked(.dailyPuzzle) else { return nil }
+        return .dailyPuzzle(dailyPuzzle.key)
+    }
+
+    /// "11월 12일 목요일" 모양의 날짜 글자 변환기 — 만드는 비용이 커서 한 번만 만들어 재사용
+    private static let dayFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "ko_KR")
+        formatter.dateFormat = "M월 d일 EEEE"
+        return formatter
+    }()
 
     private static func title(of theme: PuzzleTheme) -> String {
         switch theme {

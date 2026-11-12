@@ -47,11 +47,6 @@ final class CustomMapListViewModel: ObservableObject {
 
     var isEmpty: Bool { rows.isEmpty }
 
-    /// 번호로 저장된 맵 찾기 — 플레이·수정 화면이 사용
-    func map(withID id: UUID) -> CustomMap? {
-        service.map(withID: id)
-    }
-
     func delete(id: UUID) {
         guard let map = service.map(withID: id) else { return }
         service.delete(map)

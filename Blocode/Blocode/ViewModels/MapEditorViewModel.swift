@@ -71,7 +71,17 @@ final class MapEditorViewModel: ObservableObject {
     // MARK: 상태
 
     @Published private(set) var map: MapData
-    @Published var name: String
+    /// 맵 이름 — 최대 길이를 넘으면 잘라 내고, 이름을 바꾸면 저장 알림은 사라짐
+    @Published var name: String {
+        didSet {
+            if name.count > CustomMapService.maxNameLength {
+                name = String(name.prefix(CustomMapService.maxNameLength))
+            }
+            notice = nil
+        }
+    }
+    /// 저장 결과 같은 한 줄 알림 — 맵을 고치거나 이름을 바꾸면 사라짐
+    @Published private(set) var notice: String?
     @Published private(set) var tool: MapEditorTool = .floor
     @Published private(set) var pending: Pending?
     @Published private(set) var enabledBlocks: Set<BlockType>
@@ -111,6 +121,17 @@ final class MapEditorViewModel: ObservableObject {
         name = saved.name
         enabledBlocks = Set(saved.palette).intersection(Self.optionalBlocks)
         editingID = saved.id
+    }
+
+    /// 화면이 쓰는 저장소 — open(id:service:)로 만들 때 정해짐 (테스트는 save(to:)에 직접 넘김)
+    private var service: CustomMapService?
+
+    /// 에디터 화면용 — 번호가 있으면 저장된 맵을 고치고, 번호가 없거나 맵이 없거나 손상됐으면 새 맵
+    static func open(id: UUID?, service: CustomMapService? = nil) -> MapEditorViewModel {
+        let service = service ?? .shared
+        let model = id.flatMap { service.map(withID: $0) }.flatMap(MapEditorViewModel.init(editing:)) ?? MapEditorViewModel()
+        model.service = service
+        return model
     }
 
     private static func defaultMap() -> MapData {
@@ -488,6 +509,7 @@ final class MapEditorViewModel: ObservableObject {
         pending = nil
         message = nil
         isDirty = true
+        notice = nil
         invalidateCheckResults()
         refreshHistoryFlags()
     }
@@ -497,6 +519,7 @@ final class MapEditorViewModel: ObservableObject {
         if undoStack.count > Self.maxHistory { undoStack.removeFirst() }
         redoStack.removeAll()
         isDirty = true
+        notice = nil
         refreshHistoryFlags()
     }
 
@@ -544,5 +567,48 @@ final class MapEditorViewModel: ObservableObject {
         editingID = saved.id
         isDirty = false
         return saved
+    }
+
+    // MARK: - 화면 동작 (저장 버튼·테스트 플레이·안내 줄)
+
+    /// 저장 버튼 — 결과를 알림으로 남김. 저장됐으면 그 맵, 아니면 nil
+    /// (맵에 문제가 있으면 문제 목록이 확인 결과로 안내 줄에 보이므로 알림은 비움)
+    @discardableResult
+    func saveAndNotify() -> CustomMap? {
+        do {
+            let saved = try save(to: service ?? .shared)
+            notice = "저장했어요."
+            return saved
+        } catch CustomMapService.SaveError.invalidMap {
+            notice = nil
+        } catch {
+            notice = error.localizedDescription
+        }
+        return nil
+    }
+
+    /// 테스트 플레이에 쓸 스테이지 — 확인을 통과한 맵만 (통과하지 못하면 nil이고 문제 목록이 안내 줄에 보임)
+    func prepareTestPlay() -> Stage? {
+        let result = validation ?? validate()
+        return result.isValid ? previewStage : nil
+    }
+
+    /// 안내 줄에 보여 줄 한 가지 — 거부 안내 > 짝 맺기 안내 > 저장 알림 > 확인 결과 > 도구 사용법 순서
+    var hint: (text: String, isProblem: Bool) {
+        if let message { return (message, true) }
+        if let pending {
+            switch pending {
+            case .switchCell: return ("스위치를 놓았어요. 열릴 문을 놓을 칸을 누르세요. 같은 칸을 다시 누르면 취소돼요.", false)
+            case .portalEnd: return ("포탈 한쪽을 놓았어요. 짝이 될 칸을 누르세요. 같은 칸을 다시 누르면 취소돼요.", false)
+            }
+        }
+        if let notice { return (notice, false) }
+        if let validation {
+            if validation.isValid, let shortest = validation.shortestSolution?.count, let thresholds {
+                return ("확인 완료 · 가장 짧은 풀이는 \(shortest)블럭이고, 별 3개는 \(thresholds.threeStar)블럭 이하예요.", false)
+            }
+            return (validation.issues.joined(separator: "\n"), true)
+        }
+        return (tool.hint, false)
     }
 }

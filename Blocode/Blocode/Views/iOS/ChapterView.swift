@@ -52,7 +52,7 @@ struct ChapterView: View {
 
                         Button {
                             SoundService.shared.play(.buttonTap)
-                            if !navPath.isEmpty { navPath.removeLast() }
+                            navPath.pop()
                         } label: {
                             HStack(spacing: 4) {
                                 Image(systemName: "chevron.left")
@@ -143,7 +143,7 @@ struct ChapterView: View {
             // 뒤로가기 버튼
             Button {
                             SoundService.shared.play(.buttonTap)
-                            if !navPath.isEmpty { navPath.removeLast() }
+                            navPath.pop()
                         } label: {
                 HStack(spacing: 4) {
                     Image(systemName: "chevron.left")

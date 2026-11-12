@@ -48,10 +48,8 @@ struct StageView: View {
 
     @Environment(\.colorScheme) private var colorScheme  // 다크/라이트 모드 감지
 
-    /// 처음 만나는 블럭 설명 — 한 번에 하나씩 차례로 띄움 (대기 줄 + 지금 보이는 것)
-    @State private var introQueue: [BlockType] = []
-    @State private var introBlock: BlockType?
-    @State private var introChecked = false  // 화면이 다시 나타나도 한 번만 확인
+    /// 처음 만나는 블럭 설명 — 한 번에 하나씩 차례로 띄움 (순서와 수집 기록은 ViewModel이 담당)
+    @StateObject private var intro = BlockIntroViewModel()
 
     /// 프로덕션 진입점 — 챕터/스테이지 번호만 받고 로딩은 ViewModel(VM)이 수행
     /// (View 계층에서 데이터 소스(StageLoader)를 직접 호출하지 않음 = 정석 MVVM)
@@ -78,6 +76,18 @@ struct StageView: View {
         self.onCleared = onCleared
         self.onNewPuzzle = onNewPuzzle
         _viewModel = StateObject(wrappedValue: GameViewModel(stage: stage))
+    }
+
+    /// 일일·랜덤 퍼즐용 — 퍼즐은 ViewModel이 처음 한 번만 만듦 (화면이 다시 만들어져도 다시 생성하지 않음)
+    init(puzzle: PuzzleKind, navPath: Binding<NavigationPath>,
+         showsOwnBackButton: Bool = true,
+         onExit: (() -> Void)? = nil,
+         onNewPuzzle: (() -> Void)? = nil) {
+        self._navPath = navPath
+        self.showsOwnBackButton = showsOwnBackButton
+        self.onExit = onExit
+        self.onNewPuzzle = onNewPuzzle
+        _viewModel = StateObject(wrappedValue: GameViewModel(puzzle: puzzle))
     }
 
     // MARK: - Body (로딩 성공/실패 분기)
@@ -183,7 +193,7 @@ struct StageView: View {
                         viewModel.reset()
                         DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
                             if let next = viewModel.nextStageNumber {
-                                if !navPath.isEmpty { navPath.removeLast() }
+                                navPath.pop()
                                 navPath.append(AppRoute.stage(chapter: stage.chapter, number: next))
                             } else {
                                 // 마지막(종합) 스테이지를 별 3개로 클리어 → "챕터 목록으로"
@@ -203,10 +213,9 @@ struct StageView: View {
             }
 
             // MARK: 처음 만나는 블럭 설명 — 새 블럭이 처음 나오는 스테이지에서 딱 한 번
-            if let block = introBlock, let card = LearningCatalog.card(for: block) {
-                ConfirmCardOverlay(icon: block.iconName, title: "새 블럭 · \(card.title)",
-                                   message: "\(card.summary)\n\n\(card.body)\n\n개념 카드 모음에 저장했어요.",
-                                   accentColor: block.blockColor, primaryTitle: "알겠어요",
+            if let item = intro.current {
+                ConfirmCardOverlay(icon: item.block.iconName, title: item.title, message: item.message,
+                                   accentColor: item.block.blockColor, primaryTitle: "알겠어요",
                                    onPrimary: advanceIntro, onDismiss: advanceIntro)
                     .transition(.opacity)
             }
@@ -242,11 +251,10 @@ struct StageView: View {
             if newState == .success { onCleared?(viewModel.totalBlockCount) }
         }
         // 처음 만나는 블럭이 있으면 화면이 자리 잡은 뒤에 설명을 띄움 (진입 전환과 겹치지 않게 잠깐 기다림)
+        // 기다리는 사이 화면을 떠났으면 띄우지 않음 — 안 보여 준 설명이 수집으로 기록되지 않게 (다음에 들어올 때 다시 확인)
         .task {
-            guard !introChecked else { return }
-            introChecked = true
-            try? await Task.sleep(for: .milliseconds(400))
-            startIntros()
+            guard (try? await Task.sleep(for: .milliseconds(400))) != nil else { return }
+            withAnimation(.easeInOut(duration: 0.2)) { intro.start(for: stage) }
         }
         .hideNavigationBar()  // iOS 전용 API 래퍼 (macOS no-op)
         }  // GeometryReader 끝
@@ -378,7 +386,6 @@ struct StageView: View {
     private func codePanel(alwaysExpanded: Bool = false) -> some View {
         CodePanelView(
             viewModel: viewModel,
-            stage: stage,
             drag: $drag,
             isPanelExpanded: $isPanelExpanded,
             alwaysExpanded: alwaysExpanded
@@ -472,7 +479,7 @@ struct StageView: View {
                           isPressed: $isMacResetPressed) {
                 viewModel.resetOrClear()
             }
-            .disabled(viewModel.gameState == .running && !viewModel.isStepping)  // 단계별 실행 중에는 리셋으로 멈출 수 있음
+            .disabled(viewModel.isRunningContinuously)  // 단계별 실행 중에는 리셋으로 멈출 수 있음
 
             macRunButton
 
@@ -515,31 +522,31 @@ struct StageView: View {
         .onPressState(isPressed: isPressed)
     }
 
-    /// 상단바용 실행 버튼 — 비활성/실행중은 회색, 활성은 민트 (iOS ControlBarView.runButtonColor와 동일 규칙)
+    /// 상단바용 실행 버튼 — 비활성/실행중은 회색, 활성은 민트 (켜짐·글자·동작 규칙은 GameViewModel이 정해 아이폰 컨트롤 바와 공유)
     private var macRunButton: some View {
-        let color: Color = (viewModel.canPressRun || viewModel.isStepping) ? Color.runButtonActiveMint : Color.runButtonInactiveGray
+        let color: Color = viewModel.isRunButtonActive ? Color.runButtonActiveMint : Color.runButtonInactiveGray
 
         return Button {
             SoundService.shared.play(.buttonTap)
-            if viewModel.isStepping { viewModel.continueRun() } else { viewModel.run() }  // 단계별 중에는 남은 블럭을 이어서 실행
+            viewModel.runOrContinue()  // 단계별 중에는 남은 블럭을 이어서 실행
         } label: {
             Bevel3DButtonLabel(color: color, width: 84, height: 34, cornerRadius: 10,
                                topDepth: 1.5, botDepth: 2,
                                isPressed: isMacRunPressed) {
                 HStack(spacing: 5) {
-                    if viewModel.gameState == .running && !viewModel.isStepping {
+                    if viewModel.isRunningContinuously {
                         ProgressView().progressViewStyle(.circular).tint(.white).scaleEffect(0.6)
                     } else {
                         Image(systemName: "play.fill").font(.system(size: 11, weight: .bold))
                     }
-                    Text(viewModel.isStepping ? "계속" : (viewModel.gameState == .running ? "실행 중" : "실행"))
+                    Text(viewModel.runButtonTitle)
                         .font(.system(size: 13, weight: .bold))
                 }
                 .foregroundStyle(.white)
             }
         }
         .buttonStyle(.plain)
-        .allowsHitTesting(viewModel.canPressRun || viewModel.isStepping)
+        .allowsHitTesting(viewModel.isRunButtonActive)
         .onPressState(isPressed: $isMacRunPressed)
     }
     #endif
@@ -662,26 +669,9 @@ struct StageView: View {
 
     // MARK: - 처음 만나는 블럭 설명
 
-    /// 이 스테이지에 처음 나오는 블럭을 모아 첫 번째를 띄움
-    private func startIntros() {
-        let learning = LearningService.shared
-        // 이미 진행한 사용자가 지나온 블럭 설명을 다시 보지 않도록 진도에서 먼저 채움
-        learning.syncFromProgress(.shared)
-        introQueue = learning.unseenBlocks(for: stage)
-        advanceIntro()
-    }
-
-    /// 지금 설명을 닫고 다음 것을 띄움 — 보여 주는 순간 수집으로 기록해 한 번만 나오게 함
+    /// 지금 설명을 닫고 다음 것을 띄움 — 뷰는 전환 효과만 맡고, 순서와 수집 기록은 BlockIntroViewModel이 처리
     private func advanceIntro() {
-        withAnimation(.easeInOut(duration: 0.2)) {
-            if introQueue.isEmpty {
-                introBlock = nil
-            } else {
-                let next = introQueue.removeFirst()
-                LearningService.shared.markSeen(next)
-                introBlock = next
-            }
-        }
+        withAnimation(.easeInOut(duration: 0.2)) { intro.advance() }
     }
 
     // MARK: - 나가기·챕터 목록 복귀
@@ -690,8 +680,8 @@ struct StageView: View {
     private func exitStage() {
         if let onExit {
             onExit()
-        } else if !navPath.isEmpty {
-            navPath.removeLast()
+        } else {
+            navPath.pop()
         }
     }
 

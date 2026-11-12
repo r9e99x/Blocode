@@ -81,6 +81,11 @@ enum BlockType: String, Codable, CaseIterable {
         }
     }
 
+    /// 자식 블럭을 담는 컨테이너 블럭인지 (반복·만약에·함수) — 판정을 한 곳에서만 함
+    var isContainer: Bool {
+        self == .repeatBlock || self == .ifBlock || self == .functionBlock
+    }
+
     // 색상(blockColor·lightColor)은 View 계층인 AppColors.swift에 있음 — Model은 UI 타입을 모름
 }
 
@@ -108,13 +113,12 @@ struct Block: Identifiable, Codable {
         self.type = type
 
         // 자식 블럭을 갖는 컨테이너 타입 (repeat / if / function)
-        let isContainer = (type == .repeatBlock || type == .ifBlock || type == .functionBlock)
 
         // repeat 블럭: 기본 반복 횟수 2
         self.repeatCount = (type == .repeatBlock) ? (repeatCount ?? 2) : nil
 
         // 컨테이너 블럭: 빈 자식 배열로 초기화
-        self.children = isContainer ? (children ?? []) : nil
+        self.children = type.isContainer ? (children ?? []) : nil
 
         // if 블럭: 기본 조건 pathBlocked (앞이 막혀있으면)
         self.ifCondition = (type == .ifBlock) ? (ifCondition ?? .pathBlocked) : nil
@@ -125,7 +129,7 @@ struct Block: Identifiable, Codable {
     /// 자식 블럭 영역을 표시해야 하는 컨테이너 블럭 여부
     /// repeat / if / function 모두 자식 블럭을 가짐
     var hasChildren: Bool {
-        type == .repeatBlock || type == .ifBlock || type == .functionBlock
+        type.isContainer
     }
 
     /// repeat 블럭 여부 확인 (반복 횟수 스테퍼 표시 조건)

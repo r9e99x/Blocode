@@ -15,7 +15,6 @@ struct MapEditorView: View {
 
     @StateObject private var editor: MapEditorViewModel
 
-    private let service: CustomMapService
     private let onClose: () -> Void
     private let onSaved: ((CustomMap) -> Void)?
     /// 자체 뒤로가기 버튼 표시 여부 (맥은 툴바 버튼을 쓸 수 있도록 끌 수 있음)
@@ -25,18 +24,15 @@ struct MapEditorView: View {
     @State private var showLeaveConfirm = false
     /// 테스트 플레이 중인 스테이지 — 값이 있으면 게임 화면을 전체 화면으로 띄움
     @State private var testStage: Stage?
-    /// 저장 결과 같은 한 줄 알림 — 맵을 고치거나 이름을 바꾸면 사라짐
-    @State private var notice: String?
 
-    /// - Parameter editing: 이미 저장된 맵을 고칠 때 전달 (손상된 맵이면 새 맵으로 열림)
+    /// - Parameter editingID: 이미 저장된 맵을 고칠 때 그 맵의 번호 (없거나 손상된 맵이면 새 맵으로 열림)
     @MainActor
-    init(editing: CustomMap? = nil, service: CustomMapService? = nil,
+    init(editingID: UUID? = nil, service: CustomMapService? = nil,
          showsOwnBackButton: Bool = true,
          onSaved: ((CustomMap) -> Void)? = nil,
          onClose: @escaping () -> Void) {
-        let model = editing.flatMap(MapEditorViewModel.init(editing:)) ?? MapEditorViewModel()
-        _editor = StateObject(wrappedValue: model)
-        self.service = service ?? .shared
+        // 맵 찾기와 저장소 연결은 ViewModel이 담당 — 화면이 다시 만들어져도 한 번만 생성됨
+        _editor = StateObject(wrappedValue: MapEditorViewModel.open(id: editingID, service: service))
         self.showsOwnBackButton = showsOwnBackButton
         self.onSaved = onSaved
         self.onClose = onClose
@@ -63,15 +59,6 @@ struct MapEditorView: View {
         .fullScreenCoverCompat(isPresented: Binding(get: { testStage != nil },
                                                     set: { if !$0 { testStage = nil } })) {
             testPlayScreen
-        }
-        .onChange(of: editor.name) { _, name in
-            if name.count > CustomMapService.maxNameLength {
-                editor.name = String(name.prefix(CustomMapService.maxNameLength))
-            }
-            notice = nil
-        }
-        .onChange(of: editor.isDirty) { _, isDirty in
-            if isDirty { notice = nil }
         }
         .hideNavigationBar()
     }
@@ -158,27 +145,9 @@ struct MapEditorView: View {
 
     // MARK: - 안내 줄
 
-    /// 거부 안내 > 짝 맺기 안내 > 저장 알림 > 확인 결과 > 도구 사용법 순서로 한 가지를 보여 줌
-    private var hintText: (text: String, isProblem: Bool) {
-        if let message = editor.message { return (message, true) }
-        if let pending = editor.pending {
-            switch pending {
-            case .switchCell: return ("스위치를 놓았어요. 열릴 문을 놓을 칸을 누르세요. 같은 칸을 다시 누르면 취소돼요.", false)
-            case .portalEnd: return ("포탈 한쪽을 놓았어요. 짝이 될 칸을 누르세요. 같은 칸을 다시 누르면 취소돼요.", false)
-            }
-        }
-        if let notice { return (notice, false) }
-        if let validation = editor.validation {
-            if validation.isValid, let shortest = validation.shortestSolution?.count, let thresholds = editor.thresholds {
-                return ("확인 완료 · 가장 짧은 풀이는 \(shortest)블럭이고, 별 3개는 \(thresholds.threeStar)블럭 이하예요.", false)
-            }
-            return (validation.issues.joined(separator: "\n"), true)
-        }
-        return (editor.tool.hint, false)
-    }
-
+    /// 안내 한 줄 — 무엇을 보여 줄지(우선순위)는 ViewModel이 정함
     private var hintLine: some View {
-        let hint = hintText
+        let hint = editor.hint
         return Text(hint.text)
             .font(.system(size: 13, weight: .medium))
             .foregroundStyle(hint.isProblem ? Color.failureRed : Color.secondary)
@@ -277,23 +246,12 @@ struct MapEditorView: View {
     }
 
     private func save() {
-        do {
-            let saved = try editor.save(to: service)
-            notice = "저장했어요."
-            onSaved?(saved)
-        } catch CustomMapService.SaveError.invalidMap {
-            // 문제 목록은 확인 결과로 안내 줄에 보임
-            notice = nil
-        } catch {
-            notice = error.localizedDescription
-        }
+        if let saved = editor.saveAndNotify() { onSaved?(saved) }
     }
 
     /// 확인을 통과한 맵만 테스트 플레이 — 통과하지 못하면 문제 목록이 안내 줄에 보임
     private func startTestPlay() {
-        let result = editor.validation ?? editor.validate()
-        guard result.isValid, let stage = editor.previewStage else { return }
-        testStage = stage
+        if let stage = editor.prepareTestPlay() { testStage = stage }
     }
 }
 

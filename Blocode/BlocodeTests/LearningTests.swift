@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import Combine
 import Testing
 @testable import Blocode
 
@@ -184,5 +185,136 @@ struct SyncThroughChaptersTests {
         }
         #expect(!service.seenBlocks.contains(.collectItem))
         #expect(!service.seenBlocks.contains(.activateSwitch))
+    }
+}
+
+// MARK: - 학습 보관함 화면
+
+@MainActor
+@Suite("학습 보관함 화면")
+struct LearningLibraryViewModelTests {
+
+    /// 격리된 보관함과 진행도로 만든 화면 ViewModel
+    private func makeVM(progress: ProgressService = .makeForTesting())
+        -> (vm: LearningLibraryViewModel, learning: LearningService) {
+        let learning = LearningService(defaults: isolatedDefaults())
+        return (LearningLibraryViewModel(learning: learning, progress: progress), learning)
+    }
+
+    @Test("탭별 카드와 수집 수가 보관함 상태를 따름")
+    func cardsAndProgress() throws {
+        let (vm, learning) = makeVM()
+        #expect(vm.cards(in: .block).count == 12)
+        #expect(vm.progress(in: .block).unlocked == 0)
+        #expect(vm.progress(in: .coding) == (11, 11))  // 코딩 기초는 처음부터 열려 있음
+
+        let repeatCard = try #require(LearningCatalog.card(for: .repeatBlock))
+        #expect(!vm.isUnlocked(repeatCard))
+        learning.markSeen(.repeatBlock)
+        #expect(vm.isUnlocked(repeatCard))
+        #expect(vm.progress(in: .block).unlocked >= 1)
+    }
+
+    @Test("잠긴 블럭 카드는 그 블럭이 처음 나오는 챕터를 알려 줌 — 행은 한 줄, 팝업은 두 줄")
+    func unlockHints() throws {
+        let (vm, _) = makeVM()
+        let card = try #require(LearningCatalog.card(for: .moveForward))
+        #expect(vm.unlockHint(for: card) == "챕터 1 \"기본기\"에서 처음 만나면 열려요")
+        let hint = vm.lockHint(for: card)
+        #expect(hint.message == "챕터 1 \"기본기\"에서\n처음 만나면 열려요")
+        #expect(hint.chapter?.number == 1)
+    }
+
+    @Test("열림 조건이 없는 카드의 안내는 기본 문구이고 강조할 챕터가 없음")
+    func fallbackHint() {
+        let (vm, _) = makeVM()
+        let open = LearningCard(id: "x", category: .coding, title: "t", summary: "s", body: "b",
+                                tip: nil, unlock: .alwaysOpen, example: nil)
+        #expect(vm.unlockHint(for: open) == "아직 열리지 않았어요")
+        #expect(vm.lockHint(for: open).message == "아직 열리지 않았어요")
+        #expect(vm.lockHint(for: open).chapter?.number == nil)
+    }
+
+    @Test("화면을 열 때 이미 깬 스테이지의 블럭 카드가 채워지고, 화면에 변경을 알림")
+    func syncsFromProgressAndNotifies() throws {
+        let progress = ProgressService.makeForTesting()
+        progress.recordClear(stageId: Stage.makeID(chapter: 1, number: 1), stars: 3, blockCount: 1)
+        let (vm, _) = makeVM(progress: progress)
+        let card = try #require(LearningCatalog.card(for: .moveForward))
+        #expect(!vm.isUnlocked(card))
+
+        var received = false
+        let subscription = vm.objectWillChange.sink { received = true }
+        vm.syncCollection()
+        #expect(vm.isUnlocked(card))
+        #expect(received)  // 알림이 없으면 화면이 잠긴 모습 그대로 남음
+        subscription.cancel()
+    }
+}
+
+// MARK: - 첫 등장 설명 차례
+
+@MainActor
+@Suite("첫 등장 설명 차례")
+struct BlockIntroViewModelTests {
+
+    private func stage(id: String = "ch1_stage9", blocks: [BlockType]?) -> Stage {
+        let map = MapData(grid: [[1, 1, 1]], start: Position(x: 0, y: 0), startDirection: .right, goal: Position(x: 2, y: 0))
+        return Stage(id: id, chapter: 1, stageNumber: 1, name: "t", mapData: map,
+                     starThresholds: StarThresholds(threeStar: 2, twoStar: 3), availableBlocks: blocks)
+    }
+
+    /// 격리된 보관함과 진행도로 만든 ViewModel
+    private func makeVM(progress: ProgressService = .makeForTesting())
+        -> (vm: BlockIntroViewModel, learning: LearningService) {
+        let learning = LearningService(defaults: isolatedDefaults())
+        return (BlockIntroViewModel(learning: learning, progress: progress), learning)
+    }
+
+    @Test("처음 나오는 블럭을 팔레트 순서대로 하나씩 띄우고, 띄운 것만 수집으로 기록")
+    func showsOneAtATime() {
+        let (vm, learning) = makeVM()
+        #expect(vm.current == nil)
+
+        vm.start(for: stage(blocks: [.moveForward, .repeatBlock]))
+        #expect(vm.current?.block == .moveForward)
+        #expect(vm.current?.title == "새 블럭 · 앞으로")
+        #expect(vm.current?.message.hasSuffix("개념 카드 모음에 저장했어요.") == true)
+        #expect(learning.seenBlocks == [.moveForward])  // 아직 안 띄운 반복은 수집 전
+
+        vm.advance()
+        #expect(vm.current?.block == .repeatBlock)
+        #expect(learning.seenBlocks == [.moveForward, .repeatBlock])
+
+        vm.advance()
+        #expect(vm.current == nil)
+    }
+
+    @Test("화면이 다시 나타나 또 시작해도 한 번만 확인")
+    func startsOnce() {
+        let (vm, _) = makeVM()
+        vm.start(for: stage(blocks: [.moveForward]))
+        vm.advance()
+        #expect(vm.current == nil)
+
+        vm.start(for: stage(blocks: [.turnLeft]))  // 다시 불려도 새로 모으지 않음
+        #expect(vm.current == nil)
+    }
+
+    @Test("이미 지나온 블럭은 진도에서 채워져 설명이 뜨지 않음")
+    func skipsBlocksPassedInProgress() {
+        let progress = ProgressService.makeForTesting()
+        progress.recordClear(stageId: Stage.makeID(chapter: 1, number: 1), stars: 3, blockCount: 1)
+        let (vm, _) = makeVM(progress: progress)
+        vm.start(for: stage(blocks: [.moveForward, .collectItem]))
+        #expect(vm.current?.block == .collectItem)  // 앞으로는 1-1을 깼으니 건너뜀
+    }
+
+    @Test("사용자 맵에서는 설명을 띄우지 않고 수집도 하지 않음")
+    func skipsCustomMaps() {
+        let (vm, learning) = makeVM()
+        vm.start(for: stage(id: "\(CustomMap.stageIDPrefix)abc", blocks: [.moveForward, .repeatBlock]))
+        #expect(vm.current == nil)
+        #expect(learning.seenBlocks.isEmpty)
     }
 }

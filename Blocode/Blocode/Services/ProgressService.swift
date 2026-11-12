@@ -22,7 +22,7 @@ struct StageResult: Codable {
 
 // MARK: - ProgressService
 /// 스테이지 클리어 기록을 SwiftData(`StageProgress`)에 저장/불러오는 서비스
-/// 앱 전역에서 `@ObservedObject ProgressService.shared` 로 주입하여 사용
+/// 화면은 직접 쓰지 않고 각 ViewModel이 주입받아 사용 (앱은 `shared`, 테스트는 메모리 저장소)
 ///
 /// 설계 메모:
 /// - 저장소는 SwiftData이지만, 외부 공개 API와 `@Published` 프로퍼티는

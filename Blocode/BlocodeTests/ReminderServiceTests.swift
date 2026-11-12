@@ -9,6 +9,8 @@
 
 import Testing
 import Foundation
+import Combine
+import SwiftUI  // NavigationPath 도우미 검증용
 @testable import Blocode
 
 // MARK: - 가짜 알림 센터
@@ -291,6 +293,73 @@ struct NotificationRoutingTests {
         #expect(router.consumeDailyPuzzle())
         #expect(!router.pendingDailyPuzzle)
         #expect(!router.consumeDailyPuzzle())
+    }
+
+    // MARK: 홈 화면이 요청을 경로로 바꾸는 규칙 (아이폰 홈과 아이패드·맥 셸이 함께 씀)
+
+    /// 2026-11-12 정오(서울)로 고정한 달력과 시각
+    private var seoulCalendar: Calendar {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "Asia/Seoul")!
+        return calendar
+    }
+
+    private func fixedNoon() -> Date {
+        seoulCalendar.date(from: DateComponents(year: 2026, month: 11, day: 12, hour: 12))!
+    }
+
+    @Test("홈 화면은 대기 중인 요청을 한 번만 오늘의 퍼즐 경로로 바꿈")
+    func homeTakesPendingRouteOnce() {
+        let progress = ProgressService.makeForTesting()
+        progress.devUnlock(throughChapter: 3, chapters: ChapterCatalog.all.map { (id: $0.number, stageCount: $0.stageCount) })
+        let router = NotificationRouter()
+        let vm = HomeViewModel(progress: progress, router: router, now: { self.fixedNoon() }, calendar: seoulCalendar)
+
+        #expect(!vm.hasPendingDailyPuzzle)
+        #expect(vm.takePendingDailyPuzzleRoute() == nil)  // 요청이 없으면 이동하지 않음
+
+        router.requestDailyPuzzle()
+        #expect(vm.hasPendingDailyPuzzle)
+        #expect(vm.takePendingDailyPuzzleRoute() == .dailyPuzzle(20261112))
+        #expect(!vm.hasPendingDailyPuzzle)
+        #expect(vm.takePendingDailyPuzzleRoute() == nil)  // 같은 요청으로 두 번 이동하지 않음
+    }
+
+    @Test("일일 퍼즐이 잠겨 있으면 요청은 버려지고 이동하지 않음")
+    func lockedDiscardsRequest() {
+        let router = NotificationRouter()
+        let vm = HomeViewModel(progress: .makeForTesting(), router: router)
+        router.requestDailyPuzzle()
+        #expect(vm.takePendingDailyPuzzleRoute() == nil)
+        #expect(!router.pendingDailyPuzzle)  // 나중에 풀렸을 때 뜬금없이 이동하지 않도록 버림
+    }
+
+    @Test("요청이 들어오면 홈 화면에 변경을 알림")
+    func homeForwardsRouterChanges() {
+        let router = NotificationRouter()
+        let vm = HomeViewModel(progress: .makeForTesting(), router: router)
+        var received = false
+        let subscription = vm.objectWillChange.sink { received = true }
+        router.requestDailyPuzzle()
+        #expect(received)  // 알림이 없으면 화면이 요청을 알아채지 못함
+        subscription.cancel()
+    }
+
+    @Test("새 랜덤 퍼즐 경로와 한 화면 뒤로 가기 도우미")
+    func routeHelpers() {
+        guard case .randomPuzzle(let seed) = AppRoute.newRandomPuzzle() else {
+            Issue.record("랜덤 퍼즐 경로가 아님")
+            return
+        }
+        #expect(seed >= 1)
+
+        var path = NavigationPath()
+        path.pop()  // 빈 스택에서도 안전
+        #expect(path.isEmpty)
+        path.append(AppRoute.chapterSelect)
+        path.append(AppRoute.library)
+        path.pop()
+        #expect(path.count == 1)
     }
 }
 

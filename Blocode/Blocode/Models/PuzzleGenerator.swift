@@ -70,6 +70,32 @@ enum PuzzleDifficulty {
     }
 }
 
+// MARK: - PuzzleKind
+/// 어떤 퍼즐인지 — 일일 퍼즐은 날짜(yyyyMMdd), 랜덤 퍼즐은 씨앗
+enum PuzzleKind {
+    case daily(Int)
+    case random(UInt64)
+
+    /// 만들기 전에도 알 수 있는 스테이지 ID — 화면 정체성 구분에 사용 (퍼즐을 만들지 않고 계산)
+    var stageID: String {
+        switch self {
+        case .daily(let key):   return "\(PuzzleGenerator.dailyIDPrefix)\(key)"
+        case .random(let seed): return "\(PuzzleGenerator.randomIDPrefix)\(seed)"
+        }
+    }
+
+    /// 퍼즐 스테이지를 만듦 — 무거운 계산이라 화면이 아니라 ViewModel이 한 번만 부름
+    func makeStage() -> Stage {
+        switch self {
+        case .daily(let key):
+            // 날짜를 읽지 못하면 오늘의 퍼즐로 대체
+            return PuzzleGenerator.dailyStage(forKey: key) ?? PuzzleGenerator.dailyStage(for: Date())
+        case .random(let seed):
+            return PuzzleGenerator.randomStage(seed: seed)
+        }
+    }
+}
+
 // MARK: - PuzzleGenerator
 /// 일일 퍼즐과 랜덤 퍼즐을 만드는 규칙
 /// 미로를 파서 시작과 목표를 가장 멀리 두고, 테마에 맞는 기믹을 놓은 뒤 MapValidator·MapSolver로
