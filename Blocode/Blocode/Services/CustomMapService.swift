@@ -21,7 +21,8 @@ final class CustomMapService {
     /// 앱 전역에서 공유 — ProgressService가 소유한 단일 컨테이너를 사용
     static let shared = CustomMapService(container: ProgressService.shared.modelContainer)
 
-    static let maxNameLength = 20
+    /// 맵 이름 최대 길이 — 바뀌지 않는 상수라 메인 액터 밖(저장 실패 문구 등)에서도 읽을 수 있게 둠
+    nonisolated static let maxNameLength = 20
 
     /// 저장 실패 이유
     enum SaveError: LocalizedError, Equatable {

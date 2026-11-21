@@ -12,7 +12,8 @@ import SpriteKit   // 3D 베벨 색상을 SwiftUI(Color)·SpriteKit(SKColor) 양
 extension Color {
     /// 라이트/다크 분기 다이나믹 컬러 생성 — iOS: UIColor / macOS: NSColor 기반
     /// ⚠️ light에는 기존 고정색 리터럴을 그대로 전달할 것 (라이트 모드 외형 불변 원칙)
-    static func dynamic(light: (red: Double, green: Double, blue: Double),
+    // nonisolated: SwiftUI가 애니메이션 중 색을 별도 그리기 스레드에서 계산하므로 메인 액터에 묶이면 Swift 6 실행 중 확인에 걸려 앱이 멈춤
+    nonisolated static func dynamic(light: (red: Double, green: Double, blue: Double),
                         dark: (red: Double, green: Double, blue: Double)) -> Color {
         #if canImport(UIKit)
         // iOS/iPadOS — trait 기반 다이나믹 프로바이더

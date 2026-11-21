@@ -25,7 +25,8 @@ struct CustomMapThumbnail: View {
                     context.fill(path, with: .color(map.isFloor(position) ? .mapTileFloor : .mapTileWall))
                 }
             }
-            func dot(_ position: Position, color: Color, scale: CGFloat) {
+            // Swift 6 모드에서 컴파일러가 이 지역 함수를 메인 액터 밖으로 봐서, 격자 계산(메인 액터)을 부르도록 격리를 명시
+            @MainActor func dot(_ position: Position, color: Color, scale: CGFloat) {
                 let rect = layout.rect(of: position)
                 let radius = layout.cell * scale
                 context.fill(Path(ellipseIn: CGRect(x: rect.midX - radius, y: rect.midY - radius,

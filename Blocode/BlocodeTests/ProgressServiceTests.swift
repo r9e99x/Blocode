@@ -81,8 +81,8 @@ func isolatedDefaults() -> UserDefaults {
 }
 
 /// 변경 신호를 받았는지 담아 두는 상자 — Observation의 onChange는 바꾸는 쪽 스레드에서 바로 불려서
-/// 테스트(메인 액터) 안에서만 쓰면 안전함
-private final class ObservationFlag: @unchecked Sendable {
+/// 테스트(메인 액터) 안에서만 쓰면 안전함 — @Sendable인 onChange에서 바꿔야 해서 메인 액터 소속에서 뺌
+nonisolated private final class ObservationFlag: @unchecked Sendable {
     var fired = false
 }
 

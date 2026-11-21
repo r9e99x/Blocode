@@ -218,10 +218,11 @@ struct SyncThroughChaptersTests {
 struct LearningLibraryViewModelTests {
 
     /// 격리된 보관함과 진행도로 만든 화면 ViewModel
-    private func makeVM(progress: ProgressService = .makeForTesting())
+    /// 기본 진행도는 본문에서 만듦 — 기본 인자 식은 메인 액터 밖에서 평가될 수 있어서
+    private func makeVM(progress: ProgressService? = nil)
         -> (vm: LearningLibraryViewModel, learning: LearningService) {
         let learning = LearningService(defaults: isolatedDefaults())
-        return (LearningLibraryViewModel(learning: learning, progress: progress), learning)
+        return (LearningLibraryViewModel(learning: learning, progress: progress ?? .makeForTesting()), learning)
     }
 
     @Test("탭별 카드와 수집 수가 보관함 상태를 따름")
@@ -297,10 +298,11 @@ struct BlockIntroViewModelTests {
     }
 
     /// 격리된 보관함과 진행도로 만든 ViewModel
-    private func makeVM(progress: ProgressService = .makeForTesting())
+    /// 기본 진행도는 본문에서 만듦 — 기본 인자 식은 메인 액터 밖에서 평가될 수 있어서
+    private func makeVM(progress: ProgressService? = nil)
         -> (vm: BlockIntroViewModel, learning: LearningService) {
         let learning = LearningService(defaults: isolatedDefaults())
-        return (BlockIntroViewModel(learning: learning, progress: progress), learning)
+        return (BlockIntroViewModel(learning: learning, progress: progress ?? .makeForTesting()), learning)
     }
 
     @Test("처음 나오는 블럭을 팔레트 순서대로 하나씩 띄우고, 띄운 것만 수집으로 기록")
