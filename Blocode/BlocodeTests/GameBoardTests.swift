@@ -239,10 +239,7 @@ struct GameBoardRenderingTests {
     }
 
     private func waitUntilFinished(_ viewModel: GameViewModel) async throws {
-        let deadline = Date().addingTimeInterval(15)
-        while viewModel.gameState == .running, Date() < deadline {
-            try await Task.sleep(nanoseconds: 20_000_000)
-        }
+        try await waitWhileRunning(viewModel)
     }
 
     @Test("실행하면 변화를 순서대로 알리고 실행 속도도 함께 전달")
@@ -287,14 +284,18 @@ struct GameBoardRenderingTests {
     func reset_cancelsPendingPortal() async throws {
         let map = MapData(grid: [[1, 1, 1]], start: Position(x: 0, y: 0), startDirection: .right, goal: Position(x: 2, y: 0),
                           portals: [PortalPair(a: Position(x: 1, y: 0), b: Position(x: 2, y: 0))])
-        let vm = makeViewModel(map: map)
+        let gate = AnimationGate()
+        let stage = Stage(id: "unittest_\(UUID().uuidString)", chapter: 0, stageNumber: 0, name: "Rendering",
+                          mapData: map, starThresholds: StarThresholds(threeStar: 99, twoStar: 99))
+        let vm = GameViewModel(stage: stage, progress: .makeForTesting(), executionSpeed: { 4 },
+                               sleep: { await gate.sleep($0) })
         let renderer = RecordingRenderer()
         vm.renderer = renderer
         vm.codeBlocks = [Block(type: .moveForward)]
         vm.run()
-        try await Task.sleep(nanoseconds: 20_000_000)  // 포탈 칸에 도착해 애니메이션 대기 중
+        await gate.yield(until: { gate.waitingCount == 1 })  // 포탈 칸에 도착해 애니메이션 대기 중
         vm.reset()
-        try await Task.sleep(nanoseconds: 200_000_000)  // 이전 실행이 남아 있다면 움직일 시간
+        await gate.runToEnd(vm)  // 대기를 풀어 이전 실행이 남은 일을 하게 함 — 포탈이 작동하면 안 됨
 
         #expect(renderer.events.contains(.teleported) == false)
         #expect(vm.board.position == map.start)

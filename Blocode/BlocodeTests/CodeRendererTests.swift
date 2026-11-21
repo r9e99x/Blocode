@@ -200,3 +200,23 @@ struct CodeRendererTests {
         }
     }
 }
+
+// MARK: - 코드 언어 선택 상태
+
+@MainActor
+@Suite("코드 언어 선택")
+struct CodeLanguageViewModelTests {
+
+    @Test("고른 언어가 설정에 저장되고 다른 화면의 ViewModel도 같은 언어를 봄")
+    func languageIsSharedThroughSettings() {
+        let settings = SettingsService(defaults: isolatedDefaults())
+        let codeView = CodeLanguageViewModel(settings: settings)
+        let cardView = CodeLanguageViewModel(settings: settings)
+        #expect(codeView.language == .swift)  // 기본값
+
+        codeView.language = .python
+        #expect(settings.codeLanguage == .python)
+        #expect(cardView.language == .python)
+        #expect(codeView.code(for: [Block(type: .moveForward)]) == "move_forward()")
+    }
+}

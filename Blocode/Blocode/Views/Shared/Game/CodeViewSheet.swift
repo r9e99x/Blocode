@@ -13,13 +13,14 @@ import SwiftUI
 struct CodeViewSheet: View {
 
     let blocks: [Block]
-    @ObservedObject private var settings = SettingsService.shared
+    /// 고른 코드 언어 — 저장과 코드 변환은 ViewModel이 담당 (개념 카드 상세와 같은 언어를 공유)
+    @StateObject private var codeLanguage = CodeLanguageViewModel()
     @Environment(\.dismiss) private var dismiss
 
     /// 복사 직후 버튼 문구를 잠깐 바꾸기 위한 표시
     @State private var copied = false
 
-    private var code: String { CodeRenderer.render(blocks, language: settings.codeLanguage) }
+    private var code: String { codeLanguage.code(for: blocks) }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -100,7 +101,7 @@ struct CodeViewSheet: View {
     // MARK: - 언어 선택
 
     private var languagePicker: some View {
-        CodeLanguageChips(selection: $settings.codeLanguage)
+        CodeLanguageChips(selection: $codeLanguage.language)
     }
 
     /// 클립보드에 복사 (iOS·맥 공용)

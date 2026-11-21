@@ -251,12 +251,20 @@ struct CustomMapListView: View {
 /// 맵이 없거나 손상됐으면 안내와 돌아가기 버튼을 보여 줌
 struct CustomMapPlayView: View {
 
-    let id: UUID
-    var showsOwnBackButton = true
-    let onExit: () -> Void
+    private let showsOwnBackButton: Bool
+    private let onExit: () -> Void
+    /// 플레이할 맵 — 화면을 만들 때 한 번만 찾음 (없거나 손상됐으면 nil)
+    private let stage: Stage?
+
+    /// - Parameter service: 맵 저장소 — 테스트·프리뷰는 격리된 저장소를 주입
+    init(id: UUID, service: CustomMapService? = nil, showsOwnBackButton: Bool = true, onExit: @escaping () -> Void) {
+        self.stage = (service ?? .shared).map(withID: id)?.stage
+        self.showsOwnBackButton = showsOwnBackButton
+        self.onExit = onExit
+    }
 
     var body: some View {
-        if let stage = CustomMapService.shared.map(withID: id)?.stage {
+        if let stage {
             StageView(stage: stage, navPath: .constant(NavigationPath()),
                       showsOwnBackButton: showsOwnBackButton, onExit: onExit)
                 .id(stage.id)

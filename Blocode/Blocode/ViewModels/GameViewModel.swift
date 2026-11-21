@@ -82,6 +82,10 @@ final class GameViewModel: ObservableObject {
     /// 실행 속도를 읽는 함수 — 기본은 설정값을 실시간으로 읽고, 테스트는 고정값을 주입
     private let executionSpeedProvider: () -> Double
 
+    /// 애니메이션 대기 함수 (초 단위) — 기본은 실제 시간만큼 기다리고(취소되면 바로 깨어남),
+    /// 테스트는 원하는 순간에 풀어 주는 대기를 넣어 "이동 도중" 같은 상태를 시간에 기대지 않고 만듦
+    private let sleep: (Double) async -> Void
+
     /// 진행 중인 실행 Task — reset()에서 취소해 이전 실행이 새 실행과 겹치지 않게 함
     private var runTask: Task<Void, Never>?
 
@@ -109,12 +113,19 @@ final class GameViewModel: ObservableObject {
     /// 스테이지 데이터로 ViewModel 초기화 (프리뷰/테스트용 — 직접 주입)
     init(stage: Stage,
          progress: ProgressService = .shared,
-         executionSpeed: @escaping () -> Double = { SettingsService.shared.executionSpeed }) {
+         executionSpeed: @escaping () -> Double = { SettingsService.shared.executionSpeed },
+         sleep: @escaping (Double) async -> Void = GameViewModel.realSleep) {
         self.stage = stage
         self.board = GameBoard(map: stage.mapData)
         self.loadFailed = false
         self.progress = progress
         self.executionSpeedProvider = executionSpeed
+        self.sleep = sleep
+    }
+
+    /// 실제 시간만큼 기다리는 기본 대기 — 실행이 취소되면(리셋) 바로 깨어남
+    nonisolated static func realSleep(_ seconds: Double) async {
+        try? await Task.sleep(for: .seconds(seconds))
     }
 
     /// 일일·랜덤 퍼즐로 ViewModel 초기화 — 퍼즐 생성(무거운 계산)을 화면이 아니라 여기서 한 번만 함
@@ -127,6 +138,7 @@ final class GameViewModel: ObservableObject {
     init(chapter: Int, stageNumber: Int) {
         self.progress = .shared
         self.executionSpeedProvider = { SettingsService.shared.executionSpeed }
+        self.sleep = GameViewModel.realSleep
         // 로딩 실패 시 플레이스홀더로 타입 불변식(비옵셔널 Stage) 유지
         // (실제로는 View가 loadFailed를 보고 폴백 UI를 띄우므로 사용되지 않음)
         let loaded = StageLoader.load(chapter: chapter, stage: stageNumber)
@@ -516,7 +528,7 @@ final class GameViewModel: ObservableObject {
 
     /// 애니메이션이 끝날 때까지 대기 (속도 배율 적용) — 리셋으로 실행이 취소되면 바로 깨어남
     private func waitForAnimation(_ seconds: Double) async {
-        try? await Task.sleep(for: .seconds(seconds / executionSpeed))
+        await sleep(seconds / executionSpeed)
     }
 
     /// 앞으로/뒤로 이동 — 성공 여부 반환 (벽이면 false)

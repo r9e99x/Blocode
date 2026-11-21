@@ -25,15 +25,21 @@ struct GameViewModelStateTests {
         return GameViewModel(stage: stage, progress: .makeForTesting(), executionSpeed: { 1 })
     }
 
-    private func waitUntilFinished(_ viewModel: GameViewModel, timeout: TimeInterval = 15) async throws {
-        let deadline = Date().addingTimeInterval(timeout)
-        while viewModel.gameState == .running {
-            if Date() > deadline {
-                Issue.record("실행이 \(timeout)초 안에 끝나지 않음")
-                return
-            }
-            try await Task.sleep(nanoseconds: 20_000_000)
-        }
+    /// 같은 맵이지만 애니메이션 대기를 테스트가 직접 풀어 주는 ViewModel — "이동 도중" 상태를 시간에 기대지 않고 만듦
+    private func makeGatedFixture() -> (vm: GameViewModel, gate: AnimationGate) {
+        let gate = AnimationGate()
+        let mapData = MapData(grid: [[0, 1, 0], [0, 1, 0], [0, 1, 0]],
+                              start: Position(x: 1, y: 2), startDirection: .up, goal: Position(x: 1, y: 0))
+        let stage = Stage(id: "unittest_\(UUID().uuidString)", chapter: 0, stageNumber: 0,
+                          name: "State Test", mapData: mapData,
+                          starThresholds: StarThresholds(threeStar: 99, twoStar: 99))
+        let vm = GameViewModel(stage: stage, progress: .makeForTesting(), executionSpeed: { 1 },
+                               sleep: { await gate.sleep($0) })
+        return (vm, gate)
+    }
+
+    private func waitUntilFinished(_ viewModel: GameViewModel) async throws {
+        try await waitWhileRunning(viewModel)
     }
 
     @Test("retry()는 블럭을 유지하고 도전 횟수만 새로 시작 (B2)")
@@ -65,13 +71,14 @@ struct GameViewModelStateTests {
 
     @Test("실행 중 리셋하면 실패로 바뀌지 않고 멈춤 (B8 — 화면 이탈 시 onDisappear가 하는 일)")
     func resetWhileRunning_doesNotFail() async throws {
-        let vm = makeFixture()
+        let (vm, gate) = makeGatedFixture()
         vm.codeBlocks = [Block(type: .moveForward), Block(type: .moveForward)]
         vm.run()
-        try await Task.sleep(nanoseconds: 100_000_000)  // 첫 이동 애니메이션 도중
+        await gate.yield(until: { gate.waitingCount == 1 })  // 첫 이동 애니메이션 도중
         vm.reset()
         vm.renderer = nil  // 화면이 사라지며 그리기 담당도 해제되는 상황 재현
-        try await Task.sleep(nanoseconds: 800_000_000)  // 남은 이동 대기 시간이 다 지나도록
+        await gate.runToEnd(vm)  // 남은 대기를 풀어 이전 실행이 끝까지 돌게 함
+        #expect(gate.waitingCount == 0)  // 이전 실행이 다음 블럭으로 넘어갔다면 다시 멈춰 있었을 것
         #expect(vm.gameState == .idle)
         #expect(vm.failedBlockPath == nil)
         #expect(vm.failureMessage.isEmpty)
@@ -79,14 +86,14 @@ struct GameViewModelStateTests {
 
     @Test("실행 중 리셋 후 바로 재실행해도 이전 실행이 이어지지 않음")
     func resetThenRunAgain_doesNotRunTwice() async throws {
-        let vm = makeFixture()
+        let (vm, gate) = makeGatedFixture()
         vm.codeBlocks = [Block(type: .turnLeft), Block(type: .turnLeft)]
         vm.run()
-        try await Task.sleep(nanoseconds: 50_000_000)  // 첫 회전 대기 중
+        await gate.yield(until: { gate.waitingCount == 1 })  // 첫 회전 대기 중
         vm.reset()
         vm.run()
-        try await waitUntilFinished(vm)
-        try await Task.sleep(nanoseconds: 500_000_000)  // 이전 실행이 남아 있다면 움직일 시간
+        await gate.runToEnd(vm)  // 새 실행과 남아 있던 이전 실행을 모두 끝까지 풀어 줌
+        #expect(gate.waitingCount == 0)
         #expect(vm.board.direction == .down)  // 위에서 왼쪽 2번 — 이전 실행이 이어지면 더 돌아감
         #expect(vm.gameState == .idle)
     }
@@ -118,10 +125,10 @@ struct GameViewModelStateTests {
 
     @Test("실행 강조 — 자식이 실행 중이면 부모 행과 자식 경로가 함께 강조됨")
     func activeHighlight_followsCurrentPath() async throws {
-        let vm = makeFixture()
+        let (vm, gate) = makeGatedFixture()
         vm.codeBlocks = [Block(type: .functionBlock, children: [Block(type: .moveForward)]), Block(type: .moveForward)]
         vm.run()
-        try await Task.sleep(nanoseconds: 50_000_000)  // 첫 이동 애니메이션 도중
+        await gate.yield(until: { gate.waitingCount == 1 })  // 첫 이동 애니메이션 도중
         #expect(vm.isRowActive(0))
         #expect(vm.isRowActive(1) == false)
         #expect(vm.activeChildPath(inRow: 0) == [0])
@@ -129,6 +136,7 @@ struct GameViewModelStateTests {
         vm.reset()
         #expect(vm.isRowActive(0) == false)  // 실행이 끝나면 강조 없음
         #expect(vm.activeChildPath(inRow: 0).isEmpty)
+        await gate.runToEnd(vm)  // 멈춰 있던 이전 실행을 풀어 정리
     }
 
     @Test("실패 강조 — 자식이 실패하면 부모 행과 자식 경로가 함께 표시됨")

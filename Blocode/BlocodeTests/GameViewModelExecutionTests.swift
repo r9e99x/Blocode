@@ -47,15 +47,8 @@ struct GameViewModelExecutionTests {
     }
 
     /// run() 이후 gameState가 .running을 벗어날 때까지 대기 (실제 이동 애니메이션 지연을 실시간으로 기다림)
-    private func waitUntilFinished(_ viewModel: GameViewModel, timeout: TimeInterval = 15) async throws {
-        let deadline = Date().addingTimeInterval(timeout)
-        while viewModel.gameState == .running {
-            if Date() > deadline {
-                Issue.record("실행이 \(timeout)초 안에 끝나지 않음 (gameState=\(viewModel.gameState))")
-                return
-            }
-            try await Task.sleep(nanoseconds: 20_000_000)  // 20ms
-        }
+    private func waitUntilFinished(_ viewModel: GameViewModel) async throws {
+        try await waitWhileRunning(viewModel)  // 공용 도우미 — 시간 초과면 테스트 실패로 기록
     }
 
     // MARK: - 기본 이동/회전

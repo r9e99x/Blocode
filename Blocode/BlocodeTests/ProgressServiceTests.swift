@@ -26,6 +26,52 @@ func waitWhileRunning(_ viewModel: GameViewModel, timeout: TimeInterval = 60) as
     while viewModel.gameState == .running, Date() < deadline {
         try await Task.sleep(for: .milliseconds(5))
     }
+    if viewModel.gameState == .running {
+        Issue.record("실행이 \(timeout)초 안에 끝나지 않음 (gameState=\(viewModel.gameState))")
+    }
+}
+
+/// 테스트가 직접 풀어 주는 애니메이션 대기 — GameViewModel(sleep:)에 `gate.sleep`을 넣으면
+/// 블럭 하나의 애니메이션마다 여기서 멈추므로, "첫 이동 도중" 같은 상태를 시간에 기대지 않고 정확히 만들 수 있음
+@MainActor
+final class AnimationGate {
+    private var waiting: [CheckedContinuation<Void, Never>] = []
+
+    /// 지금 멈춰 있는 애니메이션 수
+    var waitingCount: Int { waiting.count }
+
+    /// GameViewModel에 넘길 대기 함수
+    func sleep(_ seconds: Double) async {
+        await withCheckedContinuation { waiting.append($0) }
+    }
+
+    /// 멈춰 있는 애니메이션을 모두 풀어 줌
+    func releaseAll() {
+        let pending = waiting
+        waiting = []
+        pending.forEach { $0.resume() }
+    }
+
+    /// 조건이 참이 될 때까지 다른 작업에 차례를 넘김 — 실제 시간 대기 없이 실행 Task가 진행되게 함
+    func yield(until condition: () -> Bool, limit: Int = 1_000) async {
+        var count = 0
+        while !condition(), count < limit {
+            await Task.yield()
+            count += 1
+        }
+    }
+
+    /// 실행이 끝날 때까지 애니메이션을 하나씩 풀어 줌
+    func runToEnd(_ viewModel: GameViewModel, limit: Int = 1_000) async {
+        var count = 0
+        while viewModel.gameState == .running, count < limit {
+            releaseAll()
+            await Task.yield()
+            count += 1
+        }
+        // 이미 취소된 이전 실행이 남아 있으면 마저 풀어 끝까지 돌게 함
+        for _ in 0..<20 { releaseAll(); await Task.yield() }
+    }
 }
 
 /// 다른 테스트·실제 앱 설정과 섞이지 않는 UserDefaults

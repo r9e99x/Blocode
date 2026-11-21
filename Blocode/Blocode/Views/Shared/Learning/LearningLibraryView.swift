@@ -191,7 +191,8 @@ struct LearningLibraryView: View {
 struct LearningCardSheet: View {
 
     let card: LearningCard
-    @ObservedObject private var settings = SettingsService.shared
+    /// 고른 코드 언어 — "코드로 보기"와 공유 (저장은 ViewModel이 담당)
+    @StateObject private var codeLanguage = CodeLanguageViewModel()
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
@@ -268,10 +269,10 @@ struct LearningCardSheet: View {
             Text("코드로 보면")
                 .font(.system(size: 13, weight: .semibold))
                 .foregroundStyle(.secondary)
-            CodeLanguageChips(selection: $settings.codeLanguage)
+            CodeLanguageChips(selection: $codeLanguage.language)
                 .padding(.horizontal, -20)  // 칩 줄은 화면 가장자리까지 스크롤되게
             ScrollView(.horizontal, showsIndicators: false) {
-                Text(card.exampleCode(in: settings.codeLanguage) ?? "")
+                Text(card.exampleCode(in: codeLanguage.language) ?? "")
                     .font(.system(size: 13, design: .monospaced))
                     .textSelection(.enabled)
                     .fixedSize(horizontal: true, vertical: true)
