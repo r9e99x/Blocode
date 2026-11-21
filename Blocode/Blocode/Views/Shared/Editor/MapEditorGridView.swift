@@ -125,7 +125,7 @@ struct MapEditorGridView: View {
         let info = editor.cell(at: position)
         let full = layout.rect(of: position)
         let rect = full.insetBy(dx: layout.cell * 0.04, dy: layout.cell * 0.04)
-        let tile = Path(roundedRect: rect, cornerRadius: layout.cell * 0.22)
+        let tile = Path(roundedRect: rect, cornerRadius: layout.cell * MapElementMetrics.tileCorner)
         let center = CGPoint(x: full.midX, y: full.midY)
         let size = layout.cell
 
@@ -139,17 +139,17 @@ struct MapEditorGridView: View {
 
         if info.hasItem { drawGem(context, center: center, size: size) }
         if let pair = info.gatePair {
-            context.stroke(Path(ellipseIn: circleRect(center, size * 0.22)),
+            context.stroke(Path(ellipseIn: circleRect(center, size * MapElementMetrics.gateRing)),
                            with: .color(.switchOrange.opacity(0.9)), lineWidth: 3)
             drawBadge(context, number: pair + 1, in: full)
         }
         if let pair = info.switchPair {
-            context.fill(Path(ellipseIn: circleRect(center, size * 0.24)), with: .color(.switchOrange))
+            context.fill(Path(ellipseIn: circleRect(center, size * MapElementMetrics.switchRadius)), with: .color(.switchOrange))
             drawBadge(context, number: pair + 1, in: full)
         }
         if let pair = info.portalPair {
-            context.stroke(Path(ellipseIn: circleRect(center, size * 0.32)), with: .color(.portalPurple), lineWidth: 3)
-            context.fill(Path(ellipseIn: circleRect(center, size * 0.16)), with: .color(.portalPurple.opacity(0.5)))
+            context.stroke(Path(ellipseIn: circleRect(center, size * MapElementMetrics.portalOuter)), with: .color(.portalPurple), lineWidth: 3)
+            context.fill(Path(ellipseIn: circleRect(center, size * MapElementMetrics.portalInner)), with: .color(.portalPurple.opacity(0.5)))
             drawBadge(context, number: pair + 1, in: full)
         }
         if info.isGoal { drawGoal(context, center: center, size: size) }
@@ -165,7 +165,7 @@ struct MapEditorGridView: View {
     }
 
     private func drawGem(_ context: GraphicsContext, center: CGPoint, size: CGFloat) {
-        let s = size * 0.28
+        let s = size * MapElementMetrics.gem
         var path = Path()
         path.move(to: CGPoint(x: center.x, y: center.y - s))
         path.addLine(to: CGPoint(x: center.x + s, y: center.y))
@@ -176,10 +176,10 @@ struct MapEditorGridView: View {
     }
 
     private func drawGoal(_ context: GraphicsContext, center: CGPoint, size: CGFloat) {
-        let radius = size * 0.34
+        let radius = size * MapElementMetrics.goalRadius
         context.fill(Path(ellipseIn: circleRect(center, radius)), with: .color(.mapGoal))
         let highlight = CGPoint(x: center.x - radius * 0.2, y: center.y - radius * 0.25)
-        context.fill(Path(ellipseIn: circleRect(highlight, radius * 0.45)), with: .color(.white.opacity(0.35)))
+        context.fill(Path(ellipseIn: circleRect(highlight, radius * MapElementMetrics.goalHighlight)), with: .color(.white.opacity(0.35)))
     }
 
     /// 시작 — 캐릭터와 같은 둥근 사각형에 바라보는 방향 화살표

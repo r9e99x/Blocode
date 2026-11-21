@@ -107,13 +107,7 @@ struct MapEditorView: View {
                     SoundService.shared.play(.buttonTap)
                     requestClose()
                 } label: {
-                    Image(systemName: "chevron.left")
-                        .font(.system(size: 15, weight: .semibold))
-                        .foregroundStyle(Color.secondary)
-                        .frame(width: 36, height: 36)
-                        .background(Color.panelBackground)
-                        .clipShape(RoundedRectangle(cornerRadius: 10))
-                        .shadow(color: Color.black.opacity(0.10), radius: 8, x: 0, y: 3)
+                    CardIconLabel(icon: "chevron.left", fontSize: 15, background: .panelBackground, shadowOpacity: 0.10, shadowY: 3)
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel("뒤로")

@@ -73,9 +73,6 @@ struct PaletteCardView: View {
 
     @State private var isPressed     = false  // 눌린 상태 (시각적 피드백)
     @State private var isDragging    = false  // 드래그 중 상태
-    #if os(macOS)
-    @State private var longPressTimer: Timer? = nil  // 롱프레스 감지 타이머
-    #endif
 
     /// 드래그 활성화 여부 — onDragStart 콜백이 있을 때만 활성화
     private var dragEnabled: Bool { onDragStart != nil }
@@ -116,7 +113,12 @@ struct PaletteCardView: View {
         .animation(.spring(response: 0.25, dampingFraction: 0.7), value: isDragging)
         .animation(.spring(response: 0.2,  dampingFraction: 0.8), value: isPressed)
         #if os(macOS)
-        .gesture(dragGesture)
+        // 맥 — 0.38초 길게 누르면 끌기, 아니면 탭으로 블럭 추가 (코드 리스트 순서 변경과 같은 공용 제스처)
+        .longPressDrag(isPressed: $isPressed, isDragging: $isDragging, isEnabled: dragEnabled,
+                       onTap: onTap,
+                       onStart: { onDragStart?($0) },
+                       onChange: { onDragChange?($0) },
+                       onEnd: { onDragEnd?($0) })
         #else
         .gesture(PaletteCardGesture(
             onPressChanged: { pressed in isPressed = pressed },
@@ -135,49 +137,6 @@ struct PaletteCardView: View {
         #endif
     }
 
-    #if os(macOS)
-    /// 맥용 제스처 — 0.38초 롱프레스 후 드래그 모드 전환, 아니면 탭으로 처리
-    private var dragGesture: some Gesture {
-        DragGesture(minimumDistance: 0, coordinateSpace: .global)
-            .onChanged { value in
-                if isDragging {
-                    // 이미 드래그 중이면 위치만 갱신
-                    onDragChange?(value.location)
-                } else if longPressTimer == nil && dragEnabled {
-                    // 처음 터치 시 눌린 상태 표시 + 롱프레스 타이머 시작
-                    withAnimation { isPressed = true }
-                    let timer = Timer(timeInterval: 0.38, repeats: false) { _ in  // 0.38초 이상 누르면 드래그 시작
-                        DispatchQueue.main.async {
-                            // 드래그 모드 전환
-                            withAnimation { isDragging = true; isPressed = false }
-                            onDragStart?(value.location)
-                        }
-                    }
-                    // 맥은 마우스 버튼을 누르고 있는 동안 .eventTracking 런루프로 전환되는데,
-                    // .default 모드로 등록된 타이머는 그동안 멈춰서 롱프레스가 아예 감지되지 않음 —
-                    // .common 모드로 등록해 드래그 중에도 타이머가 계속 돌도록 함
-                    RunLoop.current.add(timer, forMode: .common)
-                    longPressTimer = timer
-                }
-            }
-            .onEnded { value in
-                // 타이머 취소
-                longPressTimer?.invalidate()
-                longPressTimer = nil
-
-                if isDragging {
-                    // 드래그 종료 — 최종 위치 전달
-                    onDragEnd?(value.location)
-                } else {
-                    // 탭 (드래그 없이 손가락 뗌) — 블럭 추가
-                    onTap()
-                }
-
-                // 상태 초기화
-                withAnimation { isDragging = false; isPressed = false }
-            }
-    }
-    #endif
 }
 
 #if os(iOS)

@@ -76,6 +76,12 @@ extension Color {
         Color(red: 0.95, green: 0.72, blue: 0.28)
     }
 
+    /// 홈 통계 "챕터 완료" 아이콘 민트 — 아이폰 홈과 아이패드·맥 셸이 함께 씀
+    static let statSealMint = Color(red: 0.576, green: 0.788, blue: 0.671)
+
+    /// 홈 통계 "연속" 불꽃 아이콘 주황
+    static let statFlameOrange = Color(red: 1.0, green: 0.55, blue: 0.30)
+
     /// 카드/소형 버튼 배경 — 설정 버튼, 홈 버튼 등
     /// 라이트: #fbf6e8 (크림) / 다크: #23262e (짙은 남색)
     static var cardBackground: Color {

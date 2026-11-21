@@ -39,9 +39,7 @@ final class HomeViewModel: ObservableObject {
 
     /// 홈 화면에서 사용할 챕터 목록 (id, stageCount)
     /// ChapterCatalog(단일 원본)에서 파생 — 진행도 계산 헬퍼가 요구하는 튜플 형태로 변환
-    let chapters: [(id: Int, stageCount: Int)] = ChapterCatalog.all.map {
-        (id: $0.number, stageCount: $0.stageCount)
-    }
+    let chapters = ChapterCatalog.all
 
     init(progress: ProgressService = .shared, router: NotificationRouter? = nil,
          now: @escaping () -> Date = Date.init, calendar: Calendar = .current) {

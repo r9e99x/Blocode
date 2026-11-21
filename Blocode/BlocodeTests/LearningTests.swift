@@ -177,7 +177,7 @@ struct SyncThroughChaptersTests {
     @Test("챕터 5까지 클리어하면 반복·조건·함수·뒤로까지 채워지고 보석·스위치는 비어 있음")
     func throughChapterFive() {
         let progress = ProgressService.makeForTesting()
-        progress.devUnlock(throughChapter: 5, chapters: ChapterCatalog.all.map { (id: $0.number, stageCount: $0.stageCount) })
+        progress.devUnlock(throughChapter: 5, chapters: ChapterCatalog.all)
         let service = LearningService(defaults: isolatedDefaults())
         service.syncFromProgress(progress)
         for block in [BlockType.moveForward, .moveBackward, .turnLeft, .turnRight, .repeatBlock, .ifBlock, .functionBlock] {

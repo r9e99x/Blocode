@@ -216,7 +216,7 @@ struct SidebarShell: View {
         VStack(alignment: .leading, spacing: 10) {
             statsFooterRow(icon: "star.fill", iconColor: Color.starGold,
                            value: "\(homeVM.earnedStars)/\(homeVM.totalPossibleStars)", label: "획득 별")
-            statsFooterRow(icon: "flame.fill", iconColor: Color(red: 1.0, green: 0.55, blue: 0.30),
+            statsFooterRow(icon: "flame.fill", iconColor: Color.statFlameOrange,
                            value: "\(homeVM.streak)일째", label: "연속")
         }
         .padding(12)
@@ -278,9 +278,9 @@ struct SidebarShell: View {
                     HStack(spacing: 12) {
                         statCard(icon: "star.fill", color: Color.starGold,
                                  value: "\(homeVM.earnedStars)/\(homeVM.totalPossibleStars)", label: "획득 별")
-                        statCard(icon: "checkmark.seal.fill", color: Color(red: 0.576, green: 0.788, blue: 0.671),
+                        statCard(icon: "checkmark.seal.fill", color: Color.statSealMint,
                                  value: "\(homeVM.completedChapters)/\(homeVM.chapterCount)", label: "챕터 완료")
-                        statCard(icon: "flame.fill", color: Color(red: 1.0, green: 0.55, blue: 0.30),
+                        statCard(icon: "flame.fill", color: Color.statFlameOrange,
                                  value: "\(homeVM.streak)일째", label: "연속")
                     }
                     .padding(.top, 32)

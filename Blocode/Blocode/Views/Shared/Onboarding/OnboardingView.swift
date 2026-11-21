@@ -26,6 +26,9 @@ struct OnboardingView: View {
     /// 현재 표시 중인 슬라이드 인덱스
     @State private var currentPage = 0
 
+    /// 온보딩 일러스트의 강조 민트 — 여러 슬라이드가 같은 값을 쓰므로 한 곳에서 정의 (값은 기존 그대로)
+    private static let onboardingMint = Color(red: 124/255, green: 196/255, blue: 158/255)
+
     // MARK: - 슬라이드 데이터
     private var pages: [OnboardingPage] {
         [
@@ -308,7 +311,7 @@ struct OnboardingView: View {
             // 코드 카드 모형
             VStack(spacing: 0) {
                 mockBlockRow(number: 1, label: "앞으로",
-                             color: Color(red: 124/255, green: 196/255, blue: 158/255),
+                             color: Self.onboardingMint,
                              icon: "arrow.up")
                 Divider().opacity(0.3)
                 mockBlockRow(number: 2, label: "repeat  3",
@@ -316,7 +319,7 @@ struct OnboardingView: View {
                              icon: "repeat")
                 Divider().opacity(0.3)
                 mockBlockRow(number: 3, label: "앞으로",
-                             color: Color(red: 124/255, green: 196/255, blue: 158/255),
+                             color: Self.onboardingMint,
                              icon: "arrow.up")
                 Divider().opacity(0.3)
                 mockBlockRow(number: 4, label: "오른쪽 회전",
@@ -368,12 +371,12 @@ struct OnboardingView: View {
             // 실행 버튼 모형 (3D 스타일)
             ZStack {
                 RoundedRectangle(cornerRadius: 30)
-                    .fill(Color(red: 124/255, green: 196/255, blue: 158/255).opacity(0.3))
+                    .fill(Self.onboardingMint.opacity(0.3))
                     .frame(width: 160, height: 56)
                     .offset(y: 4)
 
                 RoundedRectangle(cornerRadius: 30)
-                    .fill(Color(red: 124/255, green: 196/255, blue: 158/255))
+                    .fill(Self.onboardingMint)
                     .frame(width: 160, height: 56)
 
                 HStack(spacing: 8) {
@@ -391,7 +394,7 @@ struct OnboardingView: View {
                     Image(systemName: "arrow.right")
                         .font(.system(size: 16, weight: .medium))
                         .foregroundStyle(
-                            Color(red: 124/255, green: 196/255, blue: 158/255)
+                            Self.onboardingMint
                                 .opacity(1.0 - Double(i) * 0.2)
                         )
                 }
@@ -451,9 +454,9 @@ struct OnboardingView: View {
                 ForEach(0..<3, id: \.self) { i in
                     Image(systemName: "star.fill")
                         .font(.system(size: i == 1 ? 52 : 36))
-                        .foregroundStyle(Color(red: 242/255, green: 183/255, blue: 64/255))
+                        .foregroundStyle(Color.starGold)
                         .offset(y: i == 1 ? -10 : 0)
-                        .shadow(color: Color(red: 242/255, green: 183/255, blue: 64/255).opacity(0.35),
+                        .shadow(color: Color.starGold.opacity(0.35),
                                 radius: 8, x: 0, y: 4)
                 }
             }
@@ -462,10 +465,10 @@ struct OnboardingView: View {
             Text("CLEAR!")
                 .font(.system(size: 13, weight: .bold))
                 .tracking(2)
-                .foregroundStyle(Color(red: 124/255, green: 196/255, blue: 158/255))
+                .foregroundStyle(Self.onboardingMint)
                 .padding(.horizontal, 16)
                 .padding(.vertical, 6)
-                .background(Color(red: 124/255, green: 196/255, blue: 158/255).opacity(0.15))
+                .background(Self.onboardingMint.opacity(0.15))
                 .clipShape(Capsule())
         }
         .frame(maxWidth: .infinity)

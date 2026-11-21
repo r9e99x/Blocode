@@ -72,6 +72,16 @@ struct Stage: Codable, Identifiable {
     /// 연습용 랜덤 퍼즐인지
     var isRandomPuzzle: Bool { id.hasPrefix(PuzzleGenerator.randomIDPrefix) }
 
+    /// 스테이지 종류 — 종류별 글자·동작을 고를 때 이 값 하나로 갈라 씀
+    enum Kind { case regular, customMap, dailyPuzzle, randomPuzzle }
+
+    var kind: Kind {
+        if isCustomMap { return .customMap }
+        if isDailyPuzzle { return .dailyPuzzle }
+        if isRandomPuzzle { return .randomPuzzle }
+        return .regular
+    }
+
     /// 클리어를 진행도·별·연속 기록에 남기는 스테이지인지 — 사용자 맵과 랜덤 퍼즐은 남기지 않음
     var recordsProgress: Bool { !isCustomMap && !isRandomPuzzle }
 

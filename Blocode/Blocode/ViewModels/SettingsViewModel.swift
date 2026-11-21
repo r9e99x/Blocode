@@ -139,6 +139,6 @@ final class SettingsViewModel: ObservableObject {
     /// 1번 챕터부터 지정 챕터까지 모든 스테이지를 3별 클리어 처리
     func devUnlock(throughChapter number: Int) {
         progress.devUnlock(throughChapter: number,
-                           chapters: chapters.map { (id: $0.id, stageCount: $0.stageCount) })
+                           chapters: chapters)
     }
 }

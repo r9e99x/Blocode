@@ -464,7 +464,7 @@ struct ClearOverlayView: View {
             .font(.system(size: 38))
             .foregroundStyle(
                 filled
-                    ? Color(red: 0.95, green: 0.72, blue: 0.24)  // 골드
+                    ? Color.starGold  // 별 금색은 앱 전체에서 하나로 통일
                     : Color.primary.opacity(0.18)                  // 연한 빈 별
             )
             // starVisible[index]가 true일 때 스케일/불투명도/회전 애니메이션으로 등장

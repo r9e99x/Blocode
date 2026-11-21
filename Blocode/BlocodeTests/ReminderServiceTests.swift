@@ -120,7 +120,7 @@ struct ReminderServiceTests {
         settings.reminderMinutes = minutes
         let progress = ProgressService.makeForTesting(defaults: defaults)
         progress.devUnlock(throughChapter: UnlockableFeature.dailyPuzzle.requiredChapter,
-                           chapters: ChapterCatalog.all.map { (id: $0.number, stageCount: $0.stageCount) })
+                           chapters: ChapterCatalog.all)
         defaults.set(clearedToday ? day : yesterday, forKey: "blocode_last_clear_date")  // 클리어 처리가 바꾼 날짜 복원
         let center = FakeNotificationCenter(permission: permission, grantsRequest: grantsRequest)
         let service = ReminderService(center: center, settings: settings, progress: progress, now: { now })
@@ -311,7 +311,7 @@ struct NotificationRoutingTests {
     @Test("홈 화면은 대기 중인 요청을 한 번만 오늘의 퍼즐 경로로 바꿈")
     func homeTakesPendingRouteOnce() {
         let progress = ProgressService.makeForTesting()
-        progress.devUnlock(throughChapter: 3, chapters: ChapterCatalog.all.map { (id: $0.number, stageCount: $0.stageCount) })
+        progress.devUnlock(throughChapter: 3, chapters: ChapterCatalog.all)
         let router = NotificationRouter()
         let vm = HomeViewModel(progress: progress, router: router, now: { self.fixedNoon() }, calendar: seoulCalendar)
 

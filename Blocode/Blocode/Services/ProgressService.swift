@@ -161,14 +161,14 @@ final class ProgressService: ObservableObject {
     // MARK: - 홈 화면용 헬퍼
 
     /// 전체 획득 별 수 (모든 챕터 합산)
-    func totalEarnedStars(chapters: [(id: Int, stageCount: Int)]) -> Int {
+    func totalEarnedStars(chapters: [ChapterInfo] = ChapterCatalog.all) -> Int {
         chapters.reduce(0) { total, ch in
             total + totalStars(chapter: ch.id, stageCount: ch.stageCount)
         }
     }
 
     /// 완료된 챕터 수 (해당 챕터의 모든 스테이지를 클리어한 경우)
-    func completedChapterCount(chapters: [(id: Int, stageCount: Int)]) -> Int {
+    func completedChapterCount(chapters: [ChapterInfo] = ChapterCatalog.all) -> Int {
         chapters.filter { ch in
             let ids = Self.stageIDs(chapter: ch.id, count: ch.stageCount)
             return !ids.isEmpty && ids.allSatisfy(isCleared)
@@ -315,7 +315,7 @@ final class ProgressService: ObservableObject {
     /// 진행 기록을 직접 기록해 해당 챕터를 바로 플레이 가능한 상태로 만듦
     /// (chapter/stage 잠금 조건이 전부 "직전 스테이지·직전 챕터 클리어" 기준이라, 1번 챕터부터
     ///  순서대로 전부 기록해야 목표 챕터까지 해금 체인이 끊기지 않음)
-    func devUnlock(throughChapter chapterNumber: Int, chapters: [(id: Int, stageCount: Int)]) {
+    func devUnlock(throughChapter chapterNumber: Int, chapters: [ChapterInfo] = ChapterCatalog.all) {
         for ch in chapters where ch.id <= chapterNumber {
             guard ch.stageCount > 0 else { continue }
             for stageNum in 1...ch.stageCount {

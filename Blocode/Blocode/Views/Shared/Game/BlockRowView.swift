@@ -30,7 +30,6 @@ struct BlockRowView: View {
     // 순서 변경 드래그 상태 (PaletteCardView의 드래그 감지 로직과 동일한 구조)
     @State private var isReorderPressed = false
     @State private var isReorderDragging = false
-    @State private var reorderLongPressTimer: Timer? = nil
 
     // 3D 카드 파라미터 — 맥은 코드 패널 폭이 좁아 블럭도 축소, iOS/아이패드는 기존 크기 유지
     #if os(macOS)
@@ -131,7 +130,12 @@ struct BlockRowView: View {
                             Spacer(minLength: 0)
                         }
                         .contentShape(Rectangle())
-                        .gesture(reorderDragGesture)
+                        // 0.38초 길게 누른 뒤 끌어서 순서 변경 (공용 제스처, 탭 동작은 없음)
+                        .longPressDrag(isPressed: $isReorderPressed, isDragging: $isReorderDragging,
+                                       isEnabled: reorderDragEnabled,
+                                       onStart: { onReorderDragStart?($0) },
+                                       onChange: { onReorderDragChange?($0) },
+                                       onEnd: { onReorderDragEnd?($0) })
 
                         // repeat 블럭 전용 — 반복 횟수 스테퍼
                         if block.isRepeatBlock, let count = block.repeatCount {
@@ -207,39 +211,6 @@ struct BlockRowView: View {
 
     /// 순서 변경 활성화 여부 — onReorderDragStart 콜백이 있을 때만 활성화 (PaletteCardView.dragEnabled와 동일 패턴)
     private var reorderDragEnabled: Bool { onReorderDragStart != nil }
-
-    /// 코드 리스트 내 순서 변경 드래그 제스처 — 0.38초 롱프레스 후 드래그 시작 (PaletteCardView.dragGesture와 동일 구조)
-    private var reorderDragGesture: some Gesture {
-        DragGesture(minimumDistance: 0, coordinateSpace: .global)
-            .onChanged { value in
-                if isReorderDragging {
-                    onReorderDragChange?(value.location)
-                } else if reorderLongPressTimer == nil && reorderDragEnabled {
-                    withAnimation { isReorderPressed = true }
-                    let timer = Timer(timeInterval: 0.38, repeats: false) { _ in
-                        DispatchQueue.main.async {
-                            withAnimation { isReorderDragging = true; isReorderPressed = false }
-                            onReorderDragStart?(value.location)
-                        }
-                    }
-                    #if os(macOS)
-                    // 마우스를 누르고 있는 동안(.eventTracking 런루프)에도 타이머가 돌도록 .common 모드로 등록
-                    RunLoop.current.add(timer, forMode: .common)
-                    #else
-                    RunLoop.current.add(timer, forMode: .default)  // 기존 Timer.scheduledTimer와 동일 (동작 변화 없음)
-                    #endif
-                    reorderLongPressTimer = timer
-                }
-            }
-            .onEnded { value in
-                reorderLongPressTimer?.invalidate()
-                reorderLongPressTimer = nil
-                if isReorderDragging {
-                    onReorderDragEnd?(value.location)
-                }
-                withAnimation { isReorderDragging = false; isReorderPressed = false }
-            }
-    }
 
     /// 블럭 앞면 색상 — 블럭 타입에 따라 결정
     private var blockFaceColor: Color {
@@ -624,6 +595,8 @@ private struct NestedBlockArea: View {
     }
 }
 
+// 프리뷰 전용 샘플 — 출시 빌드에는 넣지 않음
+#if DEBUG
 // MARK: - Preview
 
 /// 프리뷰용 편집 동작 — 실제 편집 규칙(미니 팔레트 목록)이 적용되도록 VM을 사용
@@ -731,3 +704,4 @@ private let previewHighlightTree = Block(type: .repeatBlock, repeatCount: 2, chi
     .frame(width: 400)
     .background(Color.appBackground)
 }
+#endif

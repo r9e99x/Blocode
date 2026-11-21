@@ -93,13 +93,7 @@ struct CustomMapListView: View {
                     SoundService.shared.play(.buttonTap)
                     onBack()
                 } label: {
-                    Image(systemName: "chevron.left")
-                        .font(.system(size: 15, weight: .semibold))
-                        .foregroundStyle(Color.secondary)
-                        .frame(width: 36, height: 36)
-                        .background(Color.cardBackground)
-                        .clipShape(RoundedRectangle(cornerRadius: 10))
-                        .shadow(color: Color.black.opacity(0.08), radius: 8, x: 0, y: 2)
+                    CardIconLabel(icon: "chevron.left", fontSize: 15, background: .cardBackground, shadowOpacity: 0.08, shadowY: 2)
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel("뒤로")

@@ -169,13 +169,7 @@ struct ContentView: View {
             SoundService.shared.play(.buttonTap)
             navPath.append(AppRoute.library)
         } label: {
-            Image(systemName: "books.vertical")
-                .font(.system(size: 14, weight: .semibold))
-                .foregroundStyle(Color.secondary)
-                .frame(width: 36, height: 36)
-                .background(Color.cardBackground)
-                .clipShape(RoundedRectangle(cornerRadius: 10))
-                .shadow(color: Color.black.opacity(0.08), radius: 8, x: 0, y: 2)
+            CardIconLabel(icon: "books.vertical", fontSize: 14, background: .cardBackground, shadowOpacity: 0.08, shadowY: 2)
         }
         .buttonStyle(.plain)
         .accessibilityLabel("개념 카드 모음")
@@ -188,13 +182,7 @@ struct ContentView: View {
             SoundService.shared.play(.buttonTap)
             showSettings = true
         } label: {
-            Image(systemName: "gearshape")
-                .font(.system(size: 14, weight: .semibold))
-                .foregroundStyle(Color.secondary)  // UIColor.secondaryLabel과 동일 톤 (크로스플랫폼)
-                .frame(width: 36, height: 36)
-                .background(Color.cardBackground)
-                .clipShape(RoundedRectangle(cornerRadius: 10))
-                .shadow(color: Color.black.opacity(0.08), radius: 8, x: 0, y: 2)
+            CardIconLabel(icon: "gearshape", fontSize: 14, background: .cardBackground, shadowOpacity: 0.08, shadowY: 2)
         }
         .buttonStyle(.plain)
     }
@@ -302,21 +290,21 @@ struct ContentView: View {
             // 획득 별 수 카드
             statCard(
                 icon: "star.fill",
-                iconColor: Color(red: 1.0, green: 0.82, blue: 0.25),
+                iconColor: Color.starGold,  // 별 금색은 앱 전체에서 하나로 통일
                 value: "\(vm.earnedStars)/\(vm.totalPossibleStars)",
                 label: "획득 별"
             )
             // 완료 챕터 수 카드
             statCard(
                 icon: "checkmark.seal.fill",
-                iconColor: Color(red: 0.576, green: 0.788, blue: 0.671),
+                iconColor: Color.statSealMint,
                 value: "\(vm.completedChapters)/\(vm.chapterCount)",
                 label: "챕터 완료"
             )
             // 연속 학습 일수 카드
             statCard(
                 icon: "flame.fill",
-                iconColor: Color(red: 1.0, green: 0.55, blue: 0.30),
+                iconColor: Color.statFlameOrange,
                 value: "\(vm.streak)일째",
                 label: "연속"
             )

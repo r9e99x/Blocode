@@ -180,7 +180,7 @@ class GameScene: SKScene, GameBoardRendering {
         let cellSize = layout.cellSize
         let originX  = layout.originX
         let originY  = layout.originY
-        let cornerRadius = tileSize * 0.22  // 타일 모서리 반지름 (타일 크기의 22%)
+        let cornerRadius = tileSize * MapElementMetrics.tileCorner  // 타일 모서리 반지름 (타일 크기의 22%)
 
         // MARK: 타일 렌더링 — 경로 + 빈 칸 + 기믹(문/보석/스위치/포탈) 모두 그리기
         for row in 0..<rows {
@@ -353,14 +353,14 @@ class GameScene: SKScene, GameBoardRendering {
         container.zPosition = 1  // 바닥 타일보다 위에 표시
 
         // 골드 원형 본체
-        let radius = tileSize * 0.34
+        let radius = tileSize * MapElementMetrics.goalRadius
         let circle = SKShapeNode(circleOfRadius: radius)
         circle.fillColor  = goalColor
         circle.strokeColor = .clear
         container.addChild(circle)
 
         // 하이라이트 (입체감) — 왼쪽 상단에 작은 흰 원으로 광택 표현
-        let highlightRadius = radius * 0.45
+        let highlightRadius = radius * MapElementMetrics.goalHighlight
         let highlight = SKShapeNode(circleOfRadius: highlightRadius)
         highlight.fillColor  = SKColor(white: 1.0, alpha: 0.35)
         highlight.strokeColor = .clear
@@ -374,7 +374,7 @@ class GameScene: SKScene, GameBoardRendering {
 
     /// 보석 노드 — 민트 다이아몬드 모양
     private func makeItemNode(size: CGFloat) -> SKShapeNode {
-        let s = size * 0.28
+        let s = size * MapElementMetrics.gem
         let path = CGMutablePath()
         path.move(to: CGPoint(x: 0, y: s))
         path.addLine(to: CGPoint(x: s, y: 0))
@@ -389,7 +389,7 @@ class GameScene: SKScene, GameBoardRendering {
 
     /// 스위치 노드 — 주황 원형 버튼
     private func makeSwitchNode(size: CGFloat) -> SKShapeNode {
-        let node = SKShapeNode(circleOfRadius: size * 0.24)
+        let node = SKShapeNode(circleOfRadius: size * MapElementMetrics.switchRadius)
         node.fillColor = .switchOrange
         node.strokeColor = .clear
         return node
@@ -397,7 +397,7 @@ class GameScene: SKScene, GameBoardRendering {
 
     /// 문(게이트) 표시 마커 — 닫힘: 진한 링(벽 위) / 열림: 옅은 링(바닥 위 잔상)
     private func makeGateMarkerNode(size: CGFloat, isOpen: Bool) -> SKShapeNode {
-        let ring = SKShapeNode(circleOfRadius: size * 0.22)
+        let ring = SKShapeNode(circleOfRadius: size * MapElementMetrics.gateRing)
         ring.fillColor = .clear
         ring.strokeColor = SKColor.switchOrange.withAlphaComponent(isOpen ? 0.35 : 0.9)
         ring.lineWidth = isOpen ? 2 : 3
@@ -407,11 +407,11 @@ class GameScene: SKScene, GameBoardRendering {
     /// 포탈 노드 — 보라 이중 원형
     private func makePortalNode(size: CGFloat) -> SKNode {
         let container = SKNode()
-        let outer = SKShapeNode(circleOfRadius: size * 0.32)
+        let outer = SKShapeNode(circleOfRadius: size * MapElementMetrics.portalOuter)
         outer.fillColor = .clear
         outer.strokeColor = .portalPurple
         outer.lineWidth = 3
-        let inner = SKShapeNode(circleOfRadius: size * 0.16)
+        let inner = SKShapeNode(circleOfRadius: size * MapElementMetrics.portalInner)
         inner.fillColor = SKColor.portalPurple.withAlphaComponent(0.5)
         inner.strokeColor = .clear
         container.addChild(outer)

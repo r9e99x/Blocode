@@ -84,13 +84,7 @@ struct ChapterSelectView: View {
                 SoundService.shared.play(.buttonTap)
                 navPath.pop()
             } label: {
-                Image(systemName: "house")
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundStyle(Color.secondary)  // UIColor.secondaryLabel과 동일 톤 (크로스플랫폼)
-                    .frame(width: 36, height: 36)
-                    .background(Color.cardBackground)
-                    .clipShape(RoundedRectangle(cornerRadius: 10))
-                    .shadow(color: Color.black.opacity(0.08), radius: 8, x: 0, y: 2)
+                CardIconLabel(icon: "house", fontSize: 14, background: .cardBackground, shadowOpacity: 0.08, shadowY: 2)
             }
             .buttonStyle(.plain)
         }

@@ -404,13 +404,7 @@ struct StageView: View {
                     SoundService.shared.play(.buttonTap)
                     exitStage()
                 } label: {
-                    Image(systemName: "chevron.left")
-                        .font(.system(size: 15, weight: .semibold))
-                        .foregroundStyle(Color.secondary)  // UIColor.secondaryLabel과 동일 톤 (크로스플랫폼)
-                        .frame(width: 36, height: 36)
-                        .background(Color.panelBackground)
-                        .clipShape(RoundedRectangle(cornerRadius: 10))
-                        .shadow(color: Color.black.opacity(0.10), radius: 8, x: 0, y: 3)
+                    CardIconLabel(icon: "chevron.left", fontSize: 15, background: .panelBackground, shadowOpacity: 0.10, shadowY: 3)
                 }
                 .buttonStyle(.plain)
             }
@@ -720,29 +714,37 @@ extension Stage {
 
     /// 내 맵·일일 퍼즐·랜덤 퍼즐의 상단 이름 — 기본 스테이지는 "STAGE 1-1"
     var navCaption: String {
-        if isCustomMap { return "MY MAP" }
-        if isDailyPuzzle { return "DAILY" }
-        if isRandomPuzzle { return "RANDOM" }
-        return "STAGE \(chapter)-\(stageNumber)"
+        switch kind {
+        case .customMap:    return "MY MAP"
+        case .dailyPuzzle:  return "DAILY"
+        case .randomPuzzle: return "RANDOM"
+        case .regular:      return "STAGE \(chapter)-\(stageNumber)"
+        }
     }
 
     /// 클리어 화면 제목 — nil이면 기본 스테이지 레이블
     var specialHeading: String? {
-        if isCustomMap { return "MY MAP" }
-        if isDailyPuzzle { return "DAILY PUZZLE" }
-        if isRandomPuzzle { return "RANDOM PUZZLE" }
-        return nil
+        switch kind {
+        case .customMap:    return "MY MAP"
+        case .dailyPuzzle:  return "DAILY PUZZLE"
+        case .randomPuzzle: return "RANDOM PUZZLE"
+        case .regular:      return nil
+        }
     }
 
     /// 클리어 화면 마지막 버튼 글자
     var lastButtonTitle: String {
-        if isCustomMap { return "내 맵으로" }
-        if isDailyPuzzle { return "홈으로" }
-        if isRandomPuzzle { return "한 판 더" }
-        return "챕터 목록으로"
+        switch kind {
+        case .customMap:    return "내 맵으로"
+        case .dailyPuzzle:  return "홈으로"
+        case .randomPuzzle: return "한 판 더"
+        case .regular:      return "챕터 목록으로"
+        }
     }
 }
 
+// 프리뷰 전용 샘플 — 출시 빌드에는 넣지 않음
+#if DEBUG
 // MARK: - Preview용 샘플 데이터
 
 extension Stage {
@@ -813,4 +815,5 @@ extension Stage {
     @Previewable @State var path = NavigationPath()
     StageView(stage: .preview, navPath: $path)
 }
+#endif
 #endif
