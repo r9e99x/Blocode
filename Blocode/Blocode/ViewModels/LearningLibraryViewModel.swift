@@ -6,28 +6,24 @@
 //
 
 import Foundation
-import Combine
+import Observation
 
 // MARK: - LearningLibraryViewModel
 /// 학습 보관함 화면(LearningLibraryView)의 상태/로직 담당 ViewModel
 /// 탭별 카드, 열림 여부, 수집 수, 잠긴 카드의 해금 안내 문구를 가공한다.
-/// 보관함(LearningService)이 바뀌면 변경 알림을 그대로 전파해 화면이 자동으로 갱신됨
-final class LearningLibraryViewModel: ObservableObject {
+/// 화면이 이 ViewModel을 거쳐 보관함(LearningService, @Observable)의 수집 상태를 읽으면
+/// Observation이 그 읽기를 추적해서, 수집이 바뀔 때 화면이 자동으로 다시 그려짐 (따로 알림을 전달할 필요 없음)
+@Observable
+final class LearningLibraryViewModel {
 
     // 보관함·진행도 저장소 — 테스트는 격리된 저장소를 주입
     private let learning: LearningService
     private let progress: ProgressService
-    private var cancellables = Set<AnyCancellable>()
 
     init(learning: LearningService? = nil, progress: ProgressService = .shared) {
         let learning = learning ?? .shared
         self.learning = learning
         self.progress = progress
-
-        // LearningService 변경을 그대로 전파 → 수집이 채워지면 카드가 바로 열려 보임
-        learning.objectWillChange
-            .sink { [weak self] _ in self?.objectWillChange.send() }
-            .store(in: &cancellables)
     }
 
     // MARK: - 카드 목록

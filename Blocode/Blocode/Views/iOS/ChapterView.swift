@@ -16,7 +16,7 @@ struct ChapterView: View {
     @Binding var navPath: NavigationPath    // 화면 이동 제어
 
     /// 챕터 화면 상태/로직 — 스테이지 로딩·진행 계산은 ViewModel이 담당 (MVVM)
-    @StateObject private var vm: ChapterViewModel
+    @State private var vm: ChapterViewModel
 
     @State private var retryConfirmInfo: RetryConfirmInfo? = nil  // 재도전 확인 팝업 (nil이면 숨김)
     @State private var pressedStageNumber: Int?   = nil  // 눌린 스테이지 아이콘 번호 추적
@@ -25,7 +25,7 @@ struct ChapterView: View {
     init(navPath: Binding<NavigationPath>, chapter: Int) {
         self._navPath = navPath
         // ViewModel 초기화 (스테이지 로딩은 VM 생성 시 수행)
-        self._vm = StateObject(wrappedValue: ChapterViewModel(chapter: chapter))
+        self._vm = State(initialValue: ChapterViewModel(chapter: chapter))
     }
 
     // MARK: - 챕터 색상 (챕터 번호 → 색상)

@@ -69,7 +69,7 @@ extension MapEditorTool {
 /// 도구 선택 — 아이폰 세로는 한 줄, 넓은 화면은 4열 격자
 struct MapEditorToolPicker: View {
 
-    @ObservedObject var editor: MapEditorViewModel
+    var editor: MapEditorViewModel
     var isGrid = false
 
     var body: some View {
@@ -113,7 +113,7 @@ struct MapEditorToolPicker: View {
 /// 맵 설정 — 크기, 시작 방향, 팔레트 (아이폰은 시트, 넓은 화면은 왼쪽 패널에 넣음)
 struct MapEditorSettingsView: View {
 
-    @ObservedObject var editor: MapEditorViewModel
+    var editor: MapEditorViewModel
 
     private let range = MapValidator.minSize...MapValidator.maxSize
 

@@ -242,6 +242,20 @@ struct PuzzleGeneratorTests {
         #expect(progress.streak == 1)
         #expect(home.earnedStars == starsBefore)
     }
+
+    @Test("같은 퍼즐은 최근에 만든 것을 다시 쓰고, 기억하는 퍼즐 수는 한도를 넘지 않음")
+    func cachedStageReuses() {
+        let kind = PuzzleKind.random(424_242)
+        let first = kind.cachedStage()
+        #expect(first.id == kind.stageID)
+        #expect(PuzzleKind.recentStages.first?.id == kind.stageID)
+        // 화면이 다시 그려져 GameViewModel(puzzle:)이 또 불려도 같은 퍼즐을 그대로 씀
+        #expect(GameViewModel(puzzle: kind).stage.id == first.id)
+
+        for seed in 1...UInt64(PuzzleKind.recentStageLimit + 2) { _ = PuzzleKind.random(seed).cachedStage() }
+        #expect(PuzzleKind.recentStages.count == PuzzleKind.recentStageLimit)
+        #expect(!PuzzleKind.recentStages.contains { $0.id == kind.stageID })  // 오래된 것부터 잊음
+    }
 }
 
 // MARK: - 오늘의 한 줄

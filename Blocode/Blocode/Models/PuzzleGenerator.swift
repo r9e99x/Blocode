@@ -94,6 +94,19 @@ enum PuzzleKind {
             return PuzzleGenerator.randomStage(seed: seed)
         }
     }
+
+    /// 최근에 만든 퍼즐 스테이지 — 화면이 @State로 GameViewModel을 들면 부모가 다시 그려질 때마다 생성 식이 다시 불려서,
+    /// 같은 퍼즐을 또 만들지(무거운 계산) 않도록 기억해 둠. 같은 날짜·씨앗이면 항상 같은 퍼즐이라 재사용해도 안전함
+    private(set) static var recentStages: [Stage] = []
+    static let recentStageLimit = 4
+
+    /// 최근에 만든 같은 퍼즐이 있으면 그대로, 없으면 새로 만들어 기억
+    func cachedStage() -> Stage {
+        if let saved = Self.recentStages.first(where: { $0.id == stageID }) { return saved }
+        let stage = makeStage()
+        Self.recentStages = Array(([stage] + Self.recentStages).prefix(Self.recentStageLimit))
+        return stage
+    }
 }
 
 // MARK: - PuzzleGenerator

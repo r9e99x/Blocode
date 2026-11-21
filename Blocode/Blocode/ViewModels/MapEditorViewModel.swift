@@ -6,7 +6,7 @@
 //
 
 import Foundation
-import Combine
+import Observation
 
 // MARK: - MapEditorTool
 /// 에디터에서 칸을 누를 때 쓰는 도구
@@ -38,7 +38,8 @@ struct EditorCell: Equatable {
 /// 맵 에디터의 상태와 규칙 — 칠하기, 요소 배치, 짝 맺기, 크기 변경, 팔레트 선택, 되돌리기, 검증과 저장
 /// 화면은 이 ViewModel의 값을 그리기만 하고, 모든 배치 규칙은 여기서 처리함
 /// 규칙은 MapValidator와 같은 기준이라, 에디터로 만든 맵은 구조 검사를 대부분 통과함
-final class MapEditorViewModel: ObservableObject {
+@Observable
+final class MapEditorViewModel {
 
     /// 짝을 맺는 도중 첫 칸 — 스위치는 문을, 포탈은 두 번째 칸을 기다림
     enum Pending: Equatable {
@@ -70,9 +71,9 @@ final class MapEditorViewModel: ObservableObject {
 
     // MARK: 상태
 
-    @Published private(set) var map: MapData
+    private(set) var map: MapData
     /// 맵 이름 — 이름을 바꾸면 저장 알림은 사라짐 (길이 제한은 limitNameLength())
-    @Published var name: String {
+    var name: String {
         didSet { notice = nil }
     }
 
@@ -84,19 +85,19 @@ final class MapEditorViewModel: ObservableObject {
         }
     }
     /// 저장 결과 같은 한 줄 알림 — 맵을 고치거나 이름을 바꾸면 사라짐
-    @Published private(set) var notice: String?
-    @Published private(set) var tool: MapEditorTool = .floor
-    @Published private(set) var pending: Pending?
-    @Published private(set) var enabledBlocks: Set<BlockType>
+    private(set) var notice: String?
+    private(set) var tool: MapEditorTool = .floor
+    private(set) var pending: Pending?
+    private(set) var enabledBlocks: Set<BlockType>
     /// 마지막 확인 결과 — 맵이나 팔레트를 고치면 nil로 돌아감
-    @Published private(set) var validation: MapValidation?
+    private(set) var validation: MapValidation?
     /// 만든 사람이 테스트 플레이로 클리어한 가장 적은 블럭 수 — 맵을 고치면 사라짐
-    @Published private(set) var testClearBlockCount: Int?
+    private(set) var testClearBlockCount: Int?
     /// 배치가 거부됐을 때 화면에 보여 줄 짧은 안내
-    @Published private(set) var message: String?
-    @Published private(set) var isDirty = false
-    @Published private(set) var canUndo = false
-    @Published private(set) var canRedo = false
+    private(set) var message: String?
+    private(set) var isDirty = false
+    private(set) var canUndo = false
+    private(set) var canRedo = false
 
     /// 이미 저장된 맵을 고치는 중이면 그 맵의 번호
     private(set) var editingID: UUID?

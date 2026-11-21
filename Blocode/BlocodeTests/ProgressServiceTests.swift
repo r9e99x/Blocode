@@ -9,6 +9,7 @@
 
 import Testing
 import Foundation
+import Observation
 @testable import Blocode
 
 extension ProgressService {
@@ -77,6 +78,21 @@ final class AnimationGate {
 /// 다른 테스트·실제 앱 설정과 섞이지 않는 UserDefaults
 func isolatedDefaults() -> UserDefaults {
     UserDefaults(suiteName: "test_\(UUID().uuidString)")!
+}
+
+/// 변경 신호를 받았는지 담아 두는 상자 — Observation의 onChange는 바꾸는 쪽 스레드에서 바로 불려서
+/// 테스트(메인 액터) 안에서만 쓰면 안전함
+private final class ObservationFlag: @unchecked Sendable {
+    var fired = false
+}
+
+/// @Observable 객체에서 `read`가 읽은 값이 `change` 동안 바뀌어 화면 갱신 신호가 나가는지 확인
+/// (ObservableObject 시절 objectWillChange 구독으로 하던 "화면에 변경을 알림" 검사를 대신함)
+func observationFires(reading read: () -> Void, when change: () -> Void) -> Bool {
+    let flag = ObservationFlag()
+    withObservationTracking(read, onChange: { flag.fired = true })
+    change()
+    return flag.fired
 }
 
 @MainActor

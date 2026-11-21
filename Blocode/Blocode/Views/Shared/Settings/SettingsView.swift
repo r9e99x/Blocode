@@ -15,7 +15,7 @@ struct SettingsView: View {
     /// 기본값 false로 기존 iOS 호출부는 전부 동작 변화 없음. 맥 사이드바 셸에 내용만 삽입할 때만 true로 사용
     var isEmbedded: Bool = false
 
-    @StateObject private var vm = SettingsViewModel()              // 설정 상태/로직
+    @State private var vm = SettingsViewModel()              // 설정 상태/로직
     @Environment(\.dismiss) private var dismiss                    // fullScreenCover 닫기
     @Environment(\.colorScheme) private var colorScheme            // 현재 색상 모드
     @Environment(\.openURL) private var openURL                    // 기기 알림 설정 열기

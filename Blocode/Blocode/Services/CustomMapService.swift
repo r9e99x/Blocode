@@ -6,7 +6,7 @@
 //
 
 import Foundation
-import Combine
+import Observation
 import SwiftData
 import os
 
@@ -14,7 +14,9 @@ import os
 /// 사용자가 만든 맵을 저장·불러오는 서비스
 /// 저장 전에 MapValidator로 깰 수 있는 맵인지 확인하므로, 저장된 맵은 항상 플레이할 수 있음
 /// 진행도(ProgressService)와 같은 컨테이너를 쓰지만 기록은 서로 섞이지 않음 — 진행도 초기화에도 맵은 남음
-final class CustomMapService: ObservableObject {
+/// @Observable — 화면이 `maps`를 (ViewModel을 거쳐) 읽으면 저장·삭제 때 자동으로 다시 그려짐
+@Observable
+final class CustomMapService {
 
     /// 앱 전역에서 공유 — ProgressService가 소유한 단일 컨테이너를 사용
     static let shared = CustomMapService(container: ProgressService.shared.modelContainer)
@@ -46,7 +48,7 @@ final class CustomMapService: ObservableObject {
     private var context: ModelContext { container.mainContext }
 
     /// 저장된 맵 — 최근에 고친 순서
-    @Published private(set) var maps: [CustomMap] = []
+    private(set) var maps: [CustomMap] = []
 
     init(container: ModelContainer) {
         self.container = container

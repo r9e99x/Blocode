@@ -6,7 +6,7 @@
 //
 
 import Foundation
-import Combine
+import Observation
 import SwiftData
 import os
 
@@ -25,17 +25,18 @@ struct StageResult: Codable {
 /// 화면은 직접 쓰지 않고 각 ViewModel이 주입받아 사용 (앱은 `shared`, 테스트는 메모리 저장소)
 ///
 /// 설계 메모:
-/// - 저장소는 SwiftData이지만, 외부 공개 API와 `@Published` 프로퍼티는
-///   기존(UserDefaults 시절)과 100% 동일하게 유지함 → 뷰/뷰모델 변경 없음
+/// - 저장소는 SwiftData이지만, 외부 공개 API는 기존(UserDefaults 시절)과 100% 동일하게 유지함
 /// - SwiftData 모델 변화를 뷰가 즉시 감지하도록, 메모리 미러(`results`)를
-///   `@Published`로 두고 쓰기 후 매번 다시 채움(=동기 읽기 API 유지)
+///   관찰 대상(@Observable)으로 두고 쓰기 후 매번 다시 채움(=동기 읽기 API 유지)
+/// - 화면은 ViewModel을 거쳐 `results`·`streak`를 읽고, Observation이 그 읽기를 추적해 자동 갱신
 /// - 모든 호출은 메인 스레드 가정(뷰 body / MainActor.run / 설정 화면) →
 ///   SwiftData `mainContext`를 안전하게 사용
 ///
 /// iCloud 동기화: 현재 의도적으로 비활성(CloudKit 미연결). Apple Developer
 /// 등록이 필요한 기능이라, 등록 완료 후 ModelConfiguration에 CloudKit
 /// 컨테이너를 연결하면 별도 코드 변경 없이 동기화가 활성화됨.
-final class ProgressService: ObservableObject {
+@Observable
+final class ProgressService {
 
     // MARK: 싱글톤
     static let shared = ProgressService()
@@ -52,14 +53,14 @@ final class ProgressService: ObservableObject {
     /// 메인 스레드 전용 컨텍스트 (모든 호출이 메인이라 안전)
     private var context: ModelContext { modelContainer.mainContext }
 
-    // MARK: Published — 뷰가 감지하는 진행도 미러
+    // MARK: 관찰 대상 — 뷰가 감지하는 진행도 미러
     /// key: stageId (예: "ch1_stage1"), value: StageResult
     /// SwiftData가 원본(source of truth)이고, 이 딕셔너리는 읽기 가속용 미러
-    @Published private(set) var results: [String: StageResult] = [:]
+    private(set) var results: [String: StageResult] = [:]
 
     // 연속 클리어 일수 — 단일 스칼라값이라 SwiftData가 아닌 UserDefaults 유지
     // (관계형 데이터가 아니고 작아서, 작은 설정성 값은 UserDefaults가 적합)
-    @Published private(set) var streak: Int = 0
+    private(set) var streak: Int = 0
 
     // UserDefaults 저장 키 (streak 전용)
     private let streakKey        = "blocode_streak"
@@ -106,7 +107,7 @@ final class ProgressService: ObservableObject {
     // MARK: - 미러 동기화
 
     /// SwiftData에 저장된 모든 StageProgress를 읽어 `results` 미러를 재구성
-    /// (쓰기 직후 호출하여 @Published 변경 → 뷰 자동 갱신)
+    /// (쓰기 직후 호출하여 관찰 대상 변경 → 뷰 자동 갱신)
     private func reloadMirror() {
         let all = (try? context.fetch(FetchDescriptor<StageProgress>())) ?? []
         var dict: [String: StageResult] = [:]
@@ -117,7 +118,7 @@ final class ProgressService: ObservableObject {
                 bestBlockCount: p.bestBlockCount
             )
         }
-        results = dict  // @Published 할당 → 뷰 갱신
+        results = dict  // 관찰 대상 할당 → 뷰 갱신
     }
 
     // MARK: - 읽기
@@ -276,7 +277,7 @@ final class ProgressService: ObservableObject {
         } catch {
             logger.error("진행도 저장 실패(recordClear): \(String(describing: error), privacy: .public)")
         }
-        // 메모리 미러 재구성 → @Published 변경으로 뷰 자동 갱신
+        // 메모리 미러 재구성 → 관찰 대상 변경으로 뷰 자동 갱신
         reloadMirror()
         // 연속 일수 갱신
         updateStreak()
@@ -336,7 +337,7 @@ final class ProgressService: ObservableObject {
         } catch {
             logger.error("진행도 초기화 실패(resetAll): \(String(describing: error), privacy: .public)")
         }
-        // 메모리 미러 비우기 → @Published 변경으로 뷰 자동 갱신
+        // 메모리 미러 비우기 → 관찰 대상 변경으로 뷰 자동 갱신
         results = [:]
     }
 }

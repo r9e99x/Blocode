@@ -16,7 +16,7 @@ struct StageView: View {
     /// 현재 스테이지 데이터 — 원본은 ViewModel이 보유 (로딩 책임도 VM)
     private var stage: Stage { viewModel.stage }
 
-    @StateObject private var viewModel: GameViewModel  // 게임 로직 ViewModel
+    @State private var viewModel: GameViewModel  // 게임 로직 ViewModel
     @State private var scene: GameScene?               // SpriteKit 씬 참조
 
     /// 루트 NavigationStack 경로 — 뒤로가기 및 다음 스테이지 이동에 사용
@@ -49,7 +49,7 @@ struct StageView: View {
     @Environment(\.colorScheme) private var colorScheme  // 다크/라이트 모드 감지
 
     /// 처음 만나는 블럭 설명 — 한 번에 하나씩 차례로 띄움 (순서와 수집 기록은 ViewModel이 담당)
-    @StateObject private var intro = BlockIntroViewModel()
+    @State private var intro = BlockIntroViewModel()
 
     /// 프로덕션 진입점 — 챕터/스테이지 번호만 받고 로딩은 ViewModel(VM)이 수행
     /// (View 계층에서 데이터 소스(StageLoader)를 직접 호출하지 않음 = 정석 MVVM)
@@ -59,7 +59,7 @@ struct StageView: View {
         self._navPath = navPath
         self.showsOwnBackButton = showsOwnBackButton
         self.onReturnToChapterList = onReturnToChapterList
-        _viewModel = StateObject(wrappedValue: GameViewModel(chapter: chapter, stageNumber: number))
+        _viewModel = State(initialValue: GameViewModel(chapter: chapter, stageNumber: number))
     }
 
     /// 프리뷰/테스트용 — Stage를 직접 주입 (#Preview 전용)
@@ -75,7 +75,7 @@ struct StageView: View {
         self.onExit = onExit
         self.onCleared = onCleared
         self.onNewPuzzle = onNewPuzzle
-        _viewModel = StateObject(wrappedValue: GameViewModel(stage: stage))
+        _viewModel = State(initialValue: GameViewModel(stage: stage))
     }
 
     /// 일일·랜덤 퍼즐용 — 퍼즐은 ViewModel이 처음 한 번만 만듦 (화면이 다시 만들어져도 다시 생성하지 않음)
@@ -87,7 +87,7 @@ struct StageView: View {
         self.showsOwnBackButton = showsOwnBackButton
         self.onExit = onExit
         self.onNewPuzzle = onNewPuzzle
-        _viewModel = StateObject(wrappedValue: GameViewModel(puzzle: puzzle))
+        _viewModel = State(initialValue: GameViewModel(puzzle: puzzle))
     }
 
     // MARK: - Body (로딩 성공/실패 분기)

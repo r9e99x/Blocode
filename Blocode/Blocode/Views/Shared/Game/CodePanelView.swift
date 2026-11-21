@@ -28,7 +28,7 @@ struct BlockDragState {
 /// 드래그 상태(BlockDragState)는 StageView에서 Binding으로 받아 고스트 블럭 오버레이와 공유
 struct CodePanelView: View {
 
-    @ObservedObject var viewModel: GameViewModel  // 게임 상태 / 블럭 관리
+    var viewModel: GameViewModel  // 게임 상태 / 블럭 관리
 
     @Binding var drag: BlockDragState  // 드래그 상태 — StageView의 고스트 오버레이와 공유
 

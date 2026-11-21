@@ -294,6 +294,23 @@ struct CustomMapServiceTests {
         _ = progress
     }
 
+    @Test("내 맵 목록은 저장·삭제를 바로 따라가고, 화면에 갱신 신호를 보냄")
+    func listFollowsService() throws {
+        let (service, progress) = makeService()
+        let list = CustomMapListViewModel(service: service)
+        #expect(list.isEmpty)
+
+        // 화면이 읽는 목록을 추적하는 중에 저장하면 갱신 신호가 나가야 함
+        var saved: CustomMap?
+        #expect(observationFires(reading: { _ = list.rows }, when: { saved = try? save(service, name: "길") }))
+        #expect(list.rows.map(\.name) == ["길"])
+        #expect(list.rows.first?.sizeText == "5×3" && list.rows.first?.isPlayable == true)
+
+        list.delete(id: try #require(saved).id)
+        #expect(list.isEmpty)
+        _ = progress
+    }
+
     @Test("이름이 비었거나 너무 길면 거부")
     func invalidName() {
         let (service, progress) = makeService()

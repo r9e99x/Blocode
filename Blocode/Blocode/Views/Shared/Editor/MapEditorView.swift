@@ -13,7 +13,7 @@ import SwiftUI
 /// 상태와 규칙은 모두 MapEditorViewModel에 있고 이 화면은 그리기만 함
 struct MapEditorView: View {
 
-    @StateObject private var editor: MapEditorViewModel
+    @State private var editor: MapEditorViewModel
 
     private let onClose: () -> Void
     private let onSaved: ((CustomMap) -> Void)?
@@ -31,8 +31,8 @@ struct MapEditorView: View {
          showsOwnBackButton: Bool = true,
          onSaved: ((CustomMap) -> Void)? = nil,
          onClose: @escaping () -> Void) {
-        // 맵 찾기와 저장소 연결은 ViewModel이 담당 — 화면이 다시 만들어져도 한 번만 생성됨
-        _editor = StateObject(wrappedValue: MapEditorViewModel.open(id: editingID, service: service))
+        // 맵 찾기와 저장소 연결은 ViewModel이 담당 — @State가 첫 객체를 계속 들고 있음 (다시 불려도 메모리 조회뿐이라 가벼움)
+        _editor = State(initialValue: MapEditorViewModel.open(id: editingID, service: service))
         self.showsOwnBackButton = showsOwnBackButton
         self.onSaved = onSaved
         self.onClose = onClose

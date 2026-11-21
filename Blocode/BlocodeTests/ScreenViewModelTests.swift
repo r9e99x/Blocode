@@ -9,7 +9,6 @@
 
 import Testing
 import Foundation
-import Combine
 @testable import Blocode
 
 // MARK: - HomeViewModel
@@ -302,11 +301,8 @@ struct SettingsViewModelTests {
     @Test("설정이 바뀌면 화면 갱신 알림을 보냄")
     func forwardsSettingsChanges() {
         let (vm, settings, _, _) = makeFixture()
-        var received = false
-        let subscription = vm.objectWillChange.sink { received = true }
-        settings.soundEnabled = false
-        subscription.cancel()
-        #expect(received)
+        // 화면이 읽는 효과음 값을 추적하는 중에 설정이 바뀌면 갱신 신호가 나가야 함
+        #expect(observationFires(reading: { _ = vm.soundEnabled }, when: { settings.soundEnabled = false }))
     }
 }
 
@@ -316,28 +312,25 @@ struct SettingsViewModelTests {
 @Suite("ViewModel 변경 알림")
 struct ViewModelChangeForwardingTests {
 
-    /// 진행도가 바뀌면 VM이 화면 갱신 알림을 보내는지 확인
-    /// VM은 진행도를 약한 참조로 구독하므로, 확인이 끝날 때까지 VM을 붙잡아 둠 (앱에선 @StateObject가 붙잡음)
-    private func forwards<VM: ObservableObject>(_ vm: VM, from progress: ProgressService) -> Bool
-    where VM.ObjectWillChangePublisher == ObservableObjectPublisher {
-        withExtendedLifetime(vm) {
-            var received = false
-            let subscription = vm.objectWillChange.sink { received = true }
+    /// 화면이 VM에서 읽는 값(`read`)을 추적하는 중에 1-1을 클리어하면 갱신 신호가 나가는지 확인
+    private func fires(reading read: () -> Void, from progress: ProgressService) -> Bool {
+        observationFires(reading: read, when: {
             progress.recordClear(stageId: "ch1_stage1", stars: 3, blockCount: 1)
-            subscription.cancel()
-            return received
-        }
+        })
     }
 
-    @Test("진행도가 바뀌면 VM 3개 모두 화면 갱신 알림을 보냄")
+    @Test("진행도가 바뀌면 VM 3개 모두 화면 갱신 신호를 보냄")
     func forwardsProgressChanges() {
         let homeProgress = ProgressService.makeForTesting()
-        #expect(forwards(HomeViewModel(progress: homeProgress), from: homeProgress))
+        let home = HomeViewModel(progress: homeProgress)
+        #expect(fires(reading: { _ = home.earnedStars }, from: homeProgress))
 
         let selectProgress = ProgressService.makeForTesting()
-        #expect(forwards(ChapterSelectViewModel(progress: selectProgress), from: selectProgress))
+        let select = ChapterSelectViewModel(progress: selectProgress)
+        #expect(fires(reading: { _ = select.chapterStars(select.chapters[0]) }, from: selectProgress))
 
         let chapterProgress = ProgressService.makeForTesting()
-        #expect(forwards(ChapterViewModel(chapter: 1, progress: chapterProgress), from: chapterProgress))
+        let chapter = ChapterViewModel(chapter: 1, progress: chapterProgress)
+        #expect(fires(reading: { _ = chapter.totalStars() }, from: chapterProgress))
     }
 }

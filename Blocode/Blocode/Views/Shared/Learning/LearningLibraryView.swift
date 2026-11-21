@@ -16,7 +16,7 @@ struct LearningLibraryView: View {
     var onBack: (() -> Void)? = nil
 
     /// 보관함 화면 상태/로직 — 카드 목록·열림 여부·잠금 안내는 ViewModel이 담당 (MVVM)
-    @StateObject private var vm = LearningLibraryViewModel()
+    @State private var vm = LearningLibraryViewModel()
     @State private var category: LearningCategory = .block
     @State private var openedCard: LearningCard?
     @State private var lockInfo: LockInfo?
@@ -203,7 +203,7 @@ struct LearningCardSheet: View {
 
     let card: LearningCard
     /// 고른 코드 언어 — "코드로 보기"와 공유 (저장은 ViewModel이 담당)
-    @StateObject private var codeLanguage = CodeLanguageViewModel()
+    @State private var codeLanguage = CodeLanguageViewModel()
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {

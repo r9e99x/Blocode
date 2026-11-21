@@ -6,21 +6,23 @@
 //
 
 import Foundation
-import Combine
+import Observation
 
 // MARK: - LearningService
 /// 학습 보관함 상태 — 처음 만난 블럭(= 수집된 블럭 개념 카드)을 UserDefaults에 저장
 /// 초급·중급·고급 카드는 처음부터 열려 있어서 저장할 것이 없음
-final class LearningService: ObservableObject {
+@Observable
+final class LearningService {
 
     /// 앱 전역에서 공유
     static let shared = LearningService()
 
-    private let defaults: UserDefaults
-    private let seenKey = "learningSeenBlocks"
+    // 저장소와 키는 화면에 쓰이지 않으므로 관찰하지 않음
+    @ObservationIgnored private let defaults: UserDefaults
+    @ObservationIgnored private let seenKey = "learningSeenBlocks"
 
     /// 처음 만난 블럭들 — 이 블럭의 개념 카드가 열림
-    @Published private(set) var seenBlocks: Set<BlockType>
+    private(set) var seenBlocks: Set<BlockType>
 
     /// 테스트만 격리된 UserDefaults를 주입
     init(defaults: UserDefaults = .standard) {

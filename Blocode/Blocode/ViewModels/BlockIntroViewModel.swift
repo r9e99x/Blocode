@@ -6,7 +6,7 @@
 //
 
 import Foundation
-import Combine
+import Observation
 
 // MARK: - BlockIntro
 /// 화면에 띄울 블럭 설명 한 장
@@ -20,10 +20,11 @@ struct BlockIntro: Equatable {
 /// 스테이지에 처음 나오는 블럭의 설명을 한 번에 하나씩 차례로 띄우는 상태
 /// 보여 주는 순간 수집으로 기록하므로 같은 설명이 다시 나오지 않고, 개념 카드 모음에서 그 카드가 열림
 /// (게임 실행을 맡는 GameViewModel과는 책임이 달라 따로 둠 — 게임 화면이 둘을 함께 씀)
-final class BlockIntroViewModel: ObservableObject {
+@Observable
+final class BlockIntroViewModel {
 
     /// 지금 띄울 설명 — nil이면 띄울 것이 없음
-    @Published private(set) var current: BlockIntro?
+    private(set) var current: BlockIntro?
 
     /// 아직 안 보여 준 블럭 (팔레트 순서)
     private var queue: [BlockType] = []

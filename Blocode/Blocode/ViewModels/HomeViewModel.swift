@@ -6,7 +6,7 @@
 //
 
 import Foundation
-import Combine
+import Observation
 
 // MARK: - DailyPuzzleInfo
 /// 홈 카드에 보여 줄 오늘의 퍼즐 정보
@@ -22,10 +22,10 @@ struct DailyPuzzleInfo: Equatable {
 /// 홈 화면(ContentView)의 상태/로직을 담당하는 ViewModel
 /// 진행도(ProgressService)를 읽어 통계·다음 스테이지·동적 문구를 가공한다.
 ///
-/// 동작 보존 메모: ProgressService의 `objectWillChange`를 그대로 전파하므로,
-/// 기존(View가 ProgressService를 직접 @ObservedObject 하던 시절)과
-/// 화면 자동 갱신 타이밍이 100% 동일하다.
-final class HomeViewModel: ObservableObject {
+/// 계산 속성이 ProgressService·NotificationRouter(둘 다 @Observable)를 읽으므로,
+/// 화면이 읽은 값이 바뀔 때만 자동으로 다시 그려짐 (따로 변경 알림을 전달하지 않음)
+@Observable
+final class HomeViewModel {
 
     // 진행도 서비스 (데이터 소스) — 테스트는 메모리 저장소를 주입
     private let progress: ProgressService
@@ -34,8 +34,6 @@ final class HomeViewModel: ObservableObject {
     /// 현재 시각 — 테스트는 날짜를 고정해 주입
     private let now: () -> Date
     private let calendar: Calendar
-    // ProgressService 변경 구독 해제용
-    private var cancellables = Set<AnyCancellable>()
 
     /// 홈 화면에서 사용할 챕터 목록 (id, stageCount)
     /// ChapterCatalog(단일 원본)에서 파생 — 진행도 계산 헬퍼가 요구하는 튜플 형태로 변환
@@ -48,14 +46,6 @@ final class HomeViewModel: ObservableObject {
         self.router = router
         self.now = now
         self.calendar = calendar
-        // ProgressService가 바뀌면 이 VM도 변경 알림을 그대로 전파 → 뷰 자동 갱신 유지
-        progress.objectWillChange
-            .sink { [weak self] _ in self?.objectWillChange.send() }
-            .store(in: &cancellables)
-        // 알림 이동 요청이 들어오면 화면이 알아채도록 같은 방식으로 전파
-        router.objectWillChange
-            .sink { [weak self] _ in self?.objectWillChange.send() }
-            .store(in: &cancellables)
     }
 
     // MARK: - 파생 값 (뷰가 표시용으로 사용)

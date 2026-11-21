@@ -47,7 +47,7 @@ struct CustomMapThumbnail: View {
 /// 아이폰은 뒤로가기가 있는 전체 화면, 아이패드·맥은 사이드바 옆 콘텐츠 패널로 쓰임(onBack이 nil)
 struct CustomMapListView: View {
 
-    @StateObject private var vm: CustomMapListViewModel
+    @State private var vm: CustomMapListViewModel
 
     /// 뒤로가기 — nil이면 뒤로가기 버튼을 그리지 않음 (사이드바 셸에 들어갈 때)
     let onBack: (() -> Void)?
@@ -61,7 +61,7 @@ struct CustomMapListView: View {
     init(service: CustomMapService? = nil, onBack: (() -> Void)? = nil,
          onNew: @escaping () -> Void, onPlay: @escaping (UUID) -> Void, onEdit: @escaping (UUID) -> Void) {
         // 식을 바로 넘겨야 처음 한 번만 만들어짐 (먼저 만들어 넘기면 화면이 다시 만들어질 때마다 버려질 객체가 생김)
-        _vm = StateObject(wrappedValue: CustomMapListViewModel(service: service))
+        _vm = State(initialValue: CustomMapListViewModel(service: service))
         self.onBack = onBack
         self.onNew = onNew
         self.onPlay = onPlay

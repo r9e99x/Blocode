@@ -21,10 +21,10 @@ struct ContentView: View {
     @State private var showSettings = false
 
     /// 테마 변경 감지 — SettingsService 변경 시 뷰 자동 갱신
-    @ObservedObject private var settings = SettingsService.shared
+    private let settings = SettingsService.shared  // @Observable — 테마를 읽기만 해도 바뀔 때 다시 그려짐
 
     /// 홈 화면 상태/로직 — 진행도 가공은 ViewModel이 담당 (MVVM)
-    @StateObject private var vm = HomeViewModel()
+    @State private var vm = HomeViewModel()
 
     /// 잠긴 기능을 눌렀을 때 띄우는 해금 조건 팝업
     @State private var lockInfo: LockInfo?

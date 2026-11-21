@@ -6,37 +6,32 @@
 //
 
 import Foundation
-import Combine
+import Observation
 
 // MARK: - ChapterViewModel
 /// 챕터 스테이지 목록 화면(ChapterView)의 상태/로직 담당 ViewModel
 /// 스테이지 데이터 로딩, 진행 위치 계산, 스테이지별 잠금/클리어/별점을 보유한다.
 ///
-/// 동작 보존 메모: ProgressService의 `objectWillChange`를 그대로 전파하므로
-/// 기존 화면 자동 갱신 타이밍과 100% 동일하다.
+/// 잠금·별 계산이 ProgressService(@Observable)를 읽으므로 진행도가 바뀌면 화면이 자동으로 갱신됨
 /// (색상 등 순수 UI 매핑은 View에 그대로 둔다 — VM은 UI 타입 비의존)
-final class ChapterViewModel: ObservableObject {
+@Observable
+final class ChapterViewModel {
 
     /// 현재 챕터 번호
     let chapter: Int
 
     /// 챕터 내 모든 스테이지 데이터 (JSON 로딩 — 데이터 접근은 Service 위임)
-    let stages: [Stage]
+    /// 처음 쓸 때 한 번만 읽음 — 화면이 @State로 이 VM을 들면 부모가 다시 그려질 때마다 init이 다시 불릴 수 있어서,
+    /// init에서 파일을 읽지 않도록 미룸. 바뀌지 않는 데이터라 관찰하지 않음
+    @ObservationIgnored private(set) lazy var stages: [Stage] =
+        StageLoader.loadChapter(chapter, stageCount: ChapterViewModel.stageCount(for: chapter))
 
     // 진행도 서비스 (데이터 소스) — 테스트는 메모리 저장소를 주입
     private let progress: ProgressService
-    private var cancellables = Set<AnyCancellable>()
 
     init(chapter: Int, progress: ProgressService = .shared) {
         self.chapter = chapter
         self.progress = progress
-        // 챕터 JSON 파일에서 스테이지 목록 로드 (챕터별 스테이지 수는 헬퍼로 관리)
-        self.stages  = StageLoader.loadChapter(chapter, stageCount: ChapterViewModel.stageCount(for: chapter))
-
-        // ProgressService 변경을 그대로 전파 → 뷰 자동 갱신 유지
-        progress.objectWillChange
-            .sink { [weak self] _ in self?.objectWillChange.send() }
-            .store(in: &cancellables)
     }
 
     /// 이 챕터의 메타데이터 (ChapterCatalog 단일 원본에서 조회) — 설명·색상 표시에 사용

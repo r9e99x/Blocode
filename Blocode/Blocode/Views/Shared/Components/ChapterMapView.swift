@@ -22,7 +22,7 @@ struct ChapterMapView: View {
         let lockFontSize: CGFloat    // 자물쇠 크기
     }
 
-    @ObservedObject var vm: ChapterSelectViewModel  // 챕터 목록·잠금·별 계산
+    var vm: ChapterSelectViewModel  // 챕터 목록·잠금·별 계산
     let metrics: Metrics
     var showsProgressBadge: Bool = false            // 카드 우상단 "클리어 수/전체" 배지 (아이폰만 사용)
     @Binding var lockInfo: LockInfo?                // 잠긴 카드 탭 시 채움 — 팝업 표시 위치는 호출부가 결정

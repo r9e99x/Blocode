@@ -6,12 +6,14 @@
 //
 
 import Foundation
-import Combine
+import Observation
 
 // MARK: - SettingsViewModel
 /// 설정 화면(SettingsView)의 상태/로직 담당 ViewModel
 /// 설정값 변경, 실행 속도 슬라이더 변환, 진행도 초기화, 개발자 해금을 담당한다.
-final class SettingsViewModel: ObservableObject {
+/// 계산 속성이 SettingsService(@Observable)를 읽으므로 설정이 바뀌면 화면이 자동으로 갱신됨
+@Observable
+final class SettingsViewModel {
 
     /// 실행 속도 슬라이더 단계 — 슬라이더 값은 이 배열의 인덱스
     static let speedValues: [Double] = [0.5, 1.0, 2.0]
@@ -23,7 +25,6 @@ final class SettingsViewModel: ObservableObject {
     private let applyMusicEnabled: (Bool) -> Void
     private let reminder: ReminderService
     private let learning: LearningService  // 진행도를 지우면 학습 보관함 수집도 함께 비움
-    private var cancellables = Set<AnyCancellable>()
 
     init(settings: SettingsService = .shared,
          progress: ProgressService = .shared,
@@ -35,11 +36,6 @@ final class SettingsViewModel: ObservableObject {
         self.reminder = reminder ?? .shared
         self.learning = learning ?? .shared
         self.applyMusicEnabled = applyMusicEnabled
-
-        // SettingsService 변경을 그대로 전파 → 뷰 자동 갱신 유지
-        settings.objectWillChange
-            .sink { [weak self] _ in self?.objectWillChange.send() }
-            .store(in: &cancellables)
     }
 
     // MARK: - 테마
@@ -76,7 +72,7 @@ final class SettingsViewModel: ObservableObject {
     // MARK: - 복습 알림
 
     /// 알림 권한이 거부돼 켜지 못한 상태 — 화면이 기기 설정 안내를 보여 줌
-    @Published private(set) var reminderDenied = false
+    private(set) var reminderDenied = false
 
     var reminderEnabled: Bool { settings.reminderEnabled }
     /// 일일 퍼즐이 열렸는지 — 잠긴 동안은 복습 알림 설정을 숨김
@@ -100,8 +96,8 @@ final class SettingsViewModel: ObservableObject {
         if enabled {
             Task {
                 let permission = await reminder.enable()
+                // 알림 켜짐 여부는 설정 저장소가 바꾸고, 거부 안내는 이 값이 바꿔서 둘 다 자동으로 화면에 반영됨
                 reminderDenied = (permission != .authorized)
-                objectWillChange.send()
             }
         } else {
             settings.reminderEnabled = false

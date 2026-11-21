@@ -14,7 +14,7 @@ import SwiftUI
 /// GameViewModel을 통해 게임 상태를 제어
 struct ControlBarView: View {
 
-    @ObservedObject var viewModel: GameViewModel  // 게임 상태/액션 제어
+    var viewModel: GameViewModel  // 게임 상태/액션 제어
 
     /// 다크/라이트 모드 감지 — 되돌리기/설정 버튼의 베벨 강도를 다크에서만 낮추는 데 사용
     @Environment(\.colorScheme) private var colorScheme

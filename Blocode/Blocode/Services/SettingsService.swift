@@ -6,18 +6,19 @@
 //
 
 import Foundation
-import Combine
+import Observation
 
 // MARK: - SettingsService
 /// 앱 설정값을 UserDefaults에 저장하는 싱글톤
-/// @Published 프로퍼티로 SwiftUI 뷰에서 실시간 반응 가능
-final class SettingsService: ObservableObject {
+/// @Observable이라 화면이 설정값을 읽기만 해도 바뀔 때 자동으로 다시 그려짐
+@Observable
+final class SettingsService {
 
     // 앱 전역에서 단일 인스턴스로 사용
     static let shared = SettingsService()
 
-    /// 설정값 저장소
-    private let defaults: UserDefaults
+    /// 설정값 저장소 — 화면에 쓰이지 않으므로 관찰하지 않음
+    @ObservationIgnored private let defaults: UserDefaults
 
     /// 저장 키 — 저장과 불러오기가 같은 글자를 쓰도록 한 곳에서 정의 (글자를 바꾸면 사용자의 기존 설정과 끊기므로 변경 금지)
     private enum Key {
@@ -46,40 +47,40 @@ final class SettingsService: ObservableObject {
         }
     }
 
-    // MARK: - Published 설정값
+    // MARK: - 설정값 (관찰 대상)
 
     /// 앱 테마 — 변경 시 UserDefaults에 자동 저장
-    @Published var theme: ThemePreference {
+    var theme: ThemePreference {
         didSet { defaults.set(theme.rawValue, forKey: Key.theme) }
     }
 
     /// 효과음 활성화 여부 — 변경 시 UserDefaults에 자동 저장
-    @Published var soundEnabled: Bool {
+    var soundEnabled: Bool {
         didSet { defaults.set(soundEnabled, forKey: Key.soundEnabled) }
     }
 
     /// 배경음악 활성화 여부 — 변경 시 UserDefaults에 자동 저장 (재생 반영은 SettingsViewModel 담당)
-    @Published var musicEnabled: Bool {
+    var musicEnabled: Bool {
         didSet { defaults.set(musicEnabled, forKey: Key.musicEnabled) }
     }
 
     /// 블럭 실행 속도 배율 (0.5 / 1.0 / 2.0) — 변경 시 UserDefaults에 자동 저장
-    @Published var executionSpeed: Double {
+    var executionSpeed: Double {
         didSet { defaults.set(executionSpeed, forKey: Key.executionSpeed) }
     }
 
     /// 복습 알림 사용 여부 — 기본은 꺼짐, 켤 때 알림 권한을 물음
-    @Published var reminderEnabled: Bool {
+    var reminderEnabled: Bool {
         didSet { defaults.set(reminderEnabled, forKey: Key.reminderEnabled) }
     }
 
     /// 복습 알림 시각 — 자정부터의 분 (기본 오후 8시 = 1200)
-    @Published var reminderMinutes: Int {
+    var reminderMinutes: Int {
         didSet { defaults.set(reminderMinutes, forKey: Key.reminderMinutes) }
     }
 
     /// "코드로 보기"에서 마지막에 고른 언어 — 기본은 Swift
-    @Published var codeLanguage: CodeLanguage {
+    var codeLanguage: CodeLanguage {
         didSet { defaults.set(codeLanguage.rawValue, forKey: Key.codeLanguage) }
     }
 

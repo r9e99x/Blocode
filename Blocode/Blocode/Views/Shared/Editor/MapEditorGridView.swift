@@ -56,7 +56,7 @@ struct EditorGridLayout {
 /// 바닥·벽·지우개는 끄는 동안 칠하고, 나머지 도구는 손을 뗀 칸에 한 번 적용함
 struct MapEditorGridView: View {
 
-    @ObservedObject var editor: MapEditorViewModel
+    var editor: MapEditorViewModel
 
     @State private var isStroking = false
     @State private var lastPaintedCell: Position?

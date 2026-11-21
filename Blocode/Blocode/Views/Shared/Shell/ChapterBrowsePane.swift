@@ -59,8 +59,8 @@ struct ChapterBrowsePane: View {
     let onSelectChapter: (Int) -> Void
     let onStart: (Int, Int) -> Void
 
-    @StateObject private var vm: ChapterViewModel
-    @StateObject private var chapterSelectVM = ChapterSelectViewModel()
+    @State private var vm: ChapterViewModel
+    @State private var chapterSelectVM = ChapterSelectViewModel()
     @State private var selectedStage: Int?
     @State private var lockInfo: LockInfo? = nil
     @State private var pressedStageNumber: Int? = nil
@@ -71,7 +71,7 @@ struct ChapterBrowsePane: View {
         self.onBackToMap = onBackToMap
         self.onSelectChapter = onSelectChapter
         self.onStart = onStart
-        _vm = StateObject(wrappedValue: ChapterViewModel(chapter: chapterNumber))
+        _vm = State(initialValue: ChapterViewModel(chapter: chapterNumber))
     }
 
     private var chapterColor: Color {

@@ -16,7 +16,7 @@ struct ChapterSelectView: View {
     @Binding var navPath: NavigationPath  // 뒤로가기 및 다음 화면 이동용
 
     /// 챕터 선택 화면 상태/로직 — 챕터 목록·잠금·별점 계산은 ViewModel이 담당 (MVVM)
-    @StateObject private var vm = ChapterSelectViewModel()
+    @State private var vm = ChapterSelectViewModel()
 
     /// 스크롤 시 헤더 축소 여부
     @State private var isCompact        = false

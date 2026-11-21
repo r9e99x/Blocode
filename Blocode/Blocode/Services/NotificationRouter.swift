@@ -6,18 +6,19 @@
 //
 
 import Foundation
-import Combine
+import Observation
 import UserNotifications
 
 // MARK: - NotificationRouter
 /// 알림을 눌러 앱이 열렸을 때 어디로 갈지 전달하는 창구 — 앱이 아직 화면을 그리기 전에 눌려도 요청이 남아 있다가,
 /// 홈 화면이 준비되면 가져가서 이동함
-final class NotificationRouter: ObservableObject {
+@Observable
+final class NotificationRouter {
 
     static let shared = NotificationRouter()
 
     /// 오늘의 퍼즐을 열라는 요청이 대기 중인지
-    @Published private(set) var pendingDailyPuzzle = false
+    private(set) var pendingDailyPuzzle = false
 
     func requestDailyPuzzle() {
         pendingDailyPuzzle = true

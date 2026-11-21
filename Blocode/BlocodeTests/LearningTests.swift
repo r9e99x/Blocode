@@ -6,7 +6,6 @@
 //
 
 import Foundation
-import Combine
 import Testing
 @testable import Blocode
 
@@ -278,12 +277,10 @@ struct LearningLibraryViewModelTests {
         let card = try #require(LearningCatalog.card(for: .moveForward))
         #expect(!vm.isUnlocked(card))
 
-        var received = false
-        let subscription = vm.objectWillChange.sink { received = true }
-        vm.syncCollection()
+        // 화면이 읽는 값(카드 열림 여부)을 추적하는 중에 수집이 채워지면 갱신 신호가 나가야 함
+        let fired = observationFires(reading: { _ = vm.isUnlocked(card) }, when: { vm.syncCollection() })
         #expect(vm.isUnlocked(card))
-        #expect(received)  // 알림이 없으면 화면이 잠긴 모습 그대로 남음
-        subscription.cancel()
+        #expect(fired)  // 신호가 없으면 화면이 잠긴 모습 그대로 남음
     }
 }
 

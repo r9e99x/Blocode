@@ -6,19 +6,18 @@
 //
 
 import Foundation
-import Combine
+import Observation
 
 // MARK: - ChapterSelectViewModel
 /// 챕터 선택 화면(ChapterSelectView)의 상태/로직 담당 ViewModel
 /// 챕터 목록 데이터와 잠금/별점 계산을 보유한다.
 ///
-/// 동작 보존 메모: ProgressService의 `objectWillChange`를 그대로 전파하므로
-/// 기존 화면 자동 갱신 타이밍과 100% 동일하다.
-final class ChapterSelectViewModel: ObservableObject {
+/// 잠금·별 계산이 ProgressService(@Observable)를 읽으므로 진행도가 바뀌면 화면이 자동으로 갱신됨
+@Observable
+final class ChapterSelectViewModel {
 
     // 진행도 서비스 (데이터 소스) — 테스트는 메모리 저장소를 주입
     private let progress: ProgressService
-    private var cancellables = Set<AnyCancellable>()
 
     /// 챕터 목록 — 순서대로 잠금/해제 상태 계산
     let chapters: [ChapterInfo]
@@ -28,11 +27,6 @@ final class ChapterSelectViewModel: ObservableObject {
         // 챕터 메타데이터는 ChapterCatalog(단일 원본)에서 가져옴
         // (제목·스테이지 수·색상·해금 기준을 한 곳에서 관리 → 화면 간 불일치 방지)
         self.chapters = ChapterCatalog.all
-
-        // ProgressService 변경을 그대로 전파 → 뷰 자동 갱신 유지
-        progress.objectWillChange
-            .sink { [weak self] _ in self?.objectWillChange.send() }
-            .store(in: &cancellables)
     }
 
     // MARK: - 잠금/진행 계산

@@ -9,7 +9,6 @@
 
 import Testing
 import Foundation
-import Combine
 import SwiftUI  // NavigationPath 도우미 검증용
 @testable import Blocode
 
@@ -338,11 +337,9 @@ struct NotificationRoutingTests {
     func homeForwardsRouterChanges() {
         let router = NotificationRouter()
         let vm = HomeViewModel(progress: .makeForTesting(), router: router)
-        var received = false
-        let subscription = vm.objectWillChange.sink { received = true }
-        router.requestDailyPuzzle()
-        #expect(received)  // 알림이 없으면 화면이 요청을 알아채지 못함
-        subscription.cancel()
+        // 홈 화면이 읽는 "대기 중인 요청" 값을 추적하는 중에 요청이 들어오면 갱신 신호가 나가야 함
+        #expect(observationFires(reading: { _ = vm.hasPendingDailyPuzzle }, when: { router.requestDailyPuzzle() }))
+        #expect(vm.hasPendingDailyPuzzle)  // 신호가 없으면 화면이 요청을 알아채지 못함
     }
 
     @Test("새 랜덤 퍼즐 경로와 한 화면 뒤로 가기 도우미")

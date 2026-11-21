@@ -6,23 +6,20 @@
 //
 
 import Foundation
-import Combine
+import Observation
 
 // MARK: - CodeLanguageViewModel
 /// "코드로 보기"와 개념 카드 상세가 함께 쓰는 코드 언어 선택 상태
 /// 고른 언어는 설정에 저장되어 두 화면이 같은 언어를 보여 줌 (화면이 설정 저장소를 직접 만지지 않도록 감쌈)
-final class CodeLanguageViewModel: ObservableObject {
+/// 언어는 설정 저장소(@Observable)에서 읽으므로 다른 화면에서 바꿔도 함께 갱신됨
+@Observable
+final class CodeLanguageViewModel {
 
     // 설정 저장소 — 테스트는 격리된 저장소를 주입
     private let settings: SettingsService
-    private var cancellables = Set<AnyCancellable>()
 
     init(settings: SettingsService = .shared) {
         self.settings = settings
-        // 다른 화면에서 언어를 바꿔도 함께 갱신되도록 설정 변경을 그대로 전파
-        settings.objectWillChange
-            .sink { [weak self] _ in self?.objectWillChange.send() }
-            .store(in: &cancellables)
     }
 
     /// 지금 고른 언어 — 바꾸면 바로 저장

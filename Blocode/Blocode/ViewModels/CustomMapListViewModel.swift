@@ -6,12 +6,13 @@
 //
 
 import Foundation
-import Combine
+import Observation
 
 // MARK: - CustomMapListViewModel
 /// 내 맵 목록 화면의 상태 — 저장된 맵을 화면에 보여 줄 한 줄 정보로 가공하고 삭제를 처리
-/// 저장소(CustomMapService)가 바뀌면 목록이 자동으로 갱신됨
-final class CustomMapListViewModel: ObservableObject {
+/// 목록은 저장소(CustomMapService, @Observable)의 `maps`에서 바로 계산하므로, 저장·삭제하면 화면이 자동으로 갱신됨
+@Observable
+final class CustomMapListViewModel {
 
     /// 목록 한 줄
     struct Row: Identifiable {
@@ -27,25 +28,17 @@ final class CustomMapListViewModel: ObservableObject {
         var isPlayable: Bool { map != nil }
     }
 
-    @Published private(set) var rows: [Row] = []
-
     private let service: CustomMapService
-    private var cancellable: AnyCancellable?
 
-    @MainActor
     init(service: CustomMapService? = nil) {
-        let service = service ?? .shared
-        self.service = service
-        rows = service.maps.map(Self.makeRow)
-        cancellable = service.$maps
-            .dropFirst()
-            .sink { [weak self] maps in
-                // 저장소는 메인 스레드에서만 바뀜
-                MainActor.assumeIsolated { self?.rows = maps.map(Self.makeRow) }
-            }
+        self.service = service ?? .shared
     }
 
-    var isEmpty: Bool { rows.isEmpty }
+    /// 화면에 보여 줄 목록 — 저장소의 맵을 읽을 때마다 가공 (읽기 추적으로 저장·삭제가 바로 반영됨)
+    /// shortcut: 화면이 다시 그려질 때마다 맵 JSON을 다시 풀어 씀, 내 맵이 수백 개로 늘어 목록이 버벅이면 maps가 바뀔 때만 다시 만드는 캐시로
+    var rows: [Row] { service.maps.map { Self.makeRow($0) } }  // 함수 이름을 그대로 넘기면 메인 액터 경고가 나서 클로저로 감쌈
+
+    var isEmpty: Bool { service.maps.isEmpty }
 
     func delete(id: UUID) {
         guard let map = service.map(withID: id) else { return }

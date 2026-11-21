@@ -47,9 +47,9 @@ struct SidebarShell: View {
     /// 게임 화면(StageView) 진입/복귀 전용 스택 — 사이드바 셸과는 별개의 스택
     @State private var navPath = NavigationPath()
 
-    @StateObject private var homeVM = HomeViewModel()
-    @StateObject private var chapterSelectVM = ChapterSelectViewModel()
-    @ObservedObject private var settings = SettingsService.shared
+    @State private var homeVM = HomeViewModel()
+    @State private var chapterSelectVM = ChapterSelectViewModel()
+    private let settings = SettingsService.shared  // @Observable — 테마를 읽기만 해도 바뀔 때 다시 그려짐
 
     var body: some View {
         NavigationStack(path: $navPath) {

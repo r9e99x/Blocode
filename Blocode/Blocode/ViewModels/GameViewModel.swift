@@ -6,7 +6,7 @@
 //
 
 import Foundation
-import Combine
+import Observation
 
 // MARK: - GameState
 /// 게임의 현재 상태 — 뷰에서 상태에 따라 UI 분기 처리
@@ -21,44 +21,45 @@ enum GameState {
 /// 게임 상태, 코드 블럭 목록, 실행 흐름을 관리하는 ViewModel
 /// 판의 규칙은 GameBoard(Model)가, 그리기는 GameBoardRendering을 구현한 화면이 맡음
 /// @MainActor: 모든 상태·실행 로직이 항상 메인 스레드에서만 처리됨을 보장
-/// (수동 MainActor.run/DispatchQueue 디스패치 없이 @Published 접근이 안전해짐)
+/// (수동 MainActor.run/DispatchQueue 디스패치 없이 관찰 대상 접근이 안전해짐)
 @MainActor
-final class GameViewModel: ObservableObject {
+@Observable
+final class GameViewModel {
 
-    // MARK: - Published 프로퍼티 (View에서 감지)
+    // MARK: - 관찰 대상 프로퍼티 (View에서 감지)
 
     /// 현재 게임 상태 — 상태 변경 시 UI 자동 갱신
-    @Published private(set) var gameState: GameState = .idle
+    private(set) var gameState: GameState = .idle
 
     /// 사용자가 추가한 코드 블럭 목록 (순서대로 실행)
     /// 쓰기를 열어 둔 이유: 테스트와 프리뷰가 초기 블럭을 넣는 데 사용 (화면은 편집 함수로만 변경)
-    @Published var codeBlocks: [Block] = []
+    var codeBlocks: [Block] = []
 
     /// 현재 실행 중인 블럭 경로 (하이라이트용) — nil이면 하이라이트 없음
     /// 경로 형식: [최상위 인덱스], [최상위, 자식], [최상위, 자식, 손자]
     /// (단일 Int는 중첩 블럭 실행 시 최상위 인덱스 공간과 충돌하므로 경로로 추적)
-    @Published private(set) var currentBlockPath: [Int]? = nil
+    private(set) var currentBlockPath: [Int]? = nil
 
     /// 실패한 블럭 경로 (빨간 하이라이트용) — nil이면 표시 안 함 (형식은 currentBlockPath와 동일)
-    @Published private(set) var failedBlockPath: [Int]? = nil
+    private(set) var failedBlockPath: [Int]? = nil
 
     /// 실패 이유 메시지 — 토스트 배너에 표시
-    @Published private(set) var failureMessage: String = ""
+    private(set) var failureMessage: String = ""
 
     /// 클리어 시 획득한 별 수 — ClearOverlayView에 전달
-    @Published private(set) var clearedStars: Int = 0
+    private(set) var clearedStars: Int = 0
 
     /// 클리어 시 걸린 시간 (초) — 스테이지 진입(또는 재도전)부터 클리어까지, 클리어 순간에 한 번 계산
-    @Published private(set) var elapsedTime: TimeInterval = 0
+    private(set) var elapsedTime: TimeInterval = 0
 
     /// 도전 횟수 — run() 호출 시마다 증가
-    @Published private(set) var attemptCount: Int = 0
+    private(set) var attemptCount: Int = 0
 
     /// 캐릭터가 시작 위치에서 벗어났는지 (리셋 버튼 아이콘 결정용)
-    @Published private(set) var characterMoved: Bool = false
+    private(set) var characterMoved: Bool = false
 
     /// 게임 판 상태의 원본 — 캐릭터 위치·방향, 모은 보석, 열린 문
-    @Published private(set) var board: GameBoard
+    private(set) var board: GameBoard
 
     /// 수집한 보석 위치 집합 — 상단바 보석 카운터 표시 + 별점 계산에 사용
     /// (기믹 없는 스테이지는 항상 빈 상태로 아무 영향 없음)
@@ -87,16 +88,16 @@ final class GameViewModel: ObservableObject {
     private let sleep: (Double) async -> Void
 
     /// 진행 중인 실행 Task — reset()에서 취소해 이전 실행이 새 실행과 겹치지 않게 함
-    private var runTask: Task<Void, Never>?
+    @ObservationIgnored private var runTask: Task<Void, Never>?
 
     /// 이번 실행이 단계별 실행인지 — 블럭 하나를 실행하기 전마다 사용자의 다음 단계를 기다림
     private var isStepMode = false
 
     /// 단계별 실행에서 다음 단계를 기다리는 지점 — step()·continueRun()·reset()이 깨움
-    private var stepContinuation: CheckedContinuation<Void, Never>?
+    @ObservationIgnored private var stepContinuation: CheckedContinuation<Void, Never>?
 
     /// 다음 블럭을 실행하기 전에 멈춰 있는지 — 이때 강조된 블럭이 "다음에 실행할 블럭"
-    @Published private(set) var isWaitingForStep = false
+    private(set) var isWaitingForStep = false
 
     /// 이 Task의 실행이 아직 유효한지 — 상태만 보면 리셋 후 재실행 때 이전 실행도 running으로 착각함
     private var isRunActive: Bool { gameState == .running && !Task.isCancelled }
@@ -106,20 +107,22 @@ final class GameViewModel: ObservableObject {
 
     /// 걸린 시간 측정 시작 시각 — VM 생성(스테이지 화면 진입) 시 기록, retry()/fullReset()에서 다시 기록
     /// (생각하는 시간까지 포함해야 "걸린 시간"이라는 이름과 맞음 — 실행 시간만 재던 기존 방식 수정)
-    private var startTime = Date()
+    @ObservationIgnored private var startTime = Date()
 
     // MARK: - 초기화
 
     /// 스테이지 데이터로 ViewModel 초기화 (프리뷰/테스트용 — 직접 주입)
+    /// 진행도·실행 속도의 기본값(메인 액터의 공용 저장소)은 기본 인자가 아니라 본문에서 채움 —
+    /// 기본 인자 식은 메인 액터 밖에서 평가될 수 있어 컴파일러가 경고함
     init(stage: Stage,
-         progress: ProgressService = .shared,
-         executionSpeed: @escaping () -> Double = { SettingsService.shared.executionSpeed },
+         progress: ProgressService? = nil,
+         executionSpeed: (() -> Double)? = nil,
          sleep: @escaping (Double) async -> Void = GameViewModel.realSleep) {
         self.stage = stage
         self.board = GameBoard(map: stage.mapData)
         self.loadFailed = false
-        self.progress = progress
-        self.executionSpeedProvider = executionSpeed
+        self.progress = progress ?? .shared
+        self.executionSpeedProvider = executionSpeed ?? { SettingsService.shared.executionSpeed }
         self.sleep = sleep
     }
 
@@ -128,9 +131,10 @@ final class GameViewModel: ObservableObject {
         try? await Task.sleep(for: .seconds(seconds))
     }
 
-    /// 일일·랜덤 퍼즐로 ViewModel 초기화 — 퍼즐 생성(무거운 계산)을 화면이 아니라 여기서 한 번만 함
+    /// 일일·랜덤 퍼즐로 ViewModel 초기화 — 퍼즐 생성(무거운 계산)은 화면이 아니라 여기서 하고,
+    /// 화면이 다시 그려지며 init이 또 불려도 같은 퍼즐은 다시 만들지 않음(PuzzleKind.cachedStage)
     convenience init(puzzle: PuzzleKind) {
-        self.init(stage: puzzle.makeStage())
+        self.init(stage: puzzle.cachedStage())
     }
 
     /// 챕터/스테이지 번호로 ViewModel 초기화 (프로덕션)

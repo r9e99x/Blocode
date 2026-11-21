@@ -14,7 +14,7 @@ struct CodeViewSheet: View {
 
     let blocks: [Block]
     /// 고른 코드 언어 — 저장과 코드 변환은 ViewModel이 담당 (개념 카드 상세와 같은 언어를 공유)
-    @StateObject private var codeLanguage = CodeLanguageViewModel()
+    @State private var codeLanguage = CodeLanguageViewModel()
     @Environment(\.dismiss) private var dismiss
 
     /// 복사 직후 버튼 문구를 잠깐 바꾸기 위한 표시
