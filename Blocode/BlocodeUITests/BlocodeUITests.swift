@@ -45,12 +45,16 @@ final class BlocodeUITests: XCTestCase {
 
         app.buttons["챕터 둘러보기"].tap()
 
-        let chapterOneCard = app.staticTexts["기본기"]
+        // 눌리는 곳은 챕터 이름 글자가 아니라 카드 — 맥은 이름을 눌러도 열리지 않아 카드를 직접 찾음
+        let chapterOneCard = app.descendants(matching: .any)["chapterCard-1"].firstMatch
         XCTAssertTrue(chapterOneCard.waitForExistence(timeout: 5))
         chapterOneCard.tap()
 
         // 챕터 1의 첫 스테이지 이름("첫 걸음")이 스테이지 목록에 보여야 함 —
         // 진행도(클리어 여부)와 무관하게 챕터 1 진입 자체는 항상 가능
-        XCTAssertTrue(app.staticTexts["첫 걸음"].waitForExistence(timeout: 5), "챕터 1 진입 후 첫 스테이지 이름이 안 보임")
+        // 맥은 스테이지 행 버튼이 안의 글자를 버튼 이름으로 합쳐 따로 된 글자 요소가 없음 → 종류와 상관없이 이름에 포함된 요소를 찾음
+        let firstStage = app.descendants(matching: .any)
+            .matching(NSPredicate(format: "label CONTAINS %@", "첫 걸음")).firstMatch
+        XCTAssertTrue(firstStage.waitForExistence(timeout: 5), "챕터 1 진입 후 첫 스테이지 이름이 안 보임")
     }
 }

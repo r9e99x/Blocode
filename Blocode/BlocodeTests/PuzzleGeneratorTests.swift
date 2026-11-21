@@ -163,7 +163,7 @@ struct PuzzleGeneratorTests {
         let random = PuzzleGenerator.randomStage(seed: 3)
         #expect(random.navCaption == "RANDOM" && random.specialHeading == "RANDOM PUZZLE" && random.lastButtonTitle == "한 판 더")
         let custom = Stage(id: "custom_x", chapter: 0, stageNumber: 0, name: "c", mapData: daily.mapData, starThresholds: daily.starThresholds)
-        #expect(custom.navCaption == "MY MAP" && custom.specialHeading == "MY MAP" && custom.lastButtonTitle == "내 맵으로")
+        #expect(custom.navCaption == "MY MAP" && custom.specialHeading == "MY MAP" && custom.lastButtonTitle == "나만의 맵으로")
         let normal = Stage.placeholder(chapter: 2, stageNumber: 5)
         #expect(normal.navCaption == "STAGE 2-5" && normal.specialHeading == nil && normal.lastButtonTitle == "챕터 목록으로")
     }

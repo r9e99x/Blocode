@@ -345,7 +345,7 @@ final class ProgressService: ObservableObject {
 /// 처음엔 잠겨 있다가 특정 챕터를 모두 클리어하면 열리는 기능
 enum UnlockableFeature {
     case dailyPuzzle  // 일일·랜덤 퍼즐 (+ 복습 알림)
-    case customMaps   // 내 맵 (맵 만들기)
+    case customMaps   // 나만의 맵 (맵 만들기)
 
     /// 모든 스테이지를 클리어해야 하는 챕터 번호
     var requiredChapter: Int {

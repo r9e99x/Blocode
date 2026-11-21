@@ -97,6 +97,7 @@ struct ChapterMapView: View {
         return VStack(spacing: 7) {
             cardArea(chapter, unlocked: unlocked)
                 .contentShape(Rectangle())
+                .accessibilityIdentifier("chapterCard-\(chapter.number)")  // 화면 테스트가 카드를 찾는 이름 (눌리는 곳은 카드뿐이라)
                 .onTapGesture {
                     if unlocked && chapter.stageCount > 0 {
                         SoundService.shared.play(.buttonTap)

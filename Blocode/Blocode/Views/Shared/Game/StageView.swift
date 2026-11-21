@@ -735,7 +735,7 @@ extension Stage {
     /// 클리어 화면 마지막 버튼 글자
     var lastButtonTitle: String {
         switch kind {
-        case .customMap:    return "내 맵으로"
+        case .customMap:    return "나만의 맵으로"
         case .dailyPuzzle:  return "홈으로"
         case .randomPuzzle: return "한 판 더"
         case .regular:      return "챕터 목록으로"

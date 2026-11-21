@@ -60,6 +60,8 @@ struct MapEditorView: View {
                                                     set: { if !$0 { testStage = nil } })) {
             testPlayScreen
         }
+        // 이름 길이 제한 — 규칙은 ViewModel, 자르는 시점만 화면이 알림 (입력칸이 잘린 글자로 갱신되도록 다음 갱신에서)
+        .onChange(of: editor.name) { _, _ in editor.limitNameLength() }
         .hideNavigationBar()
     }
 

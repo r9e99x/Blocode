@@ -288,59 +288,27 @@ struct ContentView: View {
     private var statsRow: some View {
         HStack(spacing: 10) {
             // 획득 별 수 카드
-            statCard(
+            HomeStatCard(
                 icon: "star.fill",
                 iconColor: Color.starGold,  // 별 금색은 앱 전체에서 하나로 통일
                 value: "\(vm.earnedStars)/\(vm.totalPossibleStars)",
                 label: "획득 별"
             )
             // 완료 챕터 수 카드
-            statCard(
+            HomeStatCard(
                 icon: "checkmark.seal.fill",
                 iconColor: Color.statSealMint,
                 value: "\(vm.completedChapters)/\(vm.chapterCount)",
                 label: "챕터 완료"
             )
             // 연속 학습 일수 카드
-            statCard(
+            HomeStatCard(
                 icon: "flame.fill",
                 iconColor: Color.statFlameOrange,
                 value: "\(vm.streak)일째",
                 label: "연속"
             )
         }
-    }
-
-    /// 개별 통계 카드 뷰 — 아이콘 + 값 + 레이블
-    private func statCard(
-        icon: String,
-        iconColor: Color,
-        value: String,
-        label: String
-    ) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
-            // 아이콘
-            Image(systemName: icon)
-                .font(.system(size: 16, weight: .semibold))
-                .foregroundStyle(iconColor)
-
-            // 숫자 값
-            Text(value)
-                .font(.system(size: 18, weight: .bold, design: .rounded))
-                .foregroundStyle(.primary)
-
-            // 레이블
-            Text(label)
-                .font(.system(size: 11, weight: .medium))
-                .foregroundStyle(.secondary)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, 14)
-        .padding(.vertical, 14)
-        // 카드 배경 — 팔레트와 동일한 크림색
-        .background(Color.statCardBackground)
-        .clipShape(RoundedRectangle(cornerRadius: 16))
-        .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 2)
     }
 
     // MARK: - 버튼 섹션

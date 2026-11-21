@@ -50,13 +50,9 @@ struct SettingsView: View {
                         HStack {
                             // x 버튼으로 화면 닫기
                             Button { dismiss() } label: {
-                                Image(systemName: "xmark")
-                                    .font(.system(size: 12, weight: .bold))
-                                    .foregroundStyle(Color.secondary)  // UIColor.secondaryLabel과 동일 톤 (크로스플랫폼)
-                                    .frame(width: 34, height: 34)
-                                    .background(Color.cardBackground)
-                                    .clipShape(RoundedRectangle(cornerRadius: 10))
-                                    .shadow(color: Color.black.opacity(0.08), radius: 8, x: 0, y: 2)
+                                // 다른 화면의 카드형 아이콘 버튼과 같은 모양 (사용자 결정으로 34pt → 36pt 통일)
+                                CardIconLabel(icon: "xmark", fontSize: 14, background: .cardBackground,
+                                              shadowOpacity: 0.08, shadowY: 2)
                             }
                             .buttonStyle(.plain)
                             Spacer()

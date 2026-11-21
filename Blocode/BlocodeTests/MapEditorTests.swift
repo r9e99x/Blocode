@@ -580,6 +580,7 @@ struct MapEditorTests {
         let (service, progress) = makeService()
         let editor = MapEditorViewModel.open(id: nil, service: service)
         editor.name = String(repeating: "가", count: CustomMapService.maxNameLength + 5)
+        editor.limitNameLength()  // 화면이 이름이 바뀐 뒤 부르는 것과 같음
         #expect(editor.name.count == CustomMapService.maxNameLength)
 
         #expect(editor.saveAndNotify() != nil)

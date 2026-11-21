@@ -71,13 +71,16 @@ final class MapEditorViewModel: ObservableObject {
     // MARK: 상태
 
     @Published private(set) var map: MapData
-    /// 맵 이름 — 최대 길이를 넘으면 잘라 내고, 이름을 바꾸면 저장 알림은 사라짐
+    /// 맵 이름 — 이름을 바꾸면 저장 알림은 사라짐 (길이 제한은 limitNameLength())
     @Published var name: String {
-        didSet {
-            if name.count > CustomMapService.maxNameLength {
-                name = String(name.prefix(CustomMapService.maxNameLength))
-            }
-            notice = nil
+        didSet { notice = nil }
+    }
+
+    /// 이름이 최대 길이를 넘으면 잘라 냄 — 화면이 이름이 바뀐 뒤(onChange) 부름
+    /// (값을 바꾸는 그 자리에서 자르면 입력칸이 갱신되지 않아 긴 글자가 그대로 보여서, 다음 갱신 때 자름)
+    func limitNameLength() {
+        if name.count > CustomMapService.maxNameLength {
+            name = String(name.prefix(CustomMapService.maxNameLength))
         }
     }
     /// 저장 결과 같은 한 줄 알림 — 맵을 고치거나 이름을 바꾸면 사라짐
@@ -129,7 +132,10 @@ final class MapEditorViewModel: ObservableObject {
     /// 에디터 화면용 — 번호가 있으면 저장된 맵을 고치고, 번호가 없거나 맵이 없거나 손상됐으면 새 맵
     static func open(id: UUID?, service: CustomMapService? = nil) -> MapEditorViewModel {
         let service = service ?? .shared
-        let model = id.flatMap { service.map(withID: $0) }.flatMap(MapEditorViewModel.init(editing:)) ?? MapEditorViewModel()
+        // 함수 참조로 넘기면 메인 액터 밖에서 부르는 것으로 보여 경고가 나므로 직접 풀어 씀
+        var opened: MapEditorViewModel?
+        if let id, let saved = service.map(withID: id) { opened = MapEditorViewModel(editing: saved) }
+        let model = opened ?? MapEditorViewModel()
         model.service = service
         return model
     }

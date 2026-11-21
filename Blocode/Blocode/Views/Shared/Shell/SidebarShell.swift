@@ -120,7 +120,7 @@ struct SidebarShell: View {
                 return "Blocode — \(info.title)"
             }
             return "Blocode — 챕터"
-        case .myMaps: return "Blocode — 내 맵"
+        case .myMaps: return "Blocode — 나만의 맵"
         case .library: return "Blocode — 개념 카드"
         case .settings: return "Blocode — 설정"
         }
@@ -149,7 +149,7 @@ struct SidebarShell: View {
                 withAnimation(.easeInOut(duration: 0.2)) { section = .chapters }
             }
             sidebarItem(icon: homeVM.isUnlocked(.customMaps) ? "pencil.and.ruler" : "lock.fill",
-                        title: "내 맵", isSelected: section == .myMaps) {
+                        title: "나만의 맵", isSelected: section == .myMaps) {
                 if homeVM.isUnlocked(.customMaps) {
                     withAnimation(.easeInOut(duration: 0.2)) { section = .myMaps }
                 } else {
@@ -276,11 +276,11 @@ struct SidebarShell: View {
                         .padding(.top, 6)
 
                     HStack(spacing: 12) {
-                        statCard(icon: "star.fill", color: Color.starGold,
+                        HomeStatCard(icon: "star.fill", iconColor: Color.starGold,
                                  value: "\(homeVM.earnedStars)/\(homeVM.totalPossibleStars)", label: "획득 별")
-                        statCard(icon: "checkmark.seal.fill", color: Color.statSealMint,
+                        HomeStatCard(icon: "checkmark.seal.fill", iconColor: Color.statSealMint,
                                  value: "\(homeVM.completedChapters)/\(homeVM.chapterCount)", label: "챕터 완료")
-                        statCard(icon: "flame.fill", color: Color.statFlameOrange,
+                        HomeStatCard(icon: "flame.fill", iconColor: Color.statFlameOrange,
                                  value: "\(homeVM.streak)일째", label: "연속")
                     }
                     .padding(.top, 32)
@@ -317,23 +317,9 @@ struct SidebarShell: View {
         }
     }
 
-    private func statCard(icon: String, color: Color, value: String, label: String) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Image(systemName: icon).foregroundStyle(color)
-            Text(value).font(.system(size: 18, weight: .bold, design: .rounded))
-            Text(label).font(.system(size: 11)).foregroundStyle(.secondary)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(14)
-        .background(Color.statCardBackground)
-        .clipShape(RoundedRectangle(cornerRadius: 16))
-        // iOS statCard와 동일한 그림자
-        .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 2)
-    }
-
     // MARK: - 챕터 지도 (지그재그 + 3D + 눌림 + 잠금 팝업)
 
-    /// 잠긴 챕터·잠긴 기능(내 맵, 일일 퍼즐)을 눌렀을 때의 해금 조건 팝업 — 셸 전체에서 하나를 공유
+    /// 잠긴 챕터·잠긴 기능(나만의 맵, 일일 퍼즐)을 눌렀을 때의 해금 조건 팝업 — 셸 전체에서 하나를 공유
     @State private var lockInfo: LockInfo? = nil
 
     private var chapterMapContent: some View {
