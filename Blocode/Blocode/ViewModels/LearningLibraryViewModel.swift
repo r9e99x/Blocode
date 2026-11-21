@@ -37,6 +37,25 @@ final class LearningLibraryViewModel: ObservableObject {
         LearningCatalog.cards(in: category)
     }
 
+    /// 탭 안에서 갈래(코딩·CS)별로 묶은 카드 한 묶음 — 갈래가 없는 탭(블럭 개념)은 머리글 없는 한 묶음
+    struct Section: Identifiable {
+        let topic: LearningTopic?
+        let cards: [LearningCard]
+        var id: String { topic?.rawValue ?? "all" }
+    }
+
+    /// 탭의 카드를 갈래 순서(코딩 → CS)로 묶음 — 갈래가 없는 카드만 있는 탭은 한 묶음
+    func sections(in category: LearningCategory) -> [Section] {
+        let all = cards(in: category)
+        guard all.contains(where: { $0.topic != nil }) else {
+            return all.isEmpty ? [] : [Section(topic: nil, cards: all)]
+        }
+        return LearningTopic.allCases.compactMap { topic in
+            let group = all.filter { $0.topic == topic }
+            return group.isEmpty ? nil : Section(topic: topic, cards: group)
+        }
+    }
+
     /// 카드가 열렸는지
     func isUnlocked(_ card: LearningCard) -> Bool {
         learning.isUnlocked(card)

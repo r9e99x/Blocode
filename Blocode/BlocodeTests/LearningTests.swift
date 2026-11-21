@@ -44,16 +44,40 @@ struct LearningTests {
         }
     }
 
-    @Test("코딩 기초 11장, CS 기초 10장이고 처음부터 열려 있음")
-    func basicsCards() {
-        #expect(LearningCatalog.cards(in: .coding).count == 11)
-        #expect(LearningCatalog.cards(in: .cs).count == 10)
+    @Test("초급 21장(코딩 11 + CS 10), 중급 15장, 고급 15장이고 처음부터 열려 있음")
+    func levelCards() {
+        let beginner = LearningCatalog.cards(in: .beginner)
+        #expect(beginner.count == 21)
+        #expect(beginner.filter { $0.topic == .coding }.count == 11)
+        #expect(beginner.filter { $0.topic == .cs }.count == 10)
+        #expect(LearningCatalog.cards(in: .intermediate).count == 15)
+        #expect(LearningCatalog.cards(in: .advanced).count == 15)
         let service = LearningService(defaults: isolatedDefaults())
-        for card in LearningCatalog.cards(in: .coding) + LearningCatalog.cards(in: .cs) {
-            #expect(card.unlock == .alwaysOpen)
-            #expect(service.isUnlocked(card))
+        for category in [LearningCategory.beginner, .intermediate, .advanced] {
+            for card in LearningCatalog.cards(in: category) {
+                #expect(card.unlock == .alwaysOpen)
+                #expect(card.topic != nil, "\(card.id) 갈래 없음")
+                #expect(service.isUnlocked(card))
+            }
+            let total = LearningCatalog.cards(in: category).count
+            #expect(service.progress(in: category) == (total, total))
         }
-        #expect(service.progress(in: .coding) == (11, 11))
+    }
+
+    @Test("중급·고급은 코딩과 CS가 섞여 있고 카드 id가 탭 이름으로 시작함")
+    func intermediateAndAdvancedMix() {
+        for (category, prefix) in [(LearningCategory.intermediate, "intermediate."), (.advanced, "advanced.")] {
+            let cards = LearningCatalog.cards(in: category)
+            #expect(cards.contains { $0.topic == .coding } && cards.contains { $0.topic == .cs })
+            #expect(cards.allSatisfy { $0.id.hasPrefix(prefix) })
+        }
+    }
+
+    @Test("카드 상세 머리글은 탭과 갈래를 함께 보여 주고 블럭 개념은 탭 이름만")
+    func categoryLabel() throws {
+        #expect(try #require(LearningCatalog.card(for: .repeatBlock)).categoryLabel == "블럭 개념")
+        #expect(LearningCatalog.cards(in: .beginner).first?.categoryLabel == "초급 · 코딩")
+        #expect(LearningCatalog.cards(in: .advanced).last?.categoryLabel == "고급 · CS")
     }
 
     @Test("모든 카드의 코드 예시가 다섯 언어 모두 비어 있지 않음")
@@ -107,7 +131,7 @@ struct LearningTests {
         #expect(!service.isUnlocked(repeatCard))
         service.markSeen(.repeatBlock)
         #expect(service.isUnlocked(repeatCard))
-        let open = LearningCard(id: "x", category: .coding, title: "t", summary: "s", body: "b",
+        let open = LearningCard(id: "x", category: .beginner, topic: .coding, title: "t", summary: "s", body: "b",
                                 tip: nil, unlock: .alwaysOpen, example: nil)
         #expect(service.isUnlocked(open))
     }
@@ -206,13 +230,24 @@ struct LearningLibraryViewModelTests {
         let (vm, learning) = makeVM()
         #expect(vm.cards(in: .block).count == 12)
         #expect(vm.progress(in: .block).unlocked == 0)
-        #expect(vm.progress(in: .coding) == (11, 11))  // 코딩 기초는 처음부터 열려 있음
+        #expect(vm.progress(in: .beginner) == (21, 21))  // 초급은 처음부터 열려 있음
 
         let repeatCard = try #require(LearningCatalog.card(for: .repeatBlock))
         #expect(!vm.isUnlocked(repeatCard))
         learning.markSeen(.repeatBlock)
         #expect(vm.isUnlocked(repeatCard))
         #expect(vm.progress(in: .block).unlocked >= 1)
+    }
+
+    @Test("탭 안의 카드가 갈래(코딩 → CS)별로 묶이고, 블럭 개념은 머리글 없는 한 묶음")
+    func sectionsByTopic() {
+        let (vm, _) = makeVM()
+        let beginner = vm.sections(in: .beginner)
+        #expect(beginner.map(\.topic) == [.coding, .cs])
+        #expect(beginner.map(\.cards.count) == [11, 10])
+        let block = vm.sections(in: .block)
+        #expect(block.count == 1 && block[0].topic == nil && block[0].cards.count == 12)
+        #expect(vm.sections(in: .advanced).map(\.topic) == [.coding, .cs])
     }
 
     @Test("잠긴 블럭 카드는 그 블럭이 처음 나오는 챕터를 알려 줌 — 행은 한 줄, 팝업은 두 줄")
@@ -228,7 +263,7 @@ struct LearningLibraryViewModelTests {
     @Test("열림 조건이 없는 카드의 안내는 기본 문구이고 강조할 챕터가 없음")
     func fallbackHint() {
         let (vm, _) = makeVM()
-        let open = LearningCard(id: "x", category: .coding, title: "t", summary: "s", body: "b",
+        let open = LearningCard(id: "x", category: .beginner, topic: .coding, title: "t", summary: "s", body: "b",
                                 tip: nil, unlock: .alwaysOpen, example: nil)
         #expect(vm.unlockHint(for: open) == "아직 열리지 않았어요")
         #expect(vm.lockHint(for: open).message == "아직 열리지 않았어요")

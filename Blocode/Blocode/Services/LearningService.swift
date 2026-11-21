@@ -10,7 +10,7 @@ import Combine
 
 // MARK: - LearningService
 /// 학습 보관함 상태 — 처음 만난 블럭(= 수집된 블럭 개념 카드)을 UserDefaults에 저장
-/// 코딩·CS 기초 카드는 처음부터 열려 있어서 저장할 것이 없음
+/// 초급·중급·고급 카드는 처음부터 열려 있어서 저장할 것이 없음
 final class LearningService: ObservableObject {
 
     /// 앱 전역에서 공유

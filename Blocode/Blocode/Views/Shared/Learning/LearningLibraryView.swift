@@ -8,7 +8,7 @@
 import SwiftUI
 
 // MARK: - LearningLibraryView
-/// 학습 보관함 — 블럭 개념 / 코딩 기초 / CS 기초 카드를 탭으로 나눠 보여 주는 화면
+/// 학습 보관함 — 블럭 개념 / 초급 / 중급 / 고급 카드를 탭으로 나눠 보여 주는 화면 (초·중·고급은 코딩·CS로 다시 묶임)
 /// 아이폰은 뒤로가기가 있는 전체 화면, 아이패드·맥은 사이드바 옆 콘텐츠 패널로 쓰임(onBack이 nil)
 struct LearningLibraryView: View {
 
@@ -21,13 +21,13 @@ struct LearningLibraryView: View {
     @State private var openedCard: LearningCard?
     @State private var lockInfo: LockInfo?
 
-    private var cards: [LearningCard] { vm.cards(in: category) }
+    private var sections: [LearningLibraryViewModel.Section] { vm.sections(in: category) }
 
     var body: some View {
         VStack(spacing: 0) {
             header
             categoryTabs
-            if cards.isEmpty {
+            if sections.isEmpty {
                 emptyState
             } else {
                 list
@@ -112,8 +112,19 @@ struct LearningLibraryView: View {
     private var list: some View {
         ScrollView {
             VStack(spacing: 10) {
-                ForEach(cards) { card in
-                    cardRow(card)
+                ForEach(sections) { section in
+                    // 갈래(코딩·CS) 머리글 — 갈래가 없는 탭은 머리글 없이 카드만
+                    if let topic = section.topic {
+                        Text(topic.title)
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundStyle(.secondary)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.top, section.id == sections.first?.id ? 0 : 10)
+                            .padding(.leading, 4)
+                    }
+                    ForEach(section.cards) { card in
+                        cardRow(card)
+                    }
                 }
             }
             .frame(maxWidth: 680)
@@ -237,7 +248,7 @@ struct LearningCardSheet: View {
     private var header: some View {
         HStack {
             VStack(alignment: .leading, spacing: 2) {
-                Text(card.category.title)
+                Text(card.categoryLabel)
                     .font(.system(size: 12, weight: .medium))
                     .foregroundStyle(.secondary)
                 Text(card.title)
