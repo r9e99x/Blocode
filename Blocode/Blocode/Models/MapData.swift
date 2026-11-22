@@ -10,7 +10,7 @@ import Foundation
 // MARK: - Direction
 /// 캐릭터가 현재 바라보고 있는 방향
 /// 2D 탑뷰 기준 (위쪽이 up)
-enum Direction: String, Codable {
+nonisolated enum Direction: String, Codable {
     case up    // 위
     case down  // 아래
     case left  // 왼쪽
@@ -40,7 +40,7 @@ enum Direction: String, Codable {
 // MARK: - Position
 /// 타일 맵 위의 좌표 (열, 행)
 /// Hashable — 기믹 상태(수집한 보석/열린 문)를 Set으로 추적하기 위함
-struct Position: Codable, Equatable, Hashable {
+nonisolated struct Position: Codable, Equatable, Hashable {
     var x: Int  // 열 (왼→오른쪽, 0부터 시작)
     var y: Int  // 행 (위→아래, 0부터 시작)
 
@@ -63,7 +63,7 @@ struct Position: Codable, Equatable, Hashable {
 
 // MARK: - TileType
 /// 타일 맵의 각 칸 종류 — grid 배열의 Int 값과 1:1 매핑
-enum TileType: Int, Codable {
+nonisolated enum TileType: Int, Codable {
     case wall  = 0  // 벽 (이동 불가)
     case floor = 1  // 바닥 (이동 가능)
 }
@@ -71,13 +71,13 @@ enum TileType: Int, Codable {
 // MARK: - 기믹 요소 (챕터 6+ 전용 — 전부 옵셔널이라 기존 스테이지 JSON 하위호환)
 
 /// 스위치-문 연결 — 스위치 타일을 밟으면 연결된 문(벽)이 열려 지나갈 수 있음
-struct SwitchGate: Codable, Equatable {
+nonisolated struct SwitchGate: Codable, Equatable {
     var switchAt: Position   // 스위치 위치 (바닥 타일 위에 배치)
     var gateAt: Position     // 문 위치 (grid에서는 벽 0으로 표기 — 열리기 전까지 통행 불가)
 }
 
 /// 포탈 짝 — 한쪽에 들어가면 다른 쪽으로 순간이동 (양방향, 1회 이동 — 체인 없음)
-struct PortalPair: Codable, Equatable {
+nonisolated struct PortalPair: Codable, Equatable {
     var a: Position
     var b: Position
 }
@@ -85,7 +85,7 @@ struct PortalPair: Codable, Equatable {
 // MARK: - MapData
 /// 스테이지 맵의 데이터 구조
 /// JSON 파일에서 디코딩하여 사용
-struct MapData: Codable {
+nonisolated struct MapData: Codable {
     /// 타일 격자: grid[row][col] → row = y, col = x
     /// 0 = 벽, 1 = 이동 가능한 바닥
     var grid: [[Int]]

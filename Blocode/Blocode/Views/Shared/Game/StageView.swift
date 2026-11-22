@@ -62,7 +62,7 @@ struct StageView: View {
         _viewModel = State(initialValue: GameViewModel(chapter: chapter, stageNumber: number))
     }
 
-    /// 프리뷰/테스트용 — Stage를 직접 주입 (#Preview 전용)
+    /// Stage를 직접 받음 — 일일·랜덤 퍼즐(PuzzlePlayView가 만들어 넘김), 내 맵, 에디터 테스트 플레이, 프리뷰
     init(stage: Stage, navPath: Binding<NavigationPath>,
          showsOwnBackButton: Bool = true,
          onReturnToChapterList: (() -> Void)? = nil,
@@ -76,18 +76,6 @@ struct StageView: View {
         self.onCleared = onCleared
         self.onNewPuzzle = onNewPuzzle
         _viewModel = State(initialValue: GameViewModel(stage: stage))
-    }
-
-    /// 일일·랜덤 퍼즐용 — 퍼즐은 ViewModel이 처음 한 번만 만듦 (화면이 다시 만들어져도 다시 생성하지 않음)
-    init(puzzle: PuzzleKind, navPath: Binding<NavigationPath>,
-         showsOwnBackButton: Bool = true,
-         onExit: (() -> Void)? = nil,
-         onNewPuzzle: (() -> Void)? = nil) {
-        self._navPath = navPath
-        self.showsOwnBackButton = showsOwnBackButton
-        self.onExit = onExit
-        self.onNewPuzzle = onNewPuzzle
-        _viewModel = State(initialValue: GameViewModel(puzzle: puzzle))
     }
 
     // MARK: - Body (로딩 성공/실패 분기)

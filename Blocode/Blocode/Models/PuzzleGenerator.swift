@@ -9,7 +9,7 @@ import Foundation
 
 // MARK: - SeededGenerator
 /// 같은 씨앗이면 항상 같은 값이 나오는 난수 — 같은 날의 일일 퍼즐이 모든 기기에서 같도록 함
-struct SeededGenerator: RandomNumberGenerator {
+nonisolated struct SeededGenerator: RandomNumberGenerator {
     private var state: UInt64
 
     init(seed: UInt64) {
@@ -27,7 +27,7 @@ struct SeededGenerator: RandomNumberGenerator {
 
 // MARK: - PuzzleTheme
 /// 퍼즐에 들어가는 기믹 구성
-enum PuzzleTheme: CaseIterable {
+nonisolated enum PuzzleTheme: CaseIterable {
     case basic      // 기믹 없음 — 미로 길 찾기
     case gems       // 보석
     case switches   // 스위치와 문
@@ -37,7 +37,7 @@ enum PuzzleTheme: CaseIterable {
 
 // MARK: - PuzzleDifficulty
 /// 퍼즐 난이도 — 일일 퍼즐은 표준, 랜덤 퍼즐은 어렵게
-enum PuzzleDifficulty {
+nonisolated enum PuzzleDifficulty {
     case standard
     case hard
 
@@ -72,7 +72,7 @@ enum PuzzleDifficulty {
 
 // MARK: - PuzzleKind
 /// 어떤 퍼즐인지 — 일일 퍼즐은 날짜(yyyyMMdd), 랜덤 퍼즐은 씨앗
-enum PuzzleKind {
+nonisolated enum PuzzleKind {
     case daily(Int)
     case random(UInt64)
 
@@ -84,7 +84,7 @@ enum PuzzleKind {
         }
     }
 
-    /// 퍼즐 스테이지를 만듦 — 무거운 계산이라 화면이 아니라 ViewModel이 한 번만 부름
+    /// 퍼즐 스테이지를 만듦 — 무거운 계산(최대 수백 번 시도하며 풀이 탐색)이라 화면에선 stage()로 비동기로 받음
     func makeStage() -> Stage {
         switch self {
         case .daily(let key):
@@ -95,15 +95,26 @@ enum PuzzleKind {
         }
     }
 
-    /// 최근에 만든 퍼즐 스테이지 — 화면이 @State로 GameViewModel을 들면 부모가 다시 그려질 때마다 생성 식이 다시 불려서,
-    /// 같은 퍼즐을 또 만들지(무거운 계산) 않도록 기억해 둠. 같은 날짜·씨앗이면 항상 같은 퍼즐이라 재사용해도 안전함
-    private(set) static var recentStages: [Stage] = []
+    /// 퍼즐 생성을 메인 스레드 밖(동시 실행 스레드)에서 함 — @concurrent(Swift 6.2)
+    /// 이 프로젝트는 "nonisolated async 함수는 부른 쪽 액터에서 돈다"(쉬운 동시성) 설정이라, 밖으로 보내려면 명시가 필요함
+    /// (랜덤 퍼즐 1개: 인텔 맥 출시 빌드 약 18ms·디버그 약 300ms — 메인에서 만들면 그만큼 화면이 멈춤)
+    @concurrent
+    func makeStageInBackground() async -> Stage {
+        makeStage()
+    }
+
+    /// 최근에 만든 퍼즐 스테이지 — 같은 퍼즐 화면이 다시 열려도 다시 만들지 않도록 기억해 둠
+    /// 같은 날짜·씨앗이면 항상 같은 퍼즐이라 재사용해도 안전함. 여러 곳에서 고치는 공유 상태라 메인 액터에 둠
+    @MainActor private(set) static var recentStages: [Stage] = []
     static let recentStageLimit = 4
 
-    /// 최근에 만든 같은 퍼즐이 있으면 그대로, 없으면 새로 만들어 기억
-    func cachedStage() -> Stage {
+    /// 퍼즐 화면이 쓰는 입구 — 최근에 만든 같은 퍼즐이 있으면 바로, 없으면 메인 밖에서 만들어 와서 기억
+    @MainActor
+    func stage() async -> Stage {
         if let saved = Self.recentStages.first(where: { $0.id == stageID }) { return saved }
-        let stage = makeStage()
+        let stage = await makeStageInBackground()
+        // 기다리는 동안 같은 퍼즐이 먼저 들어왔으면 그것을 씀 (중복으로 쌓지 않음)
+        if let saved = Self.recentStages.first(where: { $0.id == stageID }) { return saved }
         Self.recentStages = Array(([stage] + Self.recentStages).prefix(Self.recentStageLimit))
         return stage
     }
@@ -114,7 +125,7 @@ enum PuzzleKind {
 /// 미로를 파서 시작과 목표를 가장 멀리 두고, 테마에 맞는 기믹을 놓은 뒤 MapValidator·MapSolver로
 /// 풀 수 있는지와 재미 조건(길이, 꺾임, 기믹이 실제로 필요한지)을 확인함 — 조건을 못 맞추면 다른 씨앗으로 다시 시도
 /// 같은 씨앗·테마면 언제나 같은 퍼즐이 나옴
-enum PuzzleGenerator {
+nonisolated enum PuzzleGenerator {
 
     static let dailyIDPrefix = "daily_"
     static let randomIDPrefix = "random_"
@@ -198,14 +209,11 @@ enum PuzzleGenerator {
 
     private static let directions = [Position(x: 0, y: -1), Position(x: 1, y: 0), Position(x: 0, y: 1), Position(x: -1, y: 0)]
 
-    /// 맵의 모든 칸
-    private static var allCells: [Position] {
-        var cells: [Position] = []
-        for y in 0..<size {
-            for x in 0..<size { cells.append(Position(x: x, y: y)) }
-        }
-        return cells
-    }
+    /// 맵의 모든 칸 — 읽는 순서(위→아래, 왼→오른)이고 칸 번호(y × size + x)와 순서가 같음. 한 번만 만들어 둠
+    private static let allCells: [Position] = (0..<size).flatMap { y in (0..<size).map { x in Position(x: x, y: y) } }
+
+    /// 칸 → 칸 번호 (평탄 배열의 위치)
+    private static func cellIndex(_ p: Position) -> Int { p.y * size + p.x }
 
     private static func neighbors(of p: Position) -> [Position] {
         directions.map { Position(x: p.x + $0.x, y: p.y + $0.y) }
@@ -219,13 +227,13 @@ enum PuzzleGenerator {
     private static func carveMaze(rng: inout SeededGenerator) -> [[Int]] {
         var grid = Array(repeating: Array(repeating: 0, count: size), count: size)
         let rooms = (size - 1) / 2
-        var visited = Set<Position>()
+        var visited = [Bool](repeating: false, count: rooms * rooms)  // 방 번호 = y × rooms + x
         var stack = [Position(x: Int.random(in: 0..<rooms, using: &rng), y: Int.random(in: 0..<rooms, using: &rng))]
-        visited.insert(stack[0])
+        visited[stack[0].y * rooms + stack[0].x] = true
         grid[stack[0].y * 2 + 1][stack[0].x * 2 + 1] = 1
         while let current = stack.last {
             let options = neighbors(of: current).filter {
-                $0.x >= 0 && $0.x < rooms && $0.y >= 0 && $0.y < rooms && !visited.contains($0)
+                $0.x >= 0 && $0.x < rooms && $0.y >= 0 && $0.y < rooms && !visited[$0.y * rooms + $0.x]
             }
             guard let next = options.randomElement(using: &rng) else {
                 stack.removeLast()
@@ -234,7 +242,7 @@ enum PuzzleGenerator {
             // 두 방 사이 칸과 새 방을 바닥으로
             grid[current.y + next.y + 1][current.x + next.x + 1] = 1
             grid[next.y * 2 + 1][next.x * 2 + 1] = 1
-            visited.insert(next)
+            visited[next.y * rooms + next.x] = true
             stack.append(next)
         }
         return grid
@@ -250,45 +258,44 @@ enum PuzzleGenerator {
         for wall in walls.shuffled(using: &rng).prefix(count) { grid[wall.y][wall.x] = 1 }
     }
 
-    /// 위에서 아래, 왼쪽에서 오른쪽 순서로 정렬 — 집합·딕셔너리는 실행마다 순서가 달라서 난수로 고르기 전에 순서를 고정해야 같은 씨앗이 같은 퍼즐을 냄
-    private static func inReadingOrder<S: Sequence>(_ cells: S) -> [Position] where S.Element == Position {
-        cells.sorted { ($0.y, $0.x) < ($1.y, $1.x) }
-    }
-
     /// 거리가 가장 먼 칸 — 같은 거리면 읽는 순서에서 앞선 칸
-    private static func farthestCell(in distance: [Position: Int]) -> Position? {
-        var best: Position?
-        for cell in inReadingOrder(distance.keys) where best == nil || distance[cell]! > distance[best!]! {
+    /// 칸 번호 순서가 곧 읽는 순서라, 같은 씨앗이면 항상 같은 칸을 고름
+    private static func farthestCell(in distance: [Int]) -> Position? {
+        var best: Int?
+        for cell in distance.indices where distance[cell] >= 0 && (best == nil || distance[cell] > distance[best!]) {
             best = cell
         }
-        return best
+        return best.map { allCells[$0] }
     }
 
-    /// 시작에서 닿는 칸까지의 거리와 부모 — blocked는 지나갈 수 없는 칸
-    private static func distances(_ grid: [[Int]], from start: Position, blocked: Set<Position>)
-        -> (distance: [Position: Int], parent: [Position: Position]) {
-        var distance = [start: 0]
-        var parent: [Position: Position] = [:]
+    /// 시작에서 닿는 칸까지의 거리(-1은 못 감)와 부모 칸 번호(-1은 없음)
+    /// 칸 번호로 찾는 평탄 배열이라 딕셔너리처럼 해시·할당 비용이 없음
+    private static func distances(_ grid: [[Int]], from start: Position) -> (distance: [Int], parent: [Int]) {
+        var distance = [Int](repeating: -1, count: size * size)
+        var parent = [Int](repeating: -1, count: size * size)
+        distance[cellIndex(start)] = 0
         var queue = [start]
         var head = 0
         while head < queue.count {
             let current = queue[head]
             head += 1
-            for next in neighbors(of: current) where isFloor(grid, next) && !blocked.contains(next) && distance[next] == nil {
-                distance[next] = distance[current]! + 1
-                parent[next] = current
+            for d in directions {
+                let next = Position(x: current.x + d.x, y: current.y + d.y)
+                guard isFloor(grid, next), distance[cellIndex(next)] < 0 else { continue }
+                distance[cellIndex(next)] = distance[cellIndex(current)] + 1
+                parent[cellIndex(next)] = cellIndex(current)
                 queue.append(next)
             }
         }
         return (distance, parent)
     }
 
-    private static func path(from start: Position, to end: Position, parent: [Position: Position]) -> [Position] {
+    private static func path(from start: Position, to end: Position, parent: [Int]) -> [Position] {
         var cells = [end]
         var current = end
-        while current != start, let previous = parent[current] {
-            cells.append(previous)
-            current = previous
+        while current != start, parent[cellIndex(current)] >= 0 {
+            current = allCells[parent[cellIndex(current)]]
+            cells.append(current)
         }
         return cells.reversed()
     }
@@ -308,14 +315,14 @@ enum PuzzleGenerator {
         // 시작과 목표 — 미로에서 가장 먼 두 방
         let floors = allCells.filter { isFloor(grid, $0) }
         guard let seed = floors.randomElement(using: &rng) else { return nil }
-        let firstSweep = distances(grid, from: seed, blocked: [])
+        let firstSweep = distances(grid, from: seed)
         guard let far = farthestCell(in: firstSweep.distance) else { return nil }
-        let secondSweep = distances(grid, from: far, blocked: [])
+        let secondSweep = distances(grid, from: far)
         guard let farthest = farthestCell(in: secondSweep.distance) else { return nil }
         let reversed = Bool.random(using: &rng)
         let start = reversed ? farthest : far
         let goal = reversed ? far : farthest
-        let route = path(from: start, to: goal, parent: distances(grid, from: start, blocked: []).parent)
+        let route = path(from: start, to: goal, parent: distances(grid, from: start).parent)
         guard route.count >= 6 else { return nil }
         let routeSet = Set(route)
 
@@ -338,7 +345,8 @@ enum PuzzleGenerator {
             }
             guard let gate = corridors.randomElement(using: &rng) else { return nil }
             grid[gate.y][gate.x] = 0
-            let reachable = inReadingOrder(distances(grid, from: start, blocked: []).distance.keys).filter { !used.contains($0) }
+            let reach = distances(grid, from: start).distance
+            let reachable = allCells.filter { reach[cellIndex($0)] >= 0 && !used.contains($0) }
             let sideCells = reachable.filter { !routeSet.contains($0) }
             guard let switchCell = (sideCells.isEmpty ? Array(reachable) : sideCells).randomElement(using: &rng) else { return nil }
             switches = [SwitchGate(switchAt: switchCell, gateAt: gate)]

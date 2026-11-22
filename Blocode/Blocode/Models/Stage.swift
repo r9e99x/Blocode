@@ -10,7 +10,7 @@ import Foundation
 // MARK: - StarThresholds
 /// 스테이지별 별점 기준
 /// 사용한 블럭 수를 기준으로 별 1~3개 결정
-struct StarThresholds: Codable {
+nonisolated struct StarThresholds: Codable {
     /// 이 블럭 수 이하면 별 3개 (최적 풀이)
     var threeStar: Int
 
@@ -32,7 +32,7 @@ struct StarThresholds: Codable {
 // MARK: - Stage
 /// 하나의 스테이지 데이터
 /// JSON 파일에서 로드하여 사용
-struct Stage: Codable, Identifiable {
+nonisolated struct Stage: Codable, Identifiable {
     /// 고유 식별자 (예: "ch1_stage1") — ProgressService 키로도 사용
     var id: String
 

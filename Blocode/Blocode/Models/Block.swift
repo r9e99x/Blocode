@@ -9,7 +9,7 @@ import Foundation
 
 // MARK: - IfCondition
 /// if 블럭의 조건 타입 — 앞 칸 상태를 기준으로 자식 블럭 실행 여부 결정
-enum IfCondition: String, Codable {
+nonisolated enum IfCondition: String, Codable {
     case pathClear   = "pathClear"    // 앞 칸이 이동 가능하면 자식 블럭 실행 (기본값)
     case pathBlocked = "pathBlocked"  // 앞 칸이 막혀있으면 자식 블럭 실행
 
@@ -25,7 +25,7 @@ enum IfCondition: String, Codable {
 // MARK: - BlockType
 /// 코드 블럭의 종류를 정의하는 열거형
 /// 실제 프로그래밍 언어의 기본 명령어와 1:1 대응
-enum BlockType: String, Codable, CaseIterable {
+nonisolated enum BlockType: String, Codable, CaseIterable {
     case moveForward   = "moveForward"   // 앞으로 이동
     case moveBackward  = "moveBackward"  // 뒤로 이동
     case turnLeft      = "turnLeft"      // 왼쪽으로 90도 회전
@@ -91,7 +91,7 @@ enum BlockType: String, Codable, CaseIterable {
 
 // MARK: - Block
 /// 사용자가 코드 순서 영역에 추가하는 하나의 코드 블럭
-struct Block: Identifiable, Codable {
+nonisolated struct Block: Identifiable, Codable {
     var id: UUID          // SwiftUI 리스트 식별자 — ForEach에서 고유 키로 사용
     var type: BlockType   // 블럭 종류
 
@@ -153,7 +153,7 @@ struct Block: Identifiable, Codable {
 
 // MARK: - 블럭 트리 편집
 // 코드 블럭 목록을 경로로 다루는 규칙 — 경로 형식은 [최상위], [최상위, 자식], [최상위, 자식, 손자], ...
-extension Array where Element == Block {
+nonisolated extension Array where Element == Block {
 
     /// 경로에 있는 블럭 — 경로가 잘못됐으면 nil
     func block(at path: [Int]) -> Block? {
@@ -223,7 +223,7 @@ extension Array where Element == Block {
     }
 }
 
-private extension Block {
+nonisolated private extension Block {
 
     /// 트리를 따라 내려가 값 타입 블럭을 제자리에서 수정 (경로는 호출부에서 검증됨)
     mutating func edit(remainingPath: ArraySlice<Int>, _ edit: (inout Block) -> Void) {

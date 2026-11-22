@@ -243,15 +243,17 @@ struct PuzzleGeneratorTests {
     }
 
     @Test("같은 퍼즐은 최근에 만든 것을 다시 쓰고, 기억하는 퍼즐 수는 한도를 넘지 않음")
-    func cachedStageReuses() {
+    func cachedStageReuses() async {
         let kind = PuzzleKind.random(424_242)
-        let first = kind.cachedStage()
+        let first = await kind.stage()
         #expect(first.id == kind.stageID)
         #expect(PuzzleKind.recentStages.first?.id == kind.stageID)
-        // 화면이 다시 그려져 GameViewModel(puzzle:)이 또 불려도 같은 퍼즐을 그대로 씀
-        #expect(GameViewModel(puzzle: kind).stage.id == first.id)
+        // 화면이 다시 만들어져 또 요청해도 새로 만들지 않고 같은 퍼즐을 그대로 씀
+        #expect(fingerprint(await kind.stage()) == fingerprint(first))
+        // 메인 밖에서 만든 퍼즐도 메인에서 만든 것과 똑같음 (같은 시드 → 같은 퍼즐)
+        #expect(fingerprint(first) == fingerprint(kind.makeStage()))
 
-        for seed in 1...UInt64(PuzzleKind.recentStageLimit + 2) { _ = PuzzleKind.random(seed).cachedStage() }
+        for seed in 1...UInt64(PuzzleKind.recentStageLimit + 2) { _ = await PuzzleKind.random(seed).stage() }
         #expect(PuzzleKind.recentStages.count == PuzzleKind.recentStageLimit)
         #expect(!PuzzleKind.recentStages.contains { $0.id == kind.stageID })  // 오래된 것부터 잊음
     }

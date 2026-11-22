@@ -131,12 +131,6 @@ final class GameViewModel {
         try? await Task.sleep(for: .seconds(seconds))
     }
 
-    /// 일일·랜덤 퍼즐로 ViewModel 초기화 — 퍼즐 생성(무거운 계산)은 화면이 아니라 여기서 하고,
-    /// 화면이 다시 그려지며 init이 또 불려도 같은 퍼즐은 다시 만들지 않음(PuzzleKind.cachedStage)
-    convenience init(puzzle: PuzzleKind) {
-        self.init(stage: puzzle.cachedStage())
-    }
-
     /// 챕터/스테이지 번호로 ViewModel 초기화 (프로덕션)
     /// 데이터 소스(StageLoader) 접근은 View가 아닌 ViewModel의 책임
     init(chapter: Int, stageNumber: Int) {

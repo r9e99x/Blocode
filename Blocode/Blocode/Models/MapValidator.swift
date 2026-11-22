@@ -9,7 +9,7 @@ import Foundation
 
 // MARK: - MapValidation
 /// 맵 검증 결과 — 문제가 없으면 저장할 수 있음
-struct MapValidation: Equatable {
+nonisolated struct MapValidation: Equatable {
     /// 사용자에게 보여 줄 문제 목록 (없으면 저장 가능)
     var issues: [String]
 
@@ -23,7 +23,7 @@ struct MapValidation: Equatable {
 /// 사용자가 만든 맵이 저장해도 되는 맵인지 검사하는 규칙
 /// 구조(크기·배치·기믹 짝)를 먼저 보고, 문제가 없을 때만 자동 탐색으로 실제로 깰 수 있는지 확인함
 /// 기본 스테이지의 데이터 무결성 테스트와 같은 기준을 사용자 맵에도 적용
-enum MapValidator {
+nonisolated enum MapValidator {
 
     static let minSize = 3        // 가로·세로 최소 칸 수
     static let maxSize = 10       // 가로·세로 최대 칸 수 (기본 스테이지 최대와 같음)

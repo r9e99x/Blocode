@@ -57,15 +57,12 @@ final class CustomMap {
     }
 
     /// 맵 데이터를 JSON으로 인코딩해 새 맵을 만듦
-    // @Model 클래스는 프로젝트 기본 격리(메인 액터)를 따르지 않아서, 메인 액터 소속인 MapData를 JSON으로 바꾸는 메서드엔 직접 표시가 필요함
-    @MainActor
     static func make(name: String, map: MapData, palette: [BlockType], thresholds: StarThresholds) -> CustomMap {
         CustomMap(name: name, mapJSON: encode(map), paletteRaw: palette.map(\.rawValue),
                   threeStar: thresholds.threeStar, twoStar: thresholds.twoStar)
     }
 
     /// 내용을 새 값으로 교체 — id와 만든 시각은 유지
-    @MainActor
     func update(name: String, map: MapData, palette: [BlockType], thresholds: StarThresholds) {
         self.name = name
         mapJSON = Self.encode(map)
@@ -75,7 +72,6 @@ final class CustomMap {
         updatedAt = Date()
     }
 
-    @MainActor
     private static func encode(_ map: MapData) -> Data {
         (try? JSONEncoder().encode(map)) ?? Data()
     }
@@ -86,14 +82,12 @@ final class CustomMap {
     var stageID: String { Self.stageIDPrefix + id.uuidString }
 
     /// 저장된 맵 데이터 — 손상됐으면 nil
-    @MainActor
     var mapData: MapData? { try? JSONDecoder().decode(MapData.self, from: mapJSON) }
 
     /// 팔레트 블럭 목록
     var palette: [BlockType] { paletteRaw.compactMap(BlockType.init(rawValue:)) }
 
     /// 게임 화면에 넣을 스테이지 — 손상됐으면 nil (챕터·번호는 기본 스테이지 전용이라 0)
-    @MainActor
     var stage: Stage? {
         guard let map = mapData else { return nil }
         return Stage(id: stageID, chapter: 0, stageNumber: 0, name: name, mapData: map,

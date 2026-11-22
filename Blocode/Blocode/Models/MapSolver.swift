@@ -13,7 +13,7 @@ import Foundation
 /// 판의 규칙(이동·회전·보석·스위치·포탈)은 GameBoard와 똑같이 옮겨 정수 상태로 빠르게 탐색함 —
 /// GameBoard를 쓴 기준 탐색과 결과가 같은지는 MapSolverEquivalenceTests가 모든 스테이지와 무작위 맵으로 확인
 /// 쓰는 곳: 사용자 맵 저장 검증(MapValidator), 스테이지 풀이 가능 여부 테스트
-enum MapSolver {
+nonisolated enum MapSolver {
 
     /// 탐색 결과
     enum Outcome: Equatable {
