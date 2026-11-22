@@ -191,7 +191,9 @@ struct StageView: View {
                         // 다음 스테이지 → 현재 스테이지 pop 후 다음 스테이지 push
                         // 별 3개 + 마지막 스테이지: 챕터 선택 화면까지 2번 pop
                         viewModel.reset()
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                        // 리셋 애니메이션이 시작된 뒤 0.15초 있다가 화면을 바꿈
+                        Task {
+                            try? await Task.sleep(for: .seconds(0.15))
                             if let next = viewModel.nextStageNumber {
                                 navPath.pop()
                                 navPath.append(AppRoute.stage(chapter: stage.chapter, number: next))
@@ -549,7 +551,7 @@ struct StageView: View {
 
     private var mapView: some View {
         Group {
-            if let scene = scene {
+            if let scene {
                 // 씬이 준비됐으면 SpriteView 표시
                 SpriteView(scene: scene, options: [.allowsTransparency])
                     .background(Color.mapBackground)

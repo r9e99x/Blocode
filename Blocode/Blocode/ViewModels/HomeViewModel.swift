@@ -92,11 +92,9 @@ final class HomeViewModel {
         let date = now()
         let key = PuzzleGenerator.dailyKey(for: date, calendar: calendar)
         let theme = PuzzleGenerator.theme(forWeekday: calendar.component(.weekday, from: date))
-        let formatter = Self.dayFormatter
-        formatter.calendar = calendar
         let stageID = "\(PuzzleGenerator.dailyIDPrefix)\(key)"
         return DailyPuzzleInfo(key: key,
-                               dateText: formatter.string(from: date),
+                               dateText: date.formatted(dayStyle),
                                themeTitle: Self.title(of: theme),
                                isCleared: progress.isCleared(stageID),
                                stars: progress.stars(for: stageID))
@@ -115,12 +113,13 @@ final class HomeViewModel {
     }
 
     /// "11월 12일 목요일" 모양의 날짜 글자 변환기 — 만드는 비용이 커서 한 번만 만들어 재사용
-    private static let dayFormatter: DateFormatter = {
-        let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "ko_KR")
-        formatter.dateFormat = "M월 d일 EEEE"
-        return formatter
-    }()
+    /// 홈 카드 날짜 글자 형식 — 예: "11월 12일 목요일" (한국어, 주입된 달력·시간대 기준)
+    /// 예전엔 공유 DateFormatter의 달력을 매번 바꿔 끼웠는데, 값 타입인 FormatStyle은 공유 상태가 없음
+    /// (Date.FormatStyle의 한국어 기본 형식은 "11. 12. 목요일"이라 글자 틀을 직접 지정)
+    private var dayStyle: Date.VerbatimFormatStyle {
+        Date.VerbatimFormatStyle(format: "\(month: .defaultDigits)월 \(day: .defaultDigits)일 \(weekday: .wide)",
+                                 locale: Locale(identifier: "ko_KR"), timeZone: calendar.timeZone, calendar: calendar)
+    }
 
     private static func title(of theme: PuzzleTheme) -> String {
         switch theme {

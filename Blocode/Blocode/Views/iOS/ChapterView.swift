@@ -148,7 +148,7 @@ struct ChapterView: View {
                 HStack(spacing: 4) {
                     Image(systemName: "chevron.left")
                         .font(.system(size: 12, weight: .bold))
-                    Text("CHAPTER \(String(format: "%02d", vm.chapter))")
+                    Text("CHAPTER \(vm.chapter, format: .number.precision(.integerLength(2)))")  // 두 자리(01)로
                         .font(.system(size: 12, weight: .bold))
                         .tracking(2)  // 자간 넓게
                 }
@@ -282,7 +282,7 @@ struct ChapterView: View {
                 // 스테이지 텍스트 정보
                 VStack(alignment: .leading, spacing: 3) {
                     // "STAGE 01" 형식 서브타이틀
-                    Text("STAGE \(String(format: "%02d", stage.stageNumber))")
+                    Text("STAGE \(stage.stageNumber, format: .number.precision(.integerLength(2)))")
                         .font(.system(size: 11, weight: .medium))
                         .foregroundStyle(.secondary)
                         .tracking(1.2)

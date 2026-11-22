@@ -10,7 +10,11 @@ import SwiftUI
 // MARK: - OnboardingPage 모델
 /// 온보딩 슬라이드 한 장의 데이터
 private struct OnboardingPage {
-    let illustration: AnyView  // 슬라이드별 일러스트 뷰
+    /// 슬라이드별 일러스트 종류 — 그림은 OnboardingView.illustration(for:)이 그림
+    /// (예전엔 AnyView로 감쌌는데, 종류만 들고 있다가 @ViewBuilder로 그리면 타입이 지워지지 않아 SwiftUI가 변경을 더 잘 추적함)
+    enum Illustration { case welcome, block, run, gimmick, star }
+
+    let illustration: Illustration  // 슬라이드별 일러스트
     let title: String          // 큰 제목 (Georgia Italic)
     let description: String    // 설명 텍스트
 }
@@ -33,27 +37,27 @@ struct OnboardingView: View {
     private var pages: [OnboardingPage] {
         [
             OnboardingPage(
-                illustration: AnyView(welcomeIllustration),
+                illustration: .welcome,
                 title: "Blocode에\n오신 걸 환영해요.",
                 description: "블럭으로 코드를 짜고\n캐릭터를 움직여보세요."
             ),
             OnboardingPage(
-                illustration: AnyView(blockIllustration),
+                illustration: .block,
                 title: "블럭을 탭해\n코드를 만드세요",
                 description: "팔레트에서 블럭을 탭하면 추가되고,\n드래그해서 순서를 바꿀 수 있어요."
             ),
             OnboardingPage(
-                illustration: AnyView(runIllustration),
+                illustration: .run,
                 title: "실행 버튼으로\n캐릭터를 움직여요",
                 description: "블럭 순서대로 캐릭터가 움직여요.\n목표 지점에 도달하면 클리어!"
             ),
             OnboardingPage(
-                illustration: AnyView(gimmickIllustration),
+                illustration: .gimmick,
                 title: "챕터 6부터는\n특별한 칸도 만나요",
                 description: "보석을 모으고, 스위치로 문을 열고,\n포탈로 순간이동도 해보세요."
             ),
             OnboardingPage(
-                illustration: AnyView(starIllustration),
+                illustration: .star,
                 title: "별을 모아\n스테이지를 클리어해요",
                 description: "적은 블럭으로 클리어할수록\n더 많은 별을 얻을 수 있어요."
             ),
@@ -168,7 +172,7 @@ struct OnboardingView: View {
                 // 일러스트 영역 — 원본 크기(280×280)로 배치한 뒤, 세로 공간이 부족할 때만
                 // scaleEffect로 통째로 축소(내부에 절대좌표 장식 요소가 있어 frame만 줄이면
                 // 그 요소들이 밖으로 잘려나감 — 비율 그대로 축소해야 안전)
-                page.illustration
+                illustration(for: page.illustration)
                     .frame(width: 280, height: 280)
                     .scaleEffect(isCompactHeight ? 0.62 : 1.0)
                     .frame(height: isCompactHeight ? 174 : 280)
@@ -268,6 +272,18 @@ struct OnboardingView: View {
     // MARK: - 슬라이드 일러스트
 
     // ① 환영 일러스트 — 앱 아이콘 + 장식 별
+    /// 슬라이드 일러스트 종류에 맞는 그림
+    @ViewBuilder
+    private func illustration(for kind: OnboardingPage.Illustration) -> some View {
+        switch kind {
+        case .welcome: welcomeIllustration
+        case .block:   blockIllustration
+        case .run:     runIllustration
+        case .gimmick: gimmickIllustration
+        case .star:    starIllustration
+        }
+    }
+
     private var welcomeIllustration: some View {
         ZStack {
             // 장식 원형 배경

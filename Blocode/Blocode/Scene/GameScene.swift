@@ -306,7 +306,7 @@ class GameScene: SKScene, GameBoardRendering {
         topBack.strokeColor = .clear
         topBack.position    = CGPoint(x: 0, y: topDepth)  // 앞면보다 위에 위치
         topBack.zPosition   = 0
-        if let topColor = topColor {
+        if let topColor {
             topBack.fillColor = topColor
         } else {
             topBack.fillColor = color
@@ -323,7 +323,7 @@ class GameScene: SKScene, GameBoardRendering {
         botBack.strokeColor = .clear
         botBack.position    = CGPoint(x: 0, y: -(topDepth + botDepth))  // 앞면보다 아래에 위치
         botBack.zPosition   = 0
-        if let botColor = botColor {
+        if let botColor {
             botBack.fillColor = botColor
         } else {
             botBack.fillColor = color

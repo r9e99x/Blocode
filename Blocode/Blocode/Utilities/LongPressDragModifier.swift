@@ -21,7 +21,9 @@ private struct LongPressDragModifier: ViewModifier {
     let onChange: (CGPoint) -> Void  // 끌기 중 위치
     let onEnd: (CGPoint) -> Void     // 끌기 끝
 
-    @State private var timer: Timer?  // 길게 누르기 감지 타이머
+    /// 길게 누르기 감지 — 0.38초 기다렸다가 끌기 모드로 바꾸는 작업, 그 전에 손을 떼면 취소함
+    /// (타이머·런루프 대신 Task — 메인 액터 작업은 맥에서 마우스를 누르고 있는 동안에도 돌아서 런루프 모드를 따로 챙길 필요가 없음)
+    @State private var pressTask: Task<Void, Never>?
 
     func body(content: Content) -> some View {
         content.gesture(
@@ -29,27 +31,21 @@ private struct LongPressDragModifier: ViewModifier {
                 .onChanged { value in
                     if isDragging {
                         onChange(value.location)
-                    } else if timer == nil && isEnabled {
+                    } else if pressTask == nil && isEnabled {
                         // 처음 누름 — 눌린 모양을 보여 주고 0.38초 뒤 끌기 모드로
                         withAnimation { isPressed = true }
-                        let newTimer = Timer(timeInterval: 0.38, repeats: false) { _ in
-                            DispatchQueue.main.async {
-                                withAnimation { isDragging = true; isPressed = false }
-                                onStart(value.location)
-                            }
+                        let startLocation = value.location
+                        pressTask = Task {
+                            // 기다리는 중에 손을 떼면 onEnded가 취소 → 끌기를 시작하지 않음
+                            guard (try? await Task.sleep(for: .seconds(0.38))) != nil else { return }
+                            withAnimation { isDragging = true; isPressed = false }
+                            onStart(startLocation)
                         }
-                        #if os(macOS)
-                        // 맥은 마우스를 누르는 동안 .eventTracking 런루프라 .default 타이머가 멈춤 → .common으로 등록
-                        RunLoop.current.add(newTimer, forMode: .common)
-                        #else
-                        RunLoop.current.add(newTimer, forMode: .default)
-                        #endif
-                        timer = newTimer
                     }
                 }
                 .onEnded { value in
-                    timer?.invalidate()
-                    timer = nil
+                    pressTask?.cancel()
+                    pressTask = nil
                     if isDragging {
                         onEnd(value.location)
                     } else {

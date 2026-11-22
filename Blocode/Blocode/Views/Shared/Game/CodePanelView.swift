@@ -357,11 +357,10 @@ struct CodePanelView: View {
         // 코드 리스트 글로벌 프레임 추적 (드래그 감지용)
         // size가 아닌 frame(위치+크기) 변화를 추적 — 빈 상태에선 size가 안 바뀌어
         // 좌표 갱신이 누락돼 영역 판정이 어긋났음(빈 영역 드래그 추가 불가)
-        .background(GeometryReader { geo in
-            Color.clear
-                .onAppear { drag.codeListFrame = geo.frame(in: .global) }
-                .onChange(of: geo.frame(in: .global)) { drag.codeListFrame = geo.frame(in: .global) }
-        })
+        // onGeometryChange는 처음 값과 바뀔 때마다 알려 줘서, 예전 GeometryReader + onAppear + onChange 세 단계를 대신함
+        .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { frame in
+            drag.codeListFrame = frame
+        }
     }
 
     // MARK: - 삽입 인디케이터
@@ -400,7 +399,7 @@ struct CodePanelView: View {
 // MARK: - RowMidY PreferenceKey
 /// 각 블럭 행의 글로벌 중간 Y 좌표를 상위 뷰로 전달하기 위한 PreferenceKey
 struct RowMidYKey: PreferenceKey {
-    static var defaultValue: [Int: CGFloat] = [:]
+    static let defaultValue: [Int: CGFloat] = [:]  // 바뀌지 않는 기본값이라 let (Swift 6에서 전역 가변 상태를 만들지 않음)
     /// 여러 행의 값을 병합 — 나중에 온 값이 우선 (같은 키면 새 값으로 덮어씀)
     static func reduce(value: inout [Int: CGFloat], nextValue: () -> [Int: CGFloat]) {
         value.merge(nextValue()) { _, new in new }

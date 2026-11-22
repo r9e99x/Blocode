@@ -69,7 +69,7 @@ struct ClearOverlayView: View {
             .padding(.top, 20)
             #endif
         }
-        .onAppear { animateIn() }  // 화면 등장 시 순차 애니메이션 시작
+        .task { await animateIn() }  // 화면 등장 시 순차 애니메이션 시작 — 닫히면 남은 단계는 자동 취소
     }
 
     // MARK: - 별 3개 레이아웃
@@ -494,36 +494,39 @@ struct ClearOverlayView: View {
         .shadow(color: Color.black.opacity(0.06), radius: 8, x: 0, y: 2)
     }
 
-    /// 경과 시간을 "MM:SS" 형식 문자열로 변환
+    /// 경과 시간을 "MM:SS" 형식 문자열로 변환 — 60분이 넘으면 분이 그대로 늘어남(예: 75:03)
     private var formattedTime: String {
-        let total   = Int(elapsedTime)
-        let minutes = total / 60
-        let seconds = total % 60
-        return String(format: "%02d:%02d", minutes, seconds)
+        Duration.seconds(Int(elapsedTime)).formatted(.time(pattern: .minuteSecond(padMinuteToLength: 2)))
     }
 
     // MARK: - 애니메이션
 
     /// 화면 등장 시 콘텐츠 → 별 → 버튼 순서로 순차 애니메이션 실행
-    private func animateIn() {
+    /// 타이밍: 콘텐츠 즉시 → 별 0.25·0.37·0.49초 → 버튼 0.65초 (예전 asyncAfter와 같은 시점)
+    private func animateIn() async {
         // ① 콘텐츠 (메시지, 캐릭터, 스탯) 등장
         withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
             contentVisible = true
         }
-        // ② 별 3개 순차 등장 (0.12초 간격)
+        // ② 별 3개 순차 등장 (0.25초 뒤부터 0.12초 간격)
+        var delay = 0.25
         for i in 0..<3 {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.25 + Double(i) * 0.12) {
-                withAnimation(.spring(response: 0.4, dampingFraction: 0.55)) {
-                    starVisible[i] = true
-                }
+            guard await pause(delay) else { return }
+            withAnimation(.spring(response: 0.4, dampingFraction: 0.55)) {
+                starVisible[i] = true
             }
+            delay = 0.12
         }
-        // ③ 버튼 영역 등장 (콘텐츠 등장 후 0.65초 대기)
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.65) {
-            withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
-                buttonsVisible = true
-            }
+        // ③ 버튼 영역 등장 (마지막 별 0.49초 → 0.65초)
+        guard await pause(0.16) else { return }
+        withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+            buttonsVisible = true
         }
+    }
+
+    /// 잠깐 기다림 — 화면이 닫혀 작업이 취소되면 false (남은 애니메이션을 멈추는 데 씀)
+    private func pause(_ seconds: Double) async -> Bool {
+        (try? await Task.sleep(for: .seconds(seconds))) != nil
     }
 }
 

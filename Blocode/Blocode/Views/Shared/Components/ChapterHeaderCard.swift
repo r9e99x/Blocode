@@ -22,7 +22,7 @@ struct ChapterHeaderCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text("CHAPTER \(String(format: "%02d", chapterNumber))")
+            Text("CHAPTER \(chapterNumber, format: .number.precision(.integerLength(2)))")  // 두 자리(01)로
                 .font(.system(size: 11, weight: .bold)).foregroundStyle(.white.opacity(0.7)).tracking(1)
             Text(title).font(.system(size: 24, weight: .bold)).foregroundStyle(.white)
 

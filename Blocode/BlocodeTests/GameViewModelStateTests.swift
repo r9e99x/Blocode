@@ -61,7 +61,7 @@ struct GameViewModelStateTests {
     @Test("걸린 시간은 실행 시간이 아니라 화면 진입부터 잼 (B3)")
     func elapsedTime_countsFromStageEntry() async throws {
         let vm = makeFixture()
-        try await Task.sleep(nanoseconds: 1_000_000_000)  // 1초 동안 "고민"
+        try await Task.sleep(for: .seconds(1))  // 1초 동안 "고민"
         vm.codeBlocks = [Block(type: .moveForward), Block(type: .moveForward)]
         vm.run()  // 실행 자체는 약 0.6초
         try await waitUntilFinished(vm)

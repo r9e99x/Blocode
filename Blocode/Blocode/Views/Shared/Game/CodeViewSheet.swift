@@ -70,10 +70,14 @@ struct CodeViewSheet: View {
                 copyToClipboard(code)
                 SoundService.shared.play(.buttonTap)
                 copied = true
-                DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { copied = false }
             } label: {
                 Label(copied ? "복사됨" : "복사", systemImage: copied ? "checkmark" : "doc.on.doc")
                     .font(.system(size: 13, weight: .semibold))
+            }
+            // "복사됨" 표시를 1.5초 뒤 되돌림 — 시트가 닫히면 기다리던 작업도 자동으로 취소됨
+            .task(id: copied) {
+                guard copied, (try? await Task.sleep(for: .seconds(1.5))) != nil else { return }
+                copied = false
             }
             .buttonStyle(.plain)
             .foregroundStyle(.secondary)
