@@ -203,8 +203,15 @@ final class ProgressService {
     /// 별 합계·클리어 여부처럼 "챕터의 스테이지를 훑는" 계산이 모두 이 목록을 씀
     static func stageIDs(chapter: Int, count: Int) -> [String] {
         guard count > 0 else { return [] }
+        // 카탈로그 챕터는 미리 만든 표를 그대로 씀 — 화면을 그릴 때마다 문자열 104개를 새로 만들지 않음
+        if let ids = catalogStageIDs[chapter], ids.count == count { return ids }
         return (1...count).map { Stage.makeID(chapter: chapter, number: $0) }
     }
+
+    /// 챕터 번호 → 그 챕터의 스테이지 ID 목록 (ChapterCatalog 기준, 처음 쓸 때 한 번만 만듦)
+    private static let catalogStageIDs: [Int: [String]] = Dictionary(uniqueKeysWithValues: ChapterCatalog.all.map { chapter in
+        (chapter.number, chapter.stageCount > 0 ? (1...chapter.stageCount).map { Stage.makeID(chapter: chapter.number, number: $0) } : [])
+    })
 
     // MARK: - 진행 규칙 (순수 함수)
     // 저장소(SwiftData) 없이 진행도 딕셔너리만으로 계산 → 실제 진행도를 건드리지 않고 테스트 가능

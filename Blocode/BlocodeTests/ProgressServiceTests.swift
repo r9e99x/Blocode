@@ -228,6 +228,22 @@ struct StageLoaderEdgeTests {
         #expect(ChapterViewModel(chapter: 999, progress: .makeForTesting()).stages.isEmpty)  // 없는 챕터 번호
     }
 
+    @Test("다시 불러온 스테이지는 처음과 같고, ID 표는 직접 만든 목록과 같음")
+    func cachedLoadsAndIDTableMatch() throws {
+        let first = try #require(StageLoader.load(chapter: 3, stage: 2))
+        let again = try #require(StageLoader.load(chapter: 3, stage: 2))  // 두 번째는 캐시에서
+        #expect(again.id == first.id && again.mapData.grid == first.mapData.grid)
+        #expect(StageLoader.load(chapter: 99, stage: 1) == nil)  // 없는 파일은 캐시와 상관없이 nil
+
+        for chapter in ChapterCatalog.all {
+            let made = (0..<chapter.stageCount).map { Stage.makeID(chapter: chapter.number, number: $0 + 1) }
+            #expect(ProgressService.stageIDs(chapter: chapter.number, count: chapter.stageCount) == made)
+        }
+        // 카탈로그와 개수가 다르면 표 대신 직접 만듦
+        #expect(ProgressService.stageIDs(chapter: 1, count: 2) == ["ch1_stage1", "ch1_stage2"])
+        #expect(ProgressService.stageIDs(chapter: 1, count: 0).isEmpty)
+    }
+
     @Test("컨테이너 블럭은 반복·만약에·함수뿐")
     func containerTypes() {
         #expect(BlockType.allCases.filter(\.isContainer) == [.repeatBlock, .ifBlock, .functionBlock])
