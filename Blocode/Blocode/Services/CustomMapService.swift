@@ -33,10 +33,10 @@ final class CustomMapService {
 
         var errorDescription: String? {
             switch self {
-            case .invalidName: return "맵 이름은 1~\(CustomMapService.maxNameLength)자로 입력해 주세요."
-            case .invalidMap(let issues): return issues.joined(separator: "\n")
-            case .invalidThresholds: return "별 기준이 올바르지 않아요."
-            case .storageFailed: return "맵을 저장하지 못했어요. 잠시 후 다시 시도해 주세요."
+            case .invalidName: "맵 이름은 1~\(CustomMapService.maxNameLength)자로 입력해 주세요."
+            case .invalidMap(let issues): issues.joined(separator: "\n")
+            case .invalidThresholds: "별 기준이 올바르지 않아요."
+            case .storageFailed: "맵을 저장하지 못했어요. 잠시 후 다시 시도해 주세요."
             }
         }
     }
@@ -73,9 +73,10 @@ final class CustomMapService {
 
     /// 맵 저장 — id가 있고 저장된 맵이면 고치고, 아니면 새로 만듦
     /// - Throws: SaveError — 저장된 내용은 바뀌지 않음
+    ///   타입 지정 throws(Swift 6): 이 함수는 SaveError만 던진다고 컴파일러가 보장해서, 받는 쪽이 종류별로 정확히 나눠 처리할 수 있음
     @discardableResult
     func save(id: UUID? = nil, name: String, map: MapData, palette: [BlockType],
-              thresholds: StarThresholds) throws -> CustomMap {
+              thresholds: StarThresholds) throws(SaveError) -> CustomMap {
         let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
         guard (1...Self.maxNameLength).contains(trimmed.count) else { throw SaveError.invalidName }
 

@@ -45,7 +45,6 @@ final class FakeNotificationCenter: NotificationScheduling {
     }
 }
 
-@MainActor
 @Suite("복습 알림")
 struct ReminderServiceTests {
 
@@ -270,7 +269,6 @@ struct ReminderServiceTests {
 
 // MARK: - 알림을 눌렀을 때 이동
 
-@MainActor
 @Suite("알림 이동")
 struct NotificationRoutingTests {
 
@@ -362,7 +360,6 @@ struct NotificationRoutingTests {
 
 // MARK: - 기능 해금
 
-@MainActor
 @Suite("기능 해금")
 struct FeatureUnlockTests {
 
@@ -394,7 +391,6 @@ struct FeatureUnlockTests {
     }
 }
 
-@MainActor
 @Suite("일일 퍼즐 잠금과 알림")
 struct ReminderLockedTests {
     @Test("일일 퍼즐이 잠겨 있으면 켜 두어도 알림을 예약하지 않음")

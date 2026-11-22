@@ -35,8 +35,8 @@ final class LearningService {
 
     func isUnlocked(_ card: LearningCard) -> Bool {
         switch card.unlock {
-        case .alwaysOpen:        return true
-        case .block(let block):  return seenBlocks.contains(block)
+        case .alwaysOpen: true
+        case .block(let block): seenBlocks.contains(block)
         }
     }
 

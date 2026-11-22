@@ -13,7 +13,6 @@ import Foundation
 
 // MARK: - HomeViewModel
 
-@MainActor
 @Suite("홈 ViewModel")
 struct HomeViewModelTests {
 
@@ -75,7 +74,6 @@ struct HomeViewModelTests {
 
 // MARK: - ChapterSelectViewModel
 
-@MainActor
 @Suite("챕터 선택 ViewModel")
 struct ChapterSelectViewModelTests {
 
@@ -135,7 +133,6 @@ struct ChapterSelectViewModelTests {
 
 // MARK: - ChapterViewModel
 
-@MainActor
 @Suite("스테이지 목록 ViewModel")
 struct ChapterViewModelTests {
 
@@ -202,7 +199,6 @@ struct ChapterViewModelTests {
 
 // MARK: - SettingsViewModel
 
-@MainActor
 @Suite("설정 ViewModel")
 struct SettingsViewModelTests {
 
@@ -308,7 +304,6 @@ struct SettingsViewModelTests {
 
 // MARK: - 변경 알림 전파
 
-@MainActor
 @Suite("ViewModel 변경 알림")
 struct ViewModelChangeForwardingTests {
 

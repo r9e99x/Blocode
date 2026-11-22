@@ -20,9 +20,8 @@ enum GameState {
 // MARK: - GameViewModel
 /// 게임 상태, 코드 블럭 목록, 실행 흐름을 관리하는 ViewModel
 /// 판의 규칙은 GameBoard(Model)가, 그리기는 GameBoardRendering을 구현한 화면이 맡음
-/// @MainActor: 모든 상태·실행 로직이 항상 메인 스레드에서만 처리됨을 보장
+/// 메인 액터 소속(프로젝트 기본 격리): 모든 상태·실행 로직이 항상 메인 스레드에서만 처리됨
 /// (수동 MainActor.run/DispatchQueue 디스패치 없이 관찰 대상 접근이 안전해짐)
-@MainActor
 @Observable
 final class GameViewModel {
 
@@ -75,7 +74,7 @@ final class GameViewModel {
     let loadFailed: Bool
 
     /// 판을 그리는 화면 — 변화만 알리고 구체 타입은 모름, 없어도 규칙은 정상 동작 (순환 참조 방지로 weak)
-    weak var renderer: GameBoardRendering?
+    @ObservationIgnored weak var renderer: GameBoardRendering?  // 그리기 담당 연결 — 화면 상태가 아니라 관찰하지 않음
 
     /// 클리어 기록 저장소 — 테스트는 메모리 저장소를 주입
     private let progress: ProgressService
@@ -107,7 +106,8 @@ final class GameViewModel {
 
     /// 걸린 시간 측정 시작 시각 — VM 생성(스테이지 화면 진입) 시 기록, retry()/fullReset()에서 다시 기록
     /// (생각하는 시간까지 포함해야 "걸린 시간"이라는 이름과 맞음 — 실행 시간만 재던 기존 방식 수정)
-    @ObservationIgnored private var startTime = Date()
+    /// ContinuousClock: 기기 시계를 바꾸거나 시간대가 바뀌어도 흐른 시간만 정확히 셈 (Date는 벽시계라 영향을 받음)
+    @ObservationIgnored private var startTime = ContinuousClock.now
 
     // MARK: - 초기화
 
@@ -346,7 +346,7 @@ final class GameViewModel {
         attemptCount += 1       // 도전 횟수 증가
 
         // 블럭 순서대로 비동기 실행 → 완료 시 idle 복귀
-        // (@MainActor 클래스라 Task도 메인에서 실행됨)
+        // (메인 액터 클래스라 Task도 메인에서 실행됨)
         runTask = Task {
             // 되돌아가는 움직임이 끝난 뒤에 첫 블럭을 실행 — 겹치면 캐릭터가 실패한 자리에서 출발하는 것처럼 보임
             if restartsAfterFailure { await waitForAnimation(0.3) }
@@ -379,7 +379,7 @@ final class GameViewModel {
         reset()
         codeBlocks = []    // 블럭 목록 초기화
         attemptCount = 0   // 도전 횟수 초기화
-        startTime = Date() // 걸린 시간도 처음부터 다시 측정
+        startTime = .now   // 걸린 시간도 처음부터 다시 측정
     }
 
     /// 클리어 화면 "다시 도전" — 블럭은 유지한 채 캐릭터·도전 횟수·걸린 시간만 새 판으로 초기화
@@ -387,7 +387,7 @@ final class GameViewModel {
     func retry() {
         reset()
         attemptCount = 0
-        startTime = Date()
+        startTime = .now
     }
 
     // MARK: - 블럭 실행 로직
@@ -579,10 +579,10 @@ final class GameViewModel {
 
     // MARK: - 결과 처리
 
-    /// 클리어 성공 처리 — 별점 계산 후 ProgressService에 기록 저장 (@MainActor라 동기 처리)
+    /// 클리어 성공 처리 — 별점 계산 후 ProgressService에 기록 저장 (메인 액터라 동기 처리)
     private func handleSuccess() {
         // 걸린 시간 확정 — 스테이지 진입(또는 재도전)부터 지금까지
-        elapsedTime = Date().timeIntervalSince(startTime)
+        elapsedTime = (ContinuousClock.now - startTime) / .seconds(1)  // Duration ÷ 1초 = 초 단위 Double
         // 사용한 블럭 수 기준으로 별점 계산
         var stars = stage.starThresholds.stars(for: totalBlockCount)
         // 보석이 있는 스테이지인데 전부 수집하지 못했으면 별 3개는 주지 않음 (최대 2개)
@@ -605,7 +605,7 @@ final class GameViewModel {
         }
     }
 
-    /// 실패 처리 (벽 충돌 등) — 실패 블럭 경로와 메시지 설정 (@MainActor라 동기 처리)
+    /// 실패 처리 (벽 충돌 등) — 실패 블럭 경로와 메시지 설정 (메인 액터라 동기 처리)
     private func handleFailure(at path: [Int], message: String) {
         // await(이동 애니메이션 대기) 사이에 reset·화면 이탈로 실행이 끝났으면 실패로 처리하지 않음
         guard isRunActive else { return }

@@ -19,10 +19,10 @@ enum LearningCategory: String, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
-        case .block:        return "블럭 개념"
-        case .beginner:     return "초급"
-        case .intermediate: return "중급"
-        case .advanced:     return "고급"
+        case .block: "블럭 개념"
+        case .beginner: "초급"
+        case .intermediate: "중급"
+        case .advanced: "고급"
         }
     }
 }
@@ -38,8 +38,8 @@ enum LearningTopic: String, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
-        case .coding: return "코딩"
-        case .cs:     return "CS"
+        case .coding: "코딩"
+        case .cs: "CS"
         }
     }
 }
@@ -80,9 +80,9 @@ struct LearningCard: Identifiable, Equatable {
     /// 지정 언어의 코드 예시 텍스트 (예시가 없거나 그 언어 예시가 없으면 nil)
     func exampleCode(in language: CodeLanguage) -> String? {
         switch example {
-        case .blocks(let blocks)?: return CodeRenderer.render(blocks, language: language)
-        case .text(let table)?:    return table[language]
-        case nil:                  return nil
+        case .blocks(let blocks)?: CodeRenderer.render(blocks, language: language)
+        case .text(let table)?: table[language]
+        case nil: nil
         }
     }
 

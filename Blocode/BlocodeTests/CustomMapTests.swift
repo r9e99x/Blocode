@@ -67,7 +67,6 @@ private let straightRows = ["S...G", "#####", "#####"]
 
 // MARK: - MapSolver
 
-@MainActor
 @Suite("맵 풀이 탐색")
 struct MapSolverTests {
 
@@ -110,7 +109,6 @@ struct MapSolverTests {
 
 // MARK: - MapValidator
 
-@MainActor
 @Suite("맵 저장 검증")
 struct MapValidatorTests {
 
@@ -221,7 +219,6 @@ struct MapValidatorTests {
 
 // MARK: - CustomMap 모델
 
-@MainActor
 @Suite("사용자 맵 모델")
 struct CustomMapModelTests {
 
@@ -268,7 +265,6 @@ struct CustomMapModelTests {
 
 // MARK: - CustomMapService
 
-@MainActor
 @Suite("사용자 맵 저장 서비스")
 struct CustomMapServiceTests {
 
@@ -414,7 +410,6 @@ struct CustomMapServiceTests {
 
 // MARK: - 내 맵 목록·플레이 연결
 
-@MainActor
 @Suite("내 맵 목록과 플레이 연결")
 struct CustomMapListTests {
 

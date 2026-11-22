@@ -248,15 +248,15 @@ extension BlockType {
     /// (팔레트 카드·코드 행·최소화 칩·자식 행·드래그 고스트가 전부 이 색에서 파생되므로 한 곳만 관리)
     var blockColor: Color {
         switch self {
-        case .moveForward:    return Self.pastel(124/255, 196/255, 158/255) // 민트 그린
-        case .moveBackward:   return Self.pastel(207/255, 127/255, 122/255) // 살먼 로즈
-        case .turnLeft:       return Self.pastel(142/255, 176/255, 200/255) // 뮤트 블루
-        case .turnRight:      return Self.pastel(142/255, 176/255, 200/255) // 뮤트 블루
-        case .repeatBlock:    return Self.pastel(168/255, 141/255, 192/255) // 라벤더
-        case .ifBlock:        return Self.pastel(240/255, 196/255, 100/255) // 골든 옐로우
-        case .functionBlock:  return Self.pastel(94/255,  198/255, 208/255) // 틸
-        case .collectItem:    return Self.pastel(0.42, 0.82, 0.68)          // 민트 보석 — AppColors.gemMint와 동일 톤
-        case .activateSwitch: return Self.pastel(0.93, 0.62, 0.28)          // 주황 스위치 — AppColors.switchOrange와 동일 톤
+        case .moveForward: Self.pastel(124/255, 196/255, 158/255) // 민트 그린
+        case .moveBackward: Self.pastel(207/255, 127/255, 122/255) // 살먼 로즈
+        case .turnLeft: Self.pastel(142/255, 176/255, 200/255) // 뮤트 블루
+        case .turnRight: Self.pastel(142/255, 176/255, 200/255) // 뮤트 블루
+        case .repeatBlock: Self.pastel(168/255, 141/255, 192/255) // 라벤더
+        case .ifBlock: Self.pastel(240/255, 196/255, 100/255) // 골든 옐로우
+        case .functionBlock: Self.pastel(94/255,  198/255, 208/255) // 틸
+        case .collectItem: Self.pastel(0.42, 0.82, 0.68)          // 민트 보석 — AppColors.gemMint와 동일 톤
+        case .activateSwitch: Self.pastel(0.93, 0.62, 0.28)          // 주황 스위치 — AppColors.switchOrange와 동일 톤
         }
     }
 
@@ -271,9 +271,9 @@ extension SettingsService.ThemePreference {
     /// SwiftUI colorScheme 값으로 변환 (system이면 nil → OS 기본 따름)
     var colorScheme: ColorScheme? {
         switch self {
-        case .light:  return .light
-        case .dark:   return .dark
-        case .system: return nil   // nil이면 preferredColorScheme에서 시스템 따름
+        case .light: .light
+        case .dark: .dark
+        case .system: nil   // nil이면 preferredColorScheme에서 시스템 따름
         }
     }
 }

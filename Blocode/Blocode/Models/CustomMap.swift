@@ -57,6 +57,7 @@ final class CustomMap {
     }
 
     /// 맵 데이터를 JSON으로 인코딩해 새 맵을 만듦
+    // @Model 클래스는 프로젝트 기본 격리(메인 액터)를 따르지 않아서, 메인 액터 소속인 MapData를 JSON으로 바꾸는 메서드엔 직접 표시가 필요함
     @MainActor
     static func make(name: String, map: MapData, palette: [BlockType], thresholds: StarThresholds) -> CustomMap {
         CustomMap(name: name, mapJSON: encode(map), paletteRaw: palette.map(\.rawValue),

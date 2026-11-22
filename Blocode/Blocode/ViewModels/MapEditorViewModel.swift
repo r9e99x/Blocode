@@ -48,7 +48,7 @@ final class MapEditorViewModel {
 
         var position: Position {
             switch self {
-            case .switchCell(let p), .portalEnd(let p): return p
+            case .switchCell(let p), .portalEnd(let p): p
             }
         }
     }
@@ -262,14 +262,14 @@ final class MapEditorViewModel {
     /// 도구별 배치 규칙 — 거부하면 message를 남기고 false
     private func applyTool(at p: Position) -> Bool {
         switch tool {
-        case .floor:      return paintFloor(p)
-        case .wall:       return paintWall(p)
-        case .start:      return placeStart(p)
-        case .goal:       return placeGoal(p)
-        case .item:       return toggleItem(p)
-        case .switchGate: return placeSwitchOrGate(p)
-        case .portal:     return placePortal(p)
-        case .eraser:     return erase(p)
+        case .floor: paintFloor(p)
+        case .wall: paintWall(p)
+        case .start: placeStart(p)
+        case .goal: placeGoal(p)
+        case .item: toggleItem(p)
+        case .switchGate: placeSwitchOrGate(p)
+        case .portal: placePortal(p)
+        case .eraser: erase(p)
         }
     }
 
@@ -565,7 +565,7 @@ final class MapEditorViewModel {
     /// 확인을 통과해야 저장됨 — 짝을 기다리던 칸은 저장되지 않음
     /// - Throws: CustomMapService.SaveError
     @discardableResult
-    func save(to service: CustomMapService) throws -> CustomMap {
+    func save(to service: CustomMapService) throws(CustomMapService.SaveError) -> CustomMap {
         let result = validation ?? validate()
         guard result.isValid, let thresholds else {
             throw CustomMapService.SaveError.invalidMap(result.issues)
@@ -586,9 +586,10 @@ final class MapEditorViewModel {
             let saved = try save(to: service ?? .shared)
             notice = "저장했어요."
             return saved
-        } catch CustomMapService.SaveError.invalidMap {
+        } catch .invalidMap {
             notice = nil
         } catch {
+            // 타입 지정 throws라 error가 이미 SaveError — 다른 종류의 오류가 들어올 수 없음
             notice = error.localizedDescription
         }
         return nil

@@ -13,7 +13,6 @@ import Testing
 import Foundation
 @testable import Blocode
 
-@MainActor
 @Suite("스테이지 풀이 가능 여부")
 struct StageSolvabilityTests {
 

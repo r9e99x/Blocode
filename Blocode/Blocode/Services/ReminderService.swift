@@ -31,9 +31,9 @@ struct SystemNotificationCenter: NotificationScheduling {
 
     func permission() async -> NotificationPermission {
         switch await UNUserNotificationCenter.current().notificationSettings().authorizationStatus {
-        case .notDetermined: return .notDetermined
-        case .denied: return .denied
-        default: return .authorized  // authorized·provisional·ephemeral
+        case .notDetermined: .notDetermined
+        case .denied: .denied
+        default: .authorized  // authorized·provisional·ephemeral
         }
     }
 
@@ -102,9 +102,9 @@ final class ReminderService {
     /// 알림 문구 — 첫 알림은 연속 일수를 넣고, 뒤쪽 알림은 일반 문구
     static func message(streak: Int) -> String {
         switch streak {
-        case ..<1: return "오늘의 퍼즐이 기다리고 있어요. 한 판 풀어 볼까요?"
-        case 1: return "오늘의 퍼즐로 연속 기록을 이어 가요."
-        default: return "\(streak)일 연속이 끊기기 전에 한 판만 풀어 볼까요?"
+        case ..<1: "오늘의 퍼즐이 기다리고 있어요. 한 판 풀어 볼까요?"
+        case 1: "오늘의 퍼즐로 연속 기록을 이어 가요."
+        default: "\(streak)일 연속이 끊기기 전에 한 판만 풀어 볼까요?"
         }
     }
 

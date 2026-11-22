@@ -198,7 +198,6 @@ struct GameBoardTests {
 // MARK: - VM ↔ 화면 연결
 
 /// 판 변화를 기록만 하는 가짜 화면 — 어떤 순서로 무엇을 알리는지 확인
-@MainActor
 private final class RecordingRenderer: GameBoardRendering {
     var events: [BoardEvent] = []
     var speeds: [Double] = []
@@ -211,7 +210,6 @@ private final class RecordingRenderer: GameBoardRendering {
     }
 }
 
-@MainActor
 @Suite("게임 판과 화면 연결")
 struct GameBoardRenderingTests {
 

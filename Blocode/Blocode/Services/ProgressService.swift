@@ -351,8 +351,8 @@ enum UnlockableFeature {
     /// 모든 스테이지를 클리어해야 하는 챕터 번호
     var requiredChapter: Int {
         switch self {
-        case .dailyPuzzle: return 3
-        case .customMaps: return 5
+        case .dailyPuzzle: 3
+        case .customMaps: 5
         }
     }
 }

@@ -13,7 +13,6 @@ import Testing
 import Foundation
 @testable import Blocode
 
-@MainActor
 @Suite("맵 풀이 탐색 동등성")
 struct MapSolverEquivalenceTests {
 

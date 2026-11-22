@@ -11,7 +11,6 @@
 import Testing
 @testable import Blocode
 
-@MainActor
 @Suite("블럭 편집")
 struct BlockEditingTests {
 

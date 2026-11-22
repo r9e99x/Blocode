@@ -717,30 +717,30 @@ extension Stage {
     /// 내 맵·일일 퍼즐·랜덤 퍼즐의 상단 이름 — 기본 스테이지는 "STAGE 1-1"
     var navCaption: String {
         switch kind {
-        case .customMap:    return "MY MAP"
-        case .dailyPuzzle:  return "DAILY"
-        case .randomPuzzle: return "RANDOM"
-        case .regular:      return "STAGE \(chapter)-\(stageNumber)"
+        case .customMap: "MY MAP"
+        case .dailyPuzzle: "DAILY"
+        case .randomPuzzle: "RANDOM"
+        case .regular: "STAGE \(chapter)-\(stageNumber)"
         }
     }
 
     /// 클리어 화면 제목 — nil이면 기본 스테이지 레이블
     var specialHeading: String? {
         switch kind {
-        case .customMap:    return "MY MAP"
-        case .dailyPuzzle:  return "DAILY PUZZLE"
-        case .randomPuzzle: return "RANDOM PUZZLE"
-        case .regular:      return nil
+        case .customMap: "MY MAP"
+        case .dailyPuzzle: "DAILY PUZZLE"
+        case .randomPuzzle: "RANDOM PUZZLE"
+        case .regular: nil
         }
     }
 
     /// 클리어 화면 마지막 버튼 글자
     var lastButtonTitle: String {
         switch kind {
-        case .customMap:    return "나만의 맵으로"
-        case .dailyPuzzle:  return "홈으로"
-        case .randomPuzzle: return "한 판 더"
-        case .regular:      return "챕터 목록으로"
+        case .customMap: "나만의 맵으로"
+        case .dailyPuzzle: "홈으로"
+        case .randomPuzzle: "한 판 더"
+        case .regular: "챕터 목록으로"
         }
     }
 }

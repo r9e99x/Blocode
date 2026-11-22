@@ -11,7 +11,6 @@ import Testing
 import Foundation
 @testable import Blocode
 
-@MainActor
 @Suite("퍼즐 생성")
 struct PuzzleGeneratorTests {
 
@@ -260,7 +259,6 @@ struct PuzzleGeneratorTests {
 
 // MARK: - 오늘의 한 줄
 
-@MainActor
 @Suite("오늘의 한 줄")
 struct DailyQuoteTests {
     private func date(_ y: Int, _ m: Int, _ d: Int) -> Date {
@@ -294,7 +292,6 @@ struct DailyQuoteTests {
 
 // MARK: - 랜덤 퍼즐 난이도
 
-@MainActor
 @Suite("랜덤 퍼즐 난이도")
 struct RandomDifficultyTests {
 

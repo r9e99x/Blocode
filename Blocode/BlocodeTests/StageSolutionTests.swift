@@ -12,7 +12,6 @@ import Testing
 import Foundation
 @testable import Blocode
 
-@MainActor
 @Suite("챕터 11~15 기준 풀이")
 struct StageSolutionTests {
 
@@ -39,42 +38,42 @@ struct StageSolutionTests {
     /// 스테이지별 기준 풀이 — 없으면 nil
     private static func solution(for stageID: String) -> [Block]? {
         switch stageID {
-        case "ch11_stage1": return [loop(4, [forward, forward, collect])]
-        case "ch11_stage2": return [loop(6, [forward, right, forward, collect, left])]
-        case "ch11_stage3": return [loop(3, [ifClear([loop(6, [forward])]), right])]
-        case "ch11_stage4": return [loop(4, [ifClear([loop(2, [forward])]), left, ifClear([loop(2, [forward])]), collect, ifBlocked([loop(2, [backward])]), right])]
-        case "ch11_stage5": return [loop(4, [ifClear([loop(2, [forward, right, forward, left])]), collect])]
-        case "ch11_stage6": return [loop(4, [ifClear([loop(2, [forward, forward, forward, collect])]), right])]
-        case "ch11_stage7": return [loop(3, [ifClear([loop(2, [forward])]), left, ifClear([loop(2, [forward])]), collect, ifBlocked([loop(2, [backward])]), right]), loop(10, [ifBlocked([left]), ifClear([loop(2, [forward])])])]
-        case "ch12_stage1": return [loop(10, [ifBlocked([right]), forward])]
-        case "ch12_stage2": return [loop(10, [ifBlocked([right]), forward])]
-        case "ch12_stage3": return [loop(8, [ifBlocked([right]), ifClear([loop(4, [forward])])])]
-        case "ch12_stage4": return [loop(10, [ifBlocked([right]), forward, collect])]
-        case "ch12_stage5": return [loop(10, [ifBlocked([right]), ifBlocked([right, right]), forward])]
-        case "ch12_stage6": return [loop(8, [ifBlocked([right]), ifBlocked([right, right]), ifClear([loop(2, [forward])])])]
-        case "ch12_stage7": return [loop(10, [ifBlocked([right]), forward]), collect, loop(10, [ifBlocked([right]), forward])]
-        case "ch13_stage1": return [loop(4, [forward, press, forward])]
-        case "ch13_stage2": return [loop(3, [backward]), press, loop(9, [forward])]
-        case "ch13_stage3": return [loop(2, [forward]), press, loop(5, [backward]), press, loop(8, [forward])]
-        case "ch13_stage4": return [loop(4, [backward]), press, loop(8, [forward]), press, loop(4, [backward]), left, loop(2, [forward])]
-        case "ch13_stage5": return [left, loop(4, [ifClear([loop(3, [forward])]), press, ifBlocked([loop(3, [backward])]), right])]
-        case "ch13_stage6": return [loop(4, [forward, collect, forward, press, forward, right])]
-        case "ch13_stage7": return [loop(4, [backward]), press, loop(2, [forward]), left, loop(4, [forward]), press, loop(4, [backward]), right, loop(3, [forward]), right, loop(3, [forward]), collect, forward, press, loop(4, [backward]), left, loop(3, [forward])]
-        case "ch14_stage1": return [loop(6, [forward])]
-        case "ch14_stage2": return [loop(2, [backward]), loop(4, [forward])]
-        case "ch14_stage3": return [loop(3, [forward]), collect, backward, loop(3, [forward])]
-        case "ch14_stage4": return [loop(6, [backward]), collect, loop(9, [backward])]
-        case "ch14_stage5": return [loop(4, [ifClear([loop(2, [forward])]), collect, ifClear([loop(2, [forward])])])]
-        case "ch14_stage6": return [backward, loop(2, [forward]), press, loop(2, [backward]), loop(5, [forward])]
-        case "ch14_stage7": return [loop(6, [forward]), collect, loop(2, [forward]), press, loop(5, [backward]), loop(8, [forward]), collect, loop(5, [forward]), right, loop(2, [forward]), left, loop(6, [forward])]
-        case "ch15_stage1": return [loop(7, [ifBlocked([collect, left]), ifClear([loop(2, [forward])])])]
-        case "ch15_stage2": return [loop(4, [ifClear([loop(3, [forward])]), collect, ifBlocked([loop(3, [backward])]), right])]
-        case "ch15_stage3": return [loop(8, [ifBlocked([right]), forward]), collect, loop(5, [ifBlocked([right]), forward]), press, loop(10, [ifBlocked([right]), forward])]
-        case "ch15_stage4": return [loop(3, [ifClear([loop(2, [forward])]), press, left, forward, collect, backward, right, ifClear([loop(2, [forward])])])]
-        case "ch15_stage5": return [loop(4, [forward, left, forward, collect, forward, press, ifBlocked([loop(2, [backward])]), right, forward])]
-        case "ch15_stage6": return [loop(9, [ifBlocked([right]), ifClear([loop(2, [forward])])]), press, loop(2, [left]), loop(10, [ifBlocked([left]), ifClear([loop(2, [forward])])])]
-        case "ch15_stage7": return [loop(2, [ifClear([loop(2, [forward])]), left, ifClear([loop(2, [forward])]), collect, ifBlocked([loop(2, [backward])]), right]), loop(5, [ifBlocked([right]), ifClear([loop(2, [forward])])]), press, loop(6, [ifBlocked([right]), ifClear([loop(2, [forward])])]), press, loop(2, [left]), loop(10, [ifBlocked([left]), ifClear([loop(2, [forward])])]), right, loop(2, [forward])]
-        default: return nil
+        case "ch11_stage1": [loop(4, [forward, forward, collect])]
+        case "ch11_stage2": [loop(6, [forward, right, forward, collect, left])]
+        case "ch11_stage3": [loop(3, [ifClear([loop(6, [forward])]), right])]
+        case "ch11_stage4": [loop(4, [ifClear([loop(2, [forward])]), left, ifClear([loop(2, [forward])]), collect, ifBlocked([loop(2, [backward])]), right])]
+        case "ch11_stage5": [loop(4, [ifClear([loop(2, [forward, right, forward, left])]), collect])]
+        case "ch11_stage6": [loop(4, [ifClear([loop(2, [forward, forward, forward, collect])]), right])]
+        case "ch11_stage7": [loop(3, [ifClear([loop(2, [forward])]), left, ifClear([loop(2, [forward])]), collect, ifBlocked([loop(2, [backward])]), right]), loop(10, [ifBlocked([left]), ifClear([loop(2, [forward])])])]
+        case "ch12_stage1": [loop(10, [ifBlocked([right]), forward])]
+        case "ch12_stage2": [loop(10, [ifBlocked([right]), forward])]
+        case "ch12_stage3": [loop(8, [ifBlocked([right]), ifClear([loop(4, [forward])])])]
+        case "ch12_stage4": [loop(10, [ifBlocked([right]), forward, collect])]
+        case "ch12_stage5": [loop(10, [ifBlocked([right]), ifBlocked([right, right]), forward])]
+        case "ch12_stage6": [loop(8, [ifBlocked([right]), ifBlocked([right, right]), ifClear([loop(2, [forward])])])]
+        case "ch12_stage7": [loop(10, [ifBlocked([right]), forward]), collect, loop(10, [ifBlocked([right]), forward])]
+        case "ch13_stage1": [loop(4, [forward, press, forward])]
+        case "ch13_stage2": [loop(3, [backward]), press, loop(9, [forward])]
+        case "ch13_stage3": [loop(2, [forward]), press, loop(5, [backward]), press, loop(8, [forward])]
+        case "ch13_stage4": [loop(4, [backward]), press, loop(8, [forward]), press, loop(4, [backward]), left, loop(2, [forward])]
+        case "ch13_stage5": [left, loop(4, [ifClear([loop(3, [forward])]), press, ifBlocked([loop(3, [backward])]), right])]
+        case "ch13_stage6": [loop(4, [forward, collect, forward, press, forward, right])]
+        case "ch13_stage7": [loop(4, [backward]), press, loop(2, [forward]), left, loop(4, [forward]), press, loop(4, [backward]), right, loop(3, [forward]), right, loop(3, [forward]), collect, forward, press, loop(4, [backward]), left, loop(3, [forward])]
+        case "ch14_stage1": [loop(6, [forward])]
+        case "ch14_stage2": [loop(2, [backward]), loop(4, [forward])]
+        case "ch14_stage3": [loop(3, [forward]), collect, backward, loop(3, [forward])]
+        case "ch14_stage4": [loop(6, [backward]), collect, loop(9, [backward])]
+        case "ch14_stage5": [loop(4, [ifClear([loop(2, [forward])]), collect, ifClear([loop(2, [forward])])])]
+        case "ch14_stage6": [backward, loop(2, [forward]), press, loop(2, [backward]), loop(5, [forward])]
+        case "ch14_stage7": [loop(6, [forward]), collect, loop(2, [forward]), press, loop(5, [backward]), loop(8, [forward]), collect, loop(5, [forward]), right, loop(2, [forward]), left, loop(6, [forward])]
+        case "ch15_stage1": [loop(7, [ifBlocked([collect, left]), ifClear([loop(2, [forward])])])]
+        case "ch15_stage2": [loop(4, [ifClear([loop(3, [forward])]), collect, ifBlocked([loop(3, [backward])]), right])]
+        case "ch15_stage3": [loop(8, [ifBlocked([right]), forward]), collect, loop(5, [ifBlocked([right]), forward]), press, loop(10, [ifBlocked([right]), forward])]
+        case "ch15_stage4": [loop(3, [ifClear([loop(2, [forward])]), press, left, forward, collect, backward, right, ifClear([loop(2, [forward])])])]
+        case "ch15_stage5": [loop(4, [forward, left, forward, collect, forward, press, ifBlocked([loop(2, [backward])]), right, forward])]
+        case "ch15_stage6": [loop(9, [ifBlocked([right]), ifClear([loop(2, [forward])])]), press, loop(2, [left]), loop(10, [ifBlocked([left]), ifClear([loop(2, [forward])])])]
+        case "ch15_stage7": [loop(2, [ifClear([loop(2, [forward])]), left, ifClear([loop(2, [forward])]), collect, ifBlocked([loop(2, [backward])]), right]), loop(5, [ifBlocked([right]), ifClear([loop(2, [forward])])]), press, loop(6, [ifBlocked([right]), ifClear([loop(2, [forward])])]), press, loop(2, [left]), loop(10, [ifBlocked([left]), ifClear([loop(2, [forward])])]), right, loop(2, [forward])]
+        default: nil
         }
     }
 

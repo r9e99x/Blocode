@@ -10,7 +10,6 @@ import Testing
 @testable import Blocode
 
 /// 학습 보관함 — 카드 목록·수집·처음 등장 계산 검증
-@MainActor
 @Suite("학습 보관함")
 struct LearningTests {
 
@@ -159,7 +158,6 @@ struct LearningTests {
 
 // MARK: - 처음 만나는 블럭
 
-@MainActor
 @Suite("처음 만나는 블럭")
 struct FirstEncounterTests {
 
@@ -194,7 +192,6 @@ struct FirstEncounterTests {
     }
 }
 
-@MainActor
 @Suite("진도에서 채우기")
 struct SyncThroughChaptersTests {
     @Test("챕터 5까지 클리어하면 반복·조건·함수·뒤로까지 채워지고 보석·스위치는 비어 있음")
@@ -213,7 +210,6 @@ struct SyncThroughChaptersTests {
 
 // MARK: - 학습 보관함 화면
 
-@MainActor
 @Suite("학습 보관함 화면")
 struct LearningLibraryViewModelTests {
 
@@ -287,7 +283,6 @@ struct LearningLibraryViewModelTests {
 
 // MARK: - 첫 등장 설명 차례
 
-@MainActor
 @Suite("첫 등장 설명 차례")
 struct BlockIntroViewModelTests {
 

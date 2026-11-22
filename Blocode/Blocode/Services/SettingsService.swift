@@ -40,9 +40,9 @@ final class SettingsService {
         /// 설정 화면에 표시할 레이블 (한국어)
         var label: String {
             switch self {
-            case .light:  return "라이트"
-            case .dark:   return "다크"
-            case .system: return "시스템"
+            case .light: "라이트"
+            case .dark: "다크"
+            case .system: "시스템"
             }
         }
     }

@@ -44,8 +44,8 @@ enum PuzzleDifficulty {
     /// 가장 짧은 풀이 블럭 수 범위 — 너무 쉽거나 너무 길지 않게
     var shortestRange: ClosedRange<Int> {
         switch self {
-        case .standard: return 10...48
-        case .hard:     return 34...64
+        case .standard: 10...48
+        case .hard: 34...64
         }
     }
 
@@ -64,8 +64,8 @@ enum PuzzleDifficulty {
     /// 보석 최대 개수
     func maxItems(mixed: Bool) -> Int {
         switch self {
-        case .standard: return mixed ? 2 : 3
-        case .hard:     return mixed ? 3 : 4
+        case .standard: mixed ? 2 : 3
+        case .hard: mixed ? 3 : 4
         }
     }
 }
@@ -79,8 +79,8 @@ enum PuzzleKind {
     /// 만들기 전에도 알 수 있는 스테이지 ID — 화면 정체성 구분에 사용 (퍼즐을 만들지 않고 계산)
     var stageID: String {
         switch self {
-        case .daily(let key):   return "\(PuzzleGenerator.dailyIDPrefix)\(key)"
-        case .random(let seed): return "\(PuzzleGenerator.randomIDPrefix)\(seed)"
+        case .daily(let key): "\(PuzzleGenerator.dailyIDPrefix)\(key)"
+        case .random(let seed): "\(PuzzleGenerator.randomIDPrefix)\(seed)"
         }
     }
 
@@ -136,11 +136,11 @@ enum PuzzleGenerator {
     /// 요일별 테마 — 월·화 기본, 수 보석, 목 스위치, 금 포탈, 주말 섞기 (weekday는 Calendar 기준 1=일요일 … 7=토요일)
     static func theme(forWeekday weekday: Int) -> PuzzleTheme {
         switch weekday {
-        case 2, 3: return .basic
-        case 4: return .gems
-        case 5: return .switches
-        case 6: return .portals
-        default: return .mixed
+        case 2, 3: .basic
+        case 4: .gems
+        case 5: .switches
+        case 6: .portals
+        default: .mixed
         }
     }
 

@@ -9,7 +9,6 @@ import Testing
 @testable import Blocode
 
 /// 블럭 → 텍스트 코드 변환 검증
-@MainActor
 @Suite("코드로 보기 변환")
 struct CodeRendererTests {
 
@@ -203,7 +202,6 @@ struct CodeRendererTests {
 
 // MARK: - 코드 언어 선택 상태
 
-@MainActor
 @Suite("코드 언어 선택")
 struct CodeLanguageViewModelTests {
 

@@ -17,11 +17,11 @@ enum CodeLanguage: String, CaseIterable, Codable, Identifiable {
     /// 화면에 보이는 이름
     var title: String {
         switch self {
-        case .swift:  return "Swift"
-        case .python: return "Python"
-        case .c:      return "C"
-        case .cpp:    return "C++"
-        case .java:   return "Java"
+        case .swift: "Swift"
+        case .python: "Python"
+        case .c: "C"
+        case .cpp: "C++"
+        case .java: "Java"
         }
     }
 }
@@ -129,10 +129,10 @@ enum CodeRenderer {
     /// 반복문 머리 — 반복 횟수와 변수 이름으로 언어별 문법을 만듦
     private static func loopHeader(count: Int, variable: String, language: CodeLanguage) -> String {
         switch language {
-        case .python: return "for \(variable) in range(\(count)):"
-        case .swift:  return "for \(variable) in 0..<\(count) {"
-        case .c, .java: return "for (int \(variable) = 0; \(variable) < \(count); \(variable)++) {"
-        case .cpp:    return "for (int \(variable) = 0; \(variable) < \(count); ++\(variable)) {"
+        case .python: "for \(variable) in range(\(count)):"
+        case .swift: "for \(variable) in 0..<\(count) {"
+        case .c, .java: "for (int \(variable) = 0; \(variable) < \(count); \(variable)++) {"
+        case .cpp: "for (int \(variable) = 0; \(variable) < \(count); ++\(variable)) {"
         }
     }
 
@@ -194,8 +194,8 @@ enum CodeRenderer {
     /// 빈 블록에 넣는 자리 채움
     private static func pass(_ language: CodeLanguage) -> String {
         switch language {
-        case .python: return "pass"
-        default:      return "// (비어 있음)"
+        case .python: "pass"
+        default: "// (비어 있음)"
         }
     }
 }

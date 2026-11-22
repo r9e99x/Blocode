@@ -26,7 +26,6 @@ struct MapEditorView: View {
     @State private var testStage: Stage?
 
     /// - Parameter editingID: 이미 저장된 맵을 고칠 때 그 맵의 번호 (없거나 손상된 맵이면 새 맵으로 열림)
-    @MainActor
     init(editingID: UUID? = nil, service: CustomMapService? = nil,
          showsOwnBackButton: Bool = true,
          onSaved: ((CustomMap) -> Void)? = nil,

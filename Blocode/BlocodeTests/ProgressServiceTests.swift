@@ -21,7 +21,6 @@ extension ProgressService {
 
 /// 실행이 끝날 때까지 기다림 — 여러 테스트 파일이 함께 씀 (예전엔 같은 반복문이 파일마다 있었고 제한 시간도 제각각이었음)
 /// 제한 시간은 무한 대기를 막는 넉넉한 상한일 뿐 — 같이 도는 테스트와 메인 액터를 나눠 써서 부하가 걸리면 오래 걸릴 수 있고, 끝나면 바로 빠져나옴
-@MainActor
 func waitWhileRunning(_ viewModel: GameViewModel, timeout: TimeInterval = 60) async throws {
     let deadline = Date().addingTimeInterval(timeout)
     while viewModel.gameState == .running, Date() < deadline {
@@ -34,7 +33,6 @@ func waitWhileRunning(_ viewModel: GameViewModel, timeout: TimeInterval = 60) as
 
 /// 테스트가 직접 풀어 주는 애니메이션 대기 — GameViewModel(sleep:)에 `gate.sleep`을 넣으면
 /// 블럭 하나의 애니메이션마다 여기서 멈추므로, "첫 이동 도중" 같은 상태를 시간에 기대지 않고 정확히 만들 수 있음
-@MainActor
 final class AnimationGate {
     private var waiting: [CheckedContinuation<Void, Never>] = []
 
@@ -95,7 +93,6 @@ func observationFires(reading read: () -> Void, when change: () -> Void) -> Bool
     return flag.fired
 }
 
-@MainActor
 @Suite("진행도 저장")
 struct ProgressServiceTests {
 
@@ -222,7 +219,6 @@ struct ProgressServiceTests {
 
 // MARK: - 스테이지 불러오기 경계
 
-@MainActor
 @Suite("스테이지 불러오기 경계")
 struct StageLoaderEdgeTests {
 

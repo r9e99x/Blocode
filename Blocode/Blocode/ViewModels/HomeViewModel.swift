@@ -123,11 +123,11 @@ final class HomeViewModel {
 
     private static func title(of theme: PuzzleTheme) -> String {
         switch theme {
-        case .basic: return "미로 길 찾기"
-        case .gems: return "보석 수집"
-        case .switches: return "스위치와 문"
-        case .portals: return "포탈 지름길"
-        case .mixed: return "기믹 섞기"
+        case .basic: "미로 길 찾기"
+        case .gems: "보석 수집"
+        case .switches: "스위치와 문"
+        case .portals: "포탈 지름길"
+        case .mixed: "기믹 섞기"
         }
     }
 

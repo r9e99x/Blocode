@@ -16,8 +16,8 @@ enum IfCondition: String, Codable {
     /// 조건 설명 텍스트 (블럭 행에 표시)
     var displayName: String {
         switch self {
-        case .pathClear:   return "앞이 뚫려있으면"
-        case .pathBlocked: return "앞이 막혀있으면"
+        case .pathClear: "앞이 뚫려있으면"
+        case .pathBlocked: "앞이 막혀있으면"
         }
     }
 }
@@ -39,45 +39,45 @@ enum BlockType: String, Codable, CaseIterable {
     /// 화면에 표시할 블럭 이름 (한국어)
     var displayName: String {
         switch self {
-        case .moveForward:    return "앞으로"
-        case .moveBackward:   return "뒤로"
-        case .turnLeft:       return "왼쪽 회전"
-        case .turnRight:      return "오른쪽 회전"
-        case .repeatBlock:    return "반복"
-        case .ifBlock:        return "만약에"
-        case .functionBlock:  return "함수"
-        case .collectItem:    return "보석 획득"
-        case .activateSwitch: return "스위치 작동"
+        case .moveForward: "앞으로"
+        case .moveBackward: "뒤로"
+        case .turnLeft: "왼쪽 회전"
+        case .turnRight: "오른쪽 회전"
+        case .repeatBlock: "반복"
+        case .ifBlock: "만약에"
+        case .functionBlock: "함수"
+        case .collectItem: "보석 획득"
+        case .activateSwitch: "스위치 작동"
         }
     }
 
     /// SF Symbols 아이콘 이름 — 블럭 행과 팔레트에서 사용
     var iconName: String {
         switch self {
-        case .moveForward:    return "arrow.up"
-        case .moveBackward:   return "arrow.down"
-        case .turnLeft:       return "arrow.counterclockwise"
-        case .turnRight:      return "arrow.clockwise"
-        case .repeatBlock:    return "repeat"
-        case .ifBlock:        return "arrow.triangle.branch"  // 분기 경로 아이콘
-        case .functionBlock:  return "curlybraces"            // 코드 함수 아이콘
-        case .collectItem:    return "diamond.fill"           // 맵 위 보석 마커와 동일한 다이아몬드 모양
-        case .activateSwitch: return "hand.tap.fill"          // 스위치를 누르는 동작을 표현
+        case .moveForward: "arrow.up"
+        case .moveBackward: "arrow.down"
+        case .turnLeft: "arrow.counterclockwise"
+        case .turnRight: "arrow.clockwise"
+        case .repeatBlock: "repeat"
+        case .ifBlock: "arrow.triangle.branch"  // 분기 경로 아이콘
+        case .functionBlock: "curlybraces"            // 코드 함수 아이콘
+        case .collectItem: "diamond.fill"           // 맵 위 보석 마커와 동일한 다이아몬드 모양
+        case .activateSwitch: "hand.tap.fill"          // 스위치를 누르는 동작을 표현
         }
     }
 
     /// 팔레트 카드에 표시할 짧은 이름
     var shortName: String {
         switch self {
-        case .moveForward:    return "앞으로"
-        case .moveBackward:   return "뒤로"
-        case .turnLeft:       return "왼쪽"
-        case .turnRight:      return "오른쪽"
-        case .repeatBlock:    return "반복"
-        case .ifBlock:        return "만약에"
-        case .functionBlock:  return "함수"
-        case .collectItem:    return "획득"
-        case .activateSwitch: return "스위치"
+        case .moveForward: "앞으로"
+        case .moveBackward: "뒤로"
+        case .turnLeft: "왼쪽"
+        case .turnRight: "오른쪽"
+        case .repeatBlock: "반복"
+        case .ifBlock: "만약에"
+        case .functionBlock: "함수"
+        case .collectItem: "획득"
+        case .activateSwitch: "스위치"
         }
     }
 

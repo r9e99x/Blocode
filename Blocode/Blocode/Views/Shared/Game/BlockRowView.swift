@@ -516,10 +516,10 @@ private struct NestedBlockArea: View {
     /// 컨테이너 블럭 종류에 따른 끝 레이블
     private var endLabel: String {
         switch parent.type {
-        case .repeatBlock:   return "end repeat"
-        case .ifBlock:       return "end if"
-        case .functionBlock: return "end function"
-        default:             return "end"
+        case .repeatBlock: "end repeat"
+        case .ifBlock: "end if"
+        case .functionBlock: "end function"
+        default: "end"
         }
     }
 
@@ -542,9 +542,9 @@ private struct NestedBlockArea: View {
 
         static func forDepth(_ depth: Int) -> Metrics {
             switch depth {
-            case 1: return child
-            case 2: return grandchild
-            default: return greatGrandchild
+            case 1: child
+            case 2: grandchild
+            default: greatGrandchild
             }
         }
 

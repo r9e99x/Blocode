@@ -11,7 +11,6 @@ import Testing
 import Foundation
 @testable import Blocode
 
-@MainActor
 @Suite("단계별 실행")
 struct GameViewModelStepTests {
 

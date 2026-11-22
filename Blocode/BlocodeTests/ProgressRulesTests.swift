@@ -11,7 +11,6 @@
 import Testing
 @testable import Blocode
 
-@MainActor
 @Suite("진행 규칙 — 챕터 해금·이어서 하기")
 struct ProgressRulesTests {
 

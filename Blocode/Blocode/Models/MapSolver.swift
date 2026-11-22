@@ -39,10 +39,10 @@ enum MapSolver {
 
     private static func directionIndex(_ direction: Direction) -> Int {
         switch direction {
-        case .up: return 0
-        case .right: return 1
-        case .down: return 2
-        case .left: return 3
+        case .up: 0
+        case .right: 1
+        case .down: 2
+        case .left: 3
         }
     }
 

@@ -11,7 +11,6 @@ import Testing
 import Foundation
 @testable import Blocode
 
-@MainActor
 @Suite("GameViewModel 상태 — 재도전·시간·중단")
 struct GameViewModelStateTests {
 

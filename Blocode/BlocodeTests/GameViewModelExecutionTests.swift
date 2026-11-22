@@ -12,7 +12,6 @@ import Testing
 import Foundation
 @testable import Blocode
 
-@MainActor
 @Suite("GameViewModel 실행 엔진")
 struct GameViewModelExecutionTests {
 

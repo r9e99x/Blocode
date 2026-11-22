@@ -12,7 +12,6 @@ import Testing
 import Foundation
 @testable import Blocode
 
-@MainActor
 @Suite("맵 에디터")
 struct MapEditorTests {
 

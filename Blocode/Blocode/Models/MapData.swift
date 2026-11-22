@@ -19,20 +19,20 @@ enum Direction: String, Codable {
     /// 오른쪽으로 90도 회전한 방향 반환
     var turnedRight: Direction {
         switch self {
-        case .up:    return .right  // 위 → 오른쪽
-        case .right: return .down   // 오른쪽 → 아래
-        case .down:  return .left   // 아래 → 왼쪽
-        case .left:  return .up     // 왼쪽 → 위
+        case .up: .right  // 위 → 오른쪽
+        case .right: .down   // 오른쪽 → 아래
+        case .down: .left   // 아래 → 왼쪽
+        case .left: .up     // 왼쪽 → 위
         }
     }
 
     /// 왼쪽으로 90도 회전한 방향 반환
     var turnedLeft: Direction {
         switch self {
-        case .up:    return .left   // 위 → 왼쪽
-        case .left:  return .down   // 왼쪽 → 아래
-        case .down:  return .right  // 아래 → 오른쪽
-        case .right: return .up     // 오른쪽 → 위
+        case .up: .left   // 위 → 왼쪽
+        case .left: .down   // 왼쪽 → 아래
+        case .down: .right  // 아래 → 오른쪽
+        case .right: .up     // 오른쪽 → 위
         }
     }
 }
@@ -47,10 +47,10 @@ struct Position: Codable, Equatable, Hashable {
     /// 현재 방향으로 한 칸 이동했을 때의 다음 좌표 반환
     func next(direction: Direction) -> Position {
         switch direction {
-        case .up:    return Position(x: x,     y: y - 1)  // 위: y 감소
-        case .down:  return Position(x: x,     y: y + 1)  // 아래: y 증가
-        case .left:  return Position(x: x - 1, y: y)      // 왼쪽: x 감소
-        case .right: return Position(x: x + 1, y: y)      // 오른쪽: x 증가
+        case .up: Position(x: x,     y: y - 1)  // 위: y 감소
+        case .down: Position(x: x,     y: y + 1)  // 아래: y 증가
+        case .left: Position(x: x - 1, y: y)      // 왼쪽: x 감소
+        case .right: Position(x: x + 1, y: y)      // 오른쪽: x 증가
         }
     }
 

@@ -14,53 +14,53 @@ extension MapEditorTool {
     /// 도구 버튼 이름
     var title: String {
         switch self {
-        case .floor: return "바닥"
-        case .wall: return "벽"
-        case .start: return "시작"
-        case .goal: return "목표"
-        case .item: return "보석"
-        case .switchGate: return "스위치"
-        case .portal: return "포탈"
-        case .eraser: return "지우개"
+        case .floor: "바닥"
+        case .wall: "벽"
+        case .start: "시작"
+        case .goal: "목표"
+        case .item: "보석"
+        case .switchGate: "스위치"
+        case .portal: "포탈"
+        case .eraser: "지우개"
         }
     }
 
     /// 도구 버튼 아이콘 (SF Symbol)
     var icon: String {
         switch self {
-        case .floor: return "square"
-        case .wall: return "square.fill"
-        case .start: return "arrowtriangle.right.fill"
-        case .goal: return "circle.fill"
-        case .item: return "diamond.fill"
-        case .switchGate: return "hand.tap.fill"
-        case .portal: return "circle.circle"
-        case .eraser: return "eraser.fill"
+        case .floor: "square"
+        case .wall: "square.fill"
+        case .start: "arrowtriangle.right.fill"
+        case .goal: "circle.fill"
+        case .item: "diamond.fill"
+        case .switchGate: "hand.tap.fill"
+        case .portal: "circle.circle"
+        case .eraser: "eraser.fill"
         }
     }
 
     /// 맵 위 요소와 같은 색 — nil이면 기본 글자색
     var tint: Color? {
         switch self {
-        case .goal: return .mapGoal
-        case .item: return .gemMint
-        case .switchGate: return .switchOrange
-        case .portal: return .portalPurple
-        default: return nil
+        case .goal: .mapGoal
+        case .item: .gemMint
+        case .switchGate: .switchOrange
+        case .portal: .portalPurple
+        default: nil
         }
     }
 
     /// 도구를 고르면 안내 줄에 보여 줄 사용법
     var hint: String {
         switch self {
-        case .floor: return "끌어서 바닥을 칠해요."
-        case .wall: return "끌어서 벽을 칠해요."
-        case .start: return "누른 칸으로 시작을 옮겨요. 시작 칸을 다시 누르면 방향이 돌아가요."
-        case .goal: return "누른 칸으로 목표를 옮겨요."
-        case .item: return "보석을 놓아요. 놓은 보석을 다시 누르면 지워져요."
-        case .switchGate: return "스위치를 먼저 놓고, 이어서 그 스위치로 열 문을 놓아요."
-        case .portal: return "두 칸을 차례로 눌러 포탈 짝을 만들어요."
-        case .eraser: return "끌어서 보석·스위치·문·포탈을 지워요."
+        case .floor: "끌어서 바닥을 칠해요."
+        case .wall: "끌어서 벽을 칠해요."
+        case .start: "누른 칸으로 시작을 옮겨요. 시작 칸을 다시 누르면 방향이 돌아가요."
+        case .goal: "누른 칸으로 목표를 옮겨요."
+        case .item: "보석을 놓아요. 놓은 보석을 다시 누르면 지워져요."
+        case .switchGate: "스위치를 먼저 놓고, 이어서 그 스위치로 열 문을 놓아요."
+        case .portal: "두 칸을 차례로 눌러 포탈 짝을 만들어요."
+        case .eraser: "끌어서 보석·스위치·문·포탈을 지워요."
         }
     }
 }

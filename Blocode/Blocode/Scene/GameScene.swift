@@ -524,10 +524,10 @@ class GameScene: SKScene, GameBoardRendering {
     /// Direction을 SpriteKit 회전 각도(라디안)로 변환
     private func rotationAngle(for direction: Direction) -> CGFloat {
         switch direction {
-        case .up:    return 0           // 위: 회전 없음 (기본 방향)
-        case .left:  return .pi / 2     // 왼쪽: 90도 반시계
-        case .down:  return .pi         // 아래: 180도
-        case .right: return -.pi / 2    // 오른쪽: 90도 시계
+        case .up: 0           // 위: 회전 없음 (기본 방향)
+        case .left: .pi / 2     // 왼쪽: 90도 반시계
+        case .down: .pi         // 아래: 180도
+        case .right: -.pi / 2    // 오른쪽: 90도 시계
         }
     }
 
