@@ -73,7 +73,9 @@ class GameScene: SKScene, GameBoardRendering {
     private var characterNode: SKNode?  // 캐릭터 SKNode — 이동/회전 애니메이션 적용 대상
 
     // MARK: - 기믹 노드 (챕터 6+ 전용)
-    private var itemNodes: [Position: SKNode] = [:]  // 아직 안 먹은 보석 노드 (setupMap마다 재생성)
+    private var itemNodes: [Position: SKNode] = [:]  // 보석 노드 전부 — 먹으면 지우지 않고 숨겨 두었다가 리셋 때 다시 보임 (setupMap마다 재생성)
+    /// 문 칸의 타일·링 노드와 지금 그려진 열림 상태 — 문이 열리고 닫힐 때 이 칸만 바꿔 그림 (setupMap마다 재생성)
+    private var gateNodes: [Position: (tile: SKNode, marker: SKNode, isOpen: Bool)] = [:]
 
     // MARK: - 초기화
     init(mapData: MapData) {
@@ -169,6 +171,7 @@ class GameScene: SKScene, GameBoardRendering {
         // 기존 노드 전체 제거
         removeAllChildren()
         itemNodes = [:]  // 노드 자체는 removeAllChildren으로 이미 제거됨 — 참조만 비움
+        gateNodes = [:]
         guard size.width > 0, size.height > 0 else { return }
 
         let cols = mapData.width
@@ -211,6 +214,7 @@ class GameScene: SKScene, GameBoardRendering {
                     marker.position = CGPoint(x: x, y: y)
                     marker.zPosition = 1
                     addChild(marker)
+                    gateNodes[pos] = (tile, marker, isOpenGate)
                 }
 
                 // 스위치 — 바닥 위에 눌리는 버튼 표시
@@ -221,11 +225,12 @@ class GameScene: SKScene, GameBoardRendering {
                     addChild(switchNode)
                 }
 
-                // 보석 — 이미 수집한 위치는 다시 그리지 않음(재구성해도 숨김 유지)
-                if mapData.items?.contains(pos) == true, !board.collectedItems.contains(pos) {
+                // 보석 — 이미 수집한 위치는 숨긴 채로 만듦(재구성해도 숨김 유지, 리셋 때 다시 보임)
+                if mapData.items?.contains(pos) == true {
                     let itemNode = makeItemNode(size: tileSize)
                     itemNode.position = CGPoint(x: x, y: y)
                     itemNode.zPosition = 1
+                    itemNode.isHidden = board.collectedItems.contains(pos)
                     addChild(itemNode)
                     itemNodes[pos] = itemNode
                 }
@@ -547,27 +552,62 @@ class GameScene: SKScene, GameBoardRendering {
         case .itemCollected(let position):
             removeItemNode(at: position)
         case .gateOpened:
-            // 벽→바닥 전환은 타일 자체를 다시 그려야 해서 맵 전체를 재구성
-            // (updateColorScheme도 색만 바꾸려고 동일하게 setupMap()을 다시 부르는 기존 패턴과 동일)
-            setupMap()
+            // 열린 문 칸만 벽→바닥으로 바꿔 그림 (예전엔 맵 전체를 다시 만들었음)
+            refreshGates()
         case .reset:
-            // 기믹 상태가 없었으면 부드러운 슬라이드만, 있었으면 맵을 재구성해 보석 재등장·문 닫힘까지 복원
+            // 기믹 상태가 있었으면 보석 재등장·문 닫힘을 그 칸만 복원하고, 캐릭터는 부드럽게 시작점으로
             if hadGimmickChanges {
-                setupMap()
-            } else {
-                updateCharacterTransform(animated: true)
+                refreshGates()
+                restoreItems()
             }
+            updateCharacterTransform(animated: true)
         }
     }
 
-    /// 보석 노드를 사라지는 애니메이션과 함께 제거
+    /// 보석 노드를 사라지는 애니메이션과 함께 숨김 — 리셋 때 다시 보이도록 노드는 남겨 둠
     private func removeItemNode(at position: Position) {
         itemNodes[position]?.run(.sequence([
             .scale(to: 1.4, duration: 0.1),
             .group([.fadeOut(withDuration: 0.15), .scale(to: 0.1, duration: 0.15)]),
-            .removeFromParent()
+            .hide()
         ]))
-        itemNodes[position] = nil
+    }
+
+    /// 아직 안 먹은 상태가 된 보석을 원래 모습으로 되돌림 (리셋)
+    private func restoreItems() {
+        for (position, node) in itemNodes where !board.collectedItems.contains(position) {
+            node.removeAllActions()  // 사라지는 중이던 애니메이션 중단
+            node.alpha = 1
+            node.setScale(1)
+            node.isHidden = false
+        }
+    }
+
+    /// 열림 상태가 바뀐 문 칸만 타일·링을 새로 만들어 교체
+    /// 벽의 3D 아래면이 아래 칸에 살짝 걸치므로, 원래 노드가 있던 순서 자리에 넣어 겹침 순서를 그대로 유지
+    private func refreshGates() {
+        guard size.width > 0, size.height > 0 else { return }
+        let layout = layoutMetrics()
+        let cornerRadius = layout.tileSize * MapElementMetrics.tileCorner
+        for (position, old) in gateNodes {
+            let isOpen = board.openedGates.contains(position)
+            guard isOpen != old.isOpen else { continue }
+            let center = old.marker.position  // 링은 칸 가운데에 있음
+            let tile = makeTileNode(at: center, size: layout.tileSize, radius: cornerRadius, isFloor: isOpen)
+            let marker = makeGateMarkerNode(size: layout.tileSize, isOpen: isOpen)
+            marker.position = center
+            marker.zPosition = 1
+            replace(old.tile, with: tile)
+            replace(old.marker, with: marker)
+            gateNodes[position] = (tile, marker, isOpen)
+        }
+    }
+
+    /// 노드를 같은 순서 자리의 새 노드로 바꿈
+    private func replace(_ old: SKNode, with new: SKNode) {
+        let index = children.firstIndex(of: old) ?? children.count
+        old.removeFromParent()
+        insertChild(new, at: index)
     }
 
     /// 포탈 이동 — 캐릭터를 현재 칸으로 즉시 재배치 (짧은 페이드 효과로 순간이동 느낌)
