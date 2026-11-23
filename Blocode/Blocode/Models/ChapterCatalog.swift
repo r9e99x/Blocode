@@ -14,7 +14,7 @@ import Foundation
 /// (예전에는 같은 값이 4~5곳에 흩어져 있어 한 곳만 고치면 어긋나는 문제가 있었음)
 ///
 /// 챕터/스테이지를 추가·변경할 때는 아래 `all` 배열만 수정하면 된다.
-enum ChapterCatalog {
+nonisolated enum ChapterCatalog {  // nonisolated: 고정 데이터라 메인 밖(테스트 인자 등)에서도 읽음
 
     /// 전체 챕터 메타데이터 (챕터 번호 오름차순)
     static let all: [ChapterInfo] = [

@@ -14,7 +14,7 @@ import Foundation
 @testable import Blocode
 
 @Suite("맵 풀이 탐색 동등성")
-struct MapSolverEquivalenceTests {
+nonisolated struct MapSolverEquivalenceTests {  // 계산만 하는 테스트라 메인 액터 밖에서 병렬로 돎 (MapSolver·GameBoard 모두 nonisolated)
 
     // MARK: - 기준 탐색 (GameBoard 사용)
 
@@ -104,13 +104,15 @@ struct MapSolverEquivalenceTests {
 
     // MARK: - 실제 스테이지
 
-    @Test("모든 스테이지에서 기준 탐색과 결과가 같음")
-    func sameOnEveryStage() async {
-        let stages = ChapterCatalog.all.flatMap { StageLoader.loadChapter($0.number, stageCount: $0.stageCount) }
-        #expect(stages.count == 104)
+    @Test("챕터마다 모든 스테이지에서 기준 탐색과 결과가 같음", arguments: ChapterCatalog.all.map(\.number))
+    @concurrent func sameOnEveryStage(chapter: Int) async {
+        // 스테이지 읽기만 메인 액터(StageLoader 캐시)에서, 비교 계산은 메인 밖에서 — 예전엔 메인에서 돌며 스테이지마다 직접 양보했음
+        let stages = await MainActor.run {
+            StageLoader.loadChapter(chapter, stageCount: ChapterCatalog.chapter(chapter)?.stageCount ?? 0)
+        }
+        #expect(!stages.isEmpty)
         for stage in stages {
             expectSame(stage.mapData, palette: stage.paletteBlocks, label: stage.id)
-            await Task.yield()  // 메인을 오래 붙잡으면 같이 도는 실행 테스트의 대기 시간이 넘어감
         }
     }
 
@@ -174,12 +176,11 @@ struct MapSolverEquivalenceTests {
     }
 
     @Test("무작위 맵 300개에서 기준 탐색과 결과가 같음")
-    func sameOnRandomMaps() async {
+    @concurrent func sameOnRandomMaps() async {
         var random = SeededRandom(state: 20261112)
         for index in 0..<300 {
             let (map, palette) = randomMap(&random)
             expectSame(map, palette: palette, label: "무작위 맵 \(index)")
-            await Task.yield()
         }
     }
 
@@ -201,10 +202,10 @@ struct MapSolverEquivalenceTests {
                           goal: Position(x: 9, y: 9), items: items, switches: switches, portals: nil)
         let palette: [BlockType] = [.moveForward, .moveBackward, .turnLeft, .turnRight, .collectItem, .activateSwitch]
 
-        let started = Date()
+        let started = ContinuousClock.now
         let result = MapValidator.validate(map, palette: palette)
-        let elapsed = Date().timeIntervalSince(started)
+        let elapsed = ContinuousClock.now - started
         #expect(result.issues == ["선택한 블럭으로는 목표에 도착할 수 없어요."])
-        #expect(elapsed < 4, "검증에 \(elapsed)초 걸림")  // 디버그 빌드 기준 — 이전 구현은 13초
+        #expect(elapsed < .seconds(4), "검증에 \(elapsed) 걸림")  // 디버그 빌드 기준 — 이전 구현은 13초
     }
 }

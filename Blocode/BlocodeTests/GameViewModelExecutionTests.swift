@@ -12,7 +12,7 @@ import Testing
 import Foundation
 @testable import Blocode
 
-@Suite("GameViewModel 실행 엔진")
+@Suite("GameViewModel 실행 엔진", .timeLimit(.minutes(1)))
 struct GameViewModelExecutionTests {
 
     // MARK: - 테스트 픽스처 생성

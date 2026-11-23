@@ -13,12 +13,17 @@ import Testing
 import Foundation
 @testable import Blocode
 
-@Suite("스테이지 풀이 가능 여부")
+@Suite("스테이지 풀이 가능 여부", .timeLimit(.minutes(1)))
 struct StageSolvabilityTests {
 
     /// 앱에 들어 있는 모든 스테이지 (개수는 StageDataIntegrityTests가 따로 검증)
     private var allStages: [Stage] {
         ChapterCatalog.all.flatMap { StageLoader.loadChapter($0.number, stageCount: $0.stageCount) }
+    }
+
+    /// 한 챕터의 스테이지
+    private func stages(in chapter: Int) -> [Stage] {
+        StageLoader.loadChapter(chapter, stageCount: ChapterCatalog.chapter(chapter)?.stageCount ?? 0)
     }
 
     /// 가장 짧은 풀이 — 없으면 nil (탐색 규칙은 앱의 MapSolver)
@@ -52,9 +57,9 @@ struct StageSolvabilityTests {
 
     // MARK: - 실제 스테이지
 
-    @Test("모든 스테이지를 클리어할 수 있음")
-    func everyStage_canBeCleared() async throws {
-        let stages = allStages
+    @Test("챕터마다 모든 스테이지를 클리어할 수 있음", arguments: ChapterCatalog.all.map(\.number))
+    func everyStage_canBeCleared(chapter: Int) async throws {
+        let stages = stages(in: chapter)  // 챕터별 매개변수 테스트 — 실패하면 어느 챕터인지 결과에 바로 보임
         #expect(!stages.isEmpty)
         for stage in stages {
             guard let solution = shortestSolution(for: stage) else {

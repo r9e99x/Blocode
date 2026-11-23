@@ -10,6 +10,7 @@
 import Testing
 import Foundation
 import Observation
+import Synchronization
 @testable import Blocode
 
 extension ProgressService {
@@ -19,16 +20,12 @@ extension ProgressService {
     }
 }
 
-/// 실행이 끝날 때까지 기다림 — 여러 테스트 파일이 함께 씀 (예전엔 같은 반복문이 파일마다 있었고 제한 시간도 제각각이었음)
-/// 제한 시간은 무한 대기를 막는 넉넉한 상한일 뿐 — 같이 도는 테스트와 메인 액터를 나눠 써서 부하가 걸리면 오래 걸릴 수 있고, 끝나면 바로 빠져나옴
-func waitWhileRunning(_ viewModel: GameViewModel, timeout: TimeInterval = 60) async throws {
-    let deadline = Date().addingTimeInterval(timeout)
-    while viewModel.gameState == .running, Date() < deadline {
-        try await Task.sleep(for: .milliseconds(5))
-    }
-    if viewModel.gameState == .running {
-        Issue.record("실행이 \(timeout)초 안에 끝나지 않음 (gameState=\(viewModel.gameState))")
-    }
+/// 실행이 끝날 때까지 기다림 — 여러 테스트 파일이 함께 씀
+/// Observations(Swift 6.2): gameState가 바뀌는 순간 깨어남 — 예전엔 0.005초마다 확인하는 반복이라 메인 액터를 같이 쓰는 다른 테스트와 경쟁했음
+/// 무한 대기는 각 스위트의 .timeLimit이 막아 줌 (시간이 다 되면 작업이 취소되어 아래 확인에서 실패로 기록)
+func waitWhileRunning(_ viewModel: GameViewModel) async throws {
+    for await state in Observations({ viewModel.gameState }) where state != .running { return }
+    Issue.record("실행이 끝나지 않음 (gameState=\(viewModel.gameState))")
 }
 
 /// 테스트가 직접 풀어 주는 애니메이션 대기 — GameViewModel(sleep:)에 `gate.sleep`을 넣으면
@@ -78,22 +75,22 @@ func isolatedDefaults() -> UserDefaults {
     UserDefaults(suiteName: "test_\(UUID().uuidString)")!
 }
 
-/// 변경 신호를 받았는지 담아 두는 상자 — Observation의 onChange는 바꾸는 쪽 스레드에서 바로 불려서
-/// 테스트(메인 액터) 안에서만 쓰면 안전함 — @Sendable인 onChange에서 바꿔야 해서 메인 액터 소속에서 뺌
-nonisolated private final class ObservationFlag: @unchecked Sendable {
-    var fired = false
+/// 변경 신호를 받았는지 담아 두는 상자 — Observation의 onChange는 @Sendable이고 바꾸는 쪽 스레드에서 바로 불려서
+/// Mutex(Synchronization)로 감싸 안전하게 씀 (예전엔 @unchecked Sendable로 컴파일러의 동시성 검사를 껐음)
+nonisolated private final class ObservationFlag: Sendable {
+    let fired = Mutex(false)
 }
 
 /// @Observable 객체에서 `read`가 읽은 값이 `change` 동안 바뀌어 화면 갱신 신호가 나가는지 확인
 /// (ObservableObject 시절 objectWillChange 구독으로 하던 "화면에 변경을 알림" 검사를 대신함)
 func observationFires(reading read: () -> Void, when change: () -> Void) -> Bool {
     let flag = ObservationFlag()
-    withObservationTracking(read, onChange: { flag.fired = true })
+    withObservationTracking(read, onChange: { flag.fired.withLock { $0 = true } })
     change()
-    return flag.fired
+    return flag.fired.withLock { $0 }
 }
 
-@Suite("진행도 저장")
+@Suite("진행도 저장", .timeLimit(.minutes(1)))
 struct ProgressServiceTests {
 
     private let streakKey = "blocode_streak"

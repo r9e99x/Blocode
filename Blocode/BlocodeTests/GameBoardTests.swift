@@ -210,7 +210,7 @@ private final class RecordingRenderer: GameBoardRendering {
     }
 }
 
-@Suite("게임 판과 화면 연결")
+@Suite("게임 판과 화면 연결", .timeLimit(.minutes(1)))
 struct GameBoardRenderingTests {
 
     /// 가로 한 줄 맵: 0 시작 / 1 보석 / 2 스위치 / 3 문 / 4↔5 포탈 / 6 골

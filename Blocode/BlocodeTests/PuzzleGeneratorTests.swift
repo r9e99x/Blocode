@@ -5,27 +5,28 @@
 //  Created by 조준희 on 11/12/26.
 //
 //  일일·랜덤 퍼즐 생성 검증 — 같은 씨앗이면 같은 퍼즐, 항상 풀 수 있음, 재미 조건,
-//  요일별 테마, 기록 규칙. 무거운 반복은 중간에 양보해 같이 도는 실행 테스트를 막지 않는다.
+//  요일별 테마, 기록 규칙. 계산만 하는 무거운 테스트는 @concurrent로 메인 밖에서 병렬로 돌아
+//  같이 도는 실행 테스트(메인 액터)를 막지 않는다 — 예전처럼 중간에 직접 양보할 필요가 없음.
 
 import Testing
 import Foundation
 @testable import Blocode
 
-@Suite("퍼즐 생성")
+@Suite("퍼즐 생성", .timeLimit(.minutes(1)))
 struct PuzzleGeneratorTests {
 
-    private var calendar: Calendar {
+    nonisolated private var calendar: Calendar {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = TimeZone(identifier: "Asia/Seoul")!
         return calendar
     }
 
-    private func date(_ year: Int, _ month: Int, _ day: Int) -> Date {
+    nonisolated private func date(_ year: Int, _ month: Int, _ day: Int) -> Date {
         calendar.date(from: DateComponents(year: year, month: month, day: day, hour: 12))!
     }
 
     /// 맵을 비교 가능한 문자열로
-    private func fingerprint(_ stage: Stage) -> String {
+    nonisolated private func fingerprint(_ stage: Stage) -> String {
         let encoder = JSONEncoder()
         encoder.outputFormatting = .sortedKeys  // 키 순서가 매번 달라지지 않게
         let data = (try? encoder.encode(stage.mapData)) ?? Data()
@@ -59,15 +60,12 @@ struct PuzzleGeneratorTests {
         #expect(today.name == "오늘의 퍼즐")
     }
 
-    @Test("씨앗 20개 × 테마를 두 번씩 만들어도 항상 같음 (집합 순서에 기대지 않음)")
-    func repeatedGenerationIsIdentical() async {
-        for theme in PuzzleTheme.allCases {
-            for seed in 0..<20 {
-                let first = PuzzleGenerator.stage(id: "random_\(seed)", name: "t", seed: UInt64(seed), theme: theme)
-                let second = PuzzleGenerator.stage(id: "random_\(seed)", name: "t", seed: UInt64(seed), theme: theme)
-                #expect(fingerprint(first) == fingerprint(second), "\(theme) 씨앗 \(seed)")
-            }
-            try? await Task.sleep(for: .milliseconds(1))
+    @Test("테마마다 씨앗 20개를 두 번씩 만들어도 항상 같음 (집합 순서에 기대지 않음)", arguments: PuzzleTheme.allCases)
+    @concurrent func repeatedGenerationIsIdentical(theme: PuzzleTheme) async {
+        for seed in 0..<20 {
+            let first = PuzzleGenerator.stage(id: "random_\(seed)", name: "t", seed: UInt64(seed), theme: theme)
+            let second = PuzzleGenerator.stage(id: "random_\(seed)", name: "t", seed: UInt64(seed), theme: theme)
+            #expect(fingerprint(first) == fingerprint(second), "\(theme) 씨앗 \(seed)")
         }
     }
 
@@ -84,7 +82,7 @@ struct PuzzleGeneratorTests {
     // MARK: - 품질
 
     /// 퍼즐이 검증을 통과하고 재미 조건을 지키는지
-    private func checkQuality(_ stage: Stage, theme: PuzzleTheme?, label: String) {
+    nonisolated private func checkQuality(_ stage: Stage, theme: PuzzleTheme?, label: String) {
         let map = stage.mapData
         let result = MapValidator.validate(map, palette: stage.paletteBlocks)
         #expect(result.isValid, "\(label): 검증 실패 \(result.issues)")
@@ -109,34 +107,29 @@ struct PuzzleGeneratorTests {
         }
     }
 
-    @Test("모든 테마에서 씨앗 25개가 풀 수 있고 조건을 지킴")
-    func everyThemeIsValid() async {
-        for theme in PuzzleTheme.allCases {
-            for seed in 0..<25 {
-                let stage = PuzzleGenerator.stage(id: "random_\(seed)", name: "t", seed: UInt64(seed), theme: theme)
-                checkQuality(stage, theme: theme, label: "\(theme) 씨앗 \(seed)")
-                try? await Task.sleep(for: .milliseconds(1))  // 양보 — 같이 도는 실행 테스트의 대기 시간이 넘어가지 않게
-            }
+    @Test("테마마다 씨앗 25개가 풀 수 있고 조건을 지킴", arguments: PuzzleTheme.allCases)
+    @concurrent func everyThemeIsValid(theme: PuzzleTheme) async {
+        for seed in 0..<25 {
+            let stage = PuzzleGenerator.stage(id: "random_\(seed)", name: "t", seed: UInt64(seed), theme: theme)
+            checkQuality(stage, theme: theme, label: "\(theme) 씨앗 \(seed)")
         }
     }
 
     @Test("앞으로 10주 일일 퍼즐이 모두 유효함")
-    func nextYearOfDailyPuzzles() async {
+    @concurrent func nextYearOfDailyPuzzles() async {
         let start = date(2026, 11, 12)
         for offset in 0..<70 {
             let day = calendar.date(byAdding: .day, value: offset, to: start)!
             let stage = PuzzleGenerator.dailyStage(for: day, calendar: calendar)
             checkQuality(stage, theme: PuzzleGenerator.theme(forWeekday: calendar.component(.weekday, from: day)),
                          label: stage.id)
-            try? await Task.sleep(for: .milliseconds(1))  // 양보 — 같이 도는 실행 테스트의 대기 시간이 넘어가지 않게
         }
     }
 
     @Test("랜덤 퍼즐 씨앗 12개가 모두 유효함")
-    func randomSeedsAreValid() async {
+    @concurrent func randomSeedsAreValid() async {
         for seed in 1000..<1012 {
             checkQuality(PuzzleGenerator.randomStage(seed: UInt64(seed)), theme: nil, label: "랜덤 \(seed)")
-            try? await Task.sleep(for: .milliseconds(1))  // 양보 — 같이 도는 실행 테스트의 대기 시간이 넘어가지 않게
         }
     }
 
@@ -298,13 +291,13 @@ struct DailyQuoteTests {
 struct RandomDifficultyTests {
 
     /// 못 맞춰서 쓰는 뱀길(출발 (1,1), 목표 (1,7), 기본 팔레트)인지
-    private func isFallback(_ stage: Stage) -> Bool {
+    nonisolated private func isFallback(_ stage: Stage) -> Bool {
         stage.mapData.start == Position(x: 1, y: 1) && stage.mapData.goal == Position(x: 1, y: 7)
             && !stage.paletteBlocks.contains(.collectItem)
     }
 
     @Test("랜덤 퍼즐은 기믹이 들어가고 일일 퍼즐보다 길고 많이 꺾임")
-    func randomIsHarder() async {
+    @concurrent func randomIsHarder() async {
         var shortests: [Int] = []
         var fallbacks = 0
         for seed in 2000..<2010 {
@@ -317,7 +310,6 @@ struct RandomDifficultyTests {
             // 어려운 조건을 못 맞춘 씨앗은 표준 난이도로 대신 만들어지므로 하한은 표준 기준으로 확인 (평균으로 어려움을 확인)
             #expect((10...PuzzleDifficulty.hard.shortestRange.upperBound).contains(solution.count), "씨앗 \(seed): 길이 \(solution.count)")
             shortests.append(solution.count)
-            try? await Task.sleep(for: .milliseconds(1))
         }
         #expect(fallbacks <= 1, "대체 맵이 \(fallbacks)개나 나옴")
         let average = shortests.isEmpty ? 0 : Double(shortests.reduce(0, +)) / Double(shortests.count)

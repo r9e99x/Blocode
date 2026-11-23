@@ -265,7 +265,7 @@ struct CustomMapModelTests {
 
 // MARK: - CustomMapService
 
-@Suite("사용자 맵 저장 서비스")
+@Suite("사용자 맵 저장 서비스", .timeLimit(.minutes(1)))
 struct CustomMapServiceTests {
 
     private let thresholds = StarThresholds(threeStar: 4, twoStar: 8)
@@ -400,7 +400,7 @@ struct CustomMapServiceTests {
         let (service, progress) = makeService()
         let saved = try service.save(name: "문 맵", map: makeMap(["S.aA.G", "######", "######"]),
                                      palette: [.moveForward, .activateSwitch], thresholds: thresholds)
-        let validation = MapValidator.validate(saved.mapData!, palette: saved.palette)
+        let validation = MapValidator.validate(try #require(saved.mapData), palette: saved.palette)
         let stage = try #require(saved.stage)
 
         let vm = GameViewModel(stage: stage, progress: .makeForTesting(), executionSpeed: { 1000 })
@@ -414,7 +414,7 @@ struct CustomMapServiceTests {
 
 // MARK: - 내 맵 목록·플레이 연결
 
-@Suite("내 맵 목록과 플레이 연결")
+@Suite("내 맵 목록과 플레이 연결", .timeLimit(.minutes(1)))
 struct CustomMapListTests {
 
     private let thresholds = StarThresholds(threeStar: 4, twoStar: 8)

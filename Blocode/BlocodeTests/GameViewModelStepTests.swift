@@ -11,7 +11,7 @@ import Testing
 import Foundation
 @testable import Blocode
 
-@Suite("단계별 실행")
+@Suite("단계별 실행", .timeLimit(.minutes(1)))
 struct GameViewModelStepTests {
 
     private func makeStage(grid: [[Int]], goal: Position) -> Stage {
@@ -31,10 +31,10 @@ struct GameViewModelStepTests {
         Array(repeating: Block(type: .moveForward), count: count)
     }
 
-    /// 조건이 참이 될 때까지 기다림 — 5초 안에 안 되면 false
-    private func wait(_ condition: () -> Bool) async throws -> Bool {
-        let deadline = Date().addingTimeInterval(15)
-        while !condition(), Date() < deadline { try await Task.sleep(for: .milliseconds(5)) }
+    /// 조건이 참이 될 때까지 기다림 — Observations로 조건이 읽는 값이 바뀔 때마다 다시 확인 (예전엔 0.005초마다 반복 확인)
+    /// 무한 대기는 스위트의 .timeLimit이 막아 줌
+    private func wait(_ condition: @escaping @MainActor () -> Bool) async throws -> Bool {
+        for await met in Observations({ condition() }) where met { return true }
         return condition()
     }
 

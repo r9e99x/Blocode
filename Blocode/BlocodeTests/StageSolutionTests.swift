@@ -12,7 +12,7 @@ import Testing
 import Foundation
 @testable import Blocode
 
-@Suite("챕터 11~15 기준 풀이")
+@Suite("챕터 11~15 기준 풀이", .timeLimit(.minutes(1)))
 struct StageSolutionTests {
 
     // 기본 블럭 — 풀이를 읽기 쉽게 쓰기 위한 이름 (실행은 위치 기준이라 같은 값을 재사용해도 됨)
@@ -77,10 +77,9 @@ struct StageSolutionTests {
         }
     }
 
-    /// 새 챕터의 모든 스테이지
-    private var newStages: [Stage] {
-        ChapterCatalog.all.filter { $0.number >= 11 }
-            .flatMap { StageLoader.loadChapter($0.number, stageCount: $0.stageCount) }
+    /// 새 챕터 한 곳의 모든 스테이지
+    private func newStages(in chapter: Int) -> [Stage] {
+        StageLoader.loadChapter(chapter, stageCount: ChapterCatalog.chapter(chapter)?.stageCount ?? 0)
     }
 
     /// 앱에서 실제로 만들 수 있는 블럭인지 검사 — 팔레트, 중첩 규칙, 반복 횟수 1~10
@@ -117,10 +116,10 @@ struct StageSolutionTests {
         return vm
     }
 
-    @Test("모든 새 스테이지를 기준 풀이로 별 3개 클리어함")
-    func everyNewStage_clearsWithThreeStars() async throws {
-        let stages = newStages
-        #expect(stages.count == 35)
+    @Test("챕터 11~15마다 모든 스테이지를 기준 풀이로 별 3개 클리어함", arguments: 11...15)
+    func everyNewStage_clearsWithThreeStars(chapter: Int) async throws {
+        let stages = newStages(in: chapter)  // 챕터별 매개변수 테스트 — 실패하면 어느 챕터인지 결과에 바로 보임
+        #expect(stages.count == 7)
         for stage in stages {
             guard let solution = Self.solution(for: stage.id) else {
                 Issue.record("\(stage.id): 기준 풀이가 없음")

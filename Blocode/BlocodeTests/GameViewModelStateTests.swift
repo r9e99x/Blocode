@@ -11,7 +11,7 @@ import Testing
 import Foundation
 @testable import Blocode
 
-@Suite("GameViewModel 상태 — 재도전·시간·중단")
+@Suite("GameViewModel 상태 — 재도전·시간·중단", .timeLimit(.minutes(1)))
 struct GameViewModelStateTests {
 
     /// 3x3 세로 통로: (1,2)에서 위로 두 칸 가면 (1,0) 골인

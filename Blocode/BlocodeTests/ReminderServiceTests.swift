@@ -9,12 +9,15 @@
 
 import Testing
 import Foundation
+import Observation
 import SwiftUI  // NavigationPath 도우미 검증용
 @testable import Blocode
 
 // MARK: - 가짜 알림 센터
 
 /// 예약을 기록만 하는 알림 센터 — 취소하면 예약에서 빠짐
+/// @Observable: 테스트가 Observations로 "예약이 바뀔 때까지" 기다릴 수 있게 함
+@Observable
 final class FakeNotificationCenter: NotificationScheduling {
     var permissionState: NotificationPermission
     var grantsRequest: Bool
@@ -45,7 +48,7 @@ final class FakeNotificationCenter: NotificationScheduling {
     }
 }
 
-@Suite("복습 알림")
+@Suite("복습 알림", .timeLimit(.minutes(1)))
 struct ReminderServiceTests {
 
     private var seoul: Calendar {
@@ -139,12 +142,11 @@ struct ReminderServiceTests {
     }
 
     @Test("오늘 이미 풀었으면 첫 알림이 내일 이후")
-    func clearedTodaySkipsToday() async {
+    func clearedTodaySkipsToday() async throws {
         let f = makeFixture(clearedToday: true)
         await f.service.refresh()
-        let first = f.center.pending["blocode.reminder.0"]?.date
-        #expect(first != nil)
-        #expect(first! > Calendar.current.startOfDay(for: f.now).addingTimeInterval(24 * 3600))
+        let first = try #require(f.center.pending["blocode.reminder.0"]?.date)  // 없으면 여기서 실패로 멈춤
+        #expect(first > Calendar.current.startOfDay(for: f.now).addingTimeInterval(24 * 3600))
     }
 
     @Test("꺼져 있으면 예약을 모두 지움")
@@ -167,9 +169,9 @@ struct ReminderServiceTests {
     }
 
     /// 조건이 참이 될 때까지 기다림 — 지켜보기는 비동기로 다시 예약하므로 결과를 기다려야 함
-    private func waitUntil(_ condition: () -> Bool) async throws {
-        let deadline = ContinuousClock.now + .seconds(10)
-        while !condition(), ContinuousClock.now < deadline { try await Task.sleep(for: .milliseconds(5)) }
+    /// 가짜 센터가 @Observable이라 Observations로 예약이 바뀔 때마다 다시 확인 (무한 대기는 .timeLimit이 막음)
+    private func waitUntil(_ condition: @escaping @MainActor () -> Bool) async throws {
+        for await met in Observations({ condition() }) where met { return }
         #expect(condition())
     }
 
@@ -198,7 +200,7 @@ struct ReminderServiceTests {
     }
 
     @Test("다시 계산해도 예약이 쌓이지 않고 시간 변경이 반영됨")
-    func refreshReplaces() async {
+    func refreshReplaces() async throws {
         let f = makeFixture(minutes: 20 * 60)
         await f.service.refresh()
         await f.service.refresh()
@@ -209,7 +211,7 @@ struct ReminderServiceTests {
         await f.service.refresh()
         #expect(f.center.pending.count == 3)
         #expect(f.center.pending["blocode.reminder.1"]?.date != before)
-        let hour = Calendar.current.component(.hour, from: f.center.pending["blocode.reminder.1"]!.date)
+        let hour = Calendar.current.component(.hour, from: try #require(f.center.pending["blocode.reminder.1"]).date)
         #expect(hour == 8)
     }
 
