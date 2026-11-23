@@ -149,6 +149,10 @@ private final class PaletteCardRecognizer: UIGestureRecognizer {
 
     private var startPoint: CGPoint = .zero
 
+    /// 길게 누르기 대기 — 0.38초 뒤 끌기를 시작하고, 손을 떼거나 인식이 끝나면 취소
+    /// (예전 perform(#selector:afterDelay:)·cancelPreviousPerformRequests 대신 Swift 동시성 작업으로 처리 — 인식기와 같이 메인에서 돔)
+    private var dragTimer: Task<Void, Never>?
+
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent) {
         // 두 번째 손가락은 무시
         guard numberOfTouches == 1, let touch = touches.first else {
@@ -157,7 +161,10 @@ private final class PaletteCardRecognizer: UIGestureRecognizer {
         }
         startPoint = touch.location(in: nil)
         onPressChanged(true)
-        perform(#selector(beginDrag), with: nil, afterDelay: 0.38)
+        dragTimer = Task { [weak self] in
+            guard (try? await Task.sleep(for: .seconds(0.38))) != nil else { return }  // 취소되면 끌기를 시작하지 않음
+            self?.beginDrag()
+        }
     }
 
     override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent) {
@@ -185,11 +192,12 @@ private final class PaletteCardRecognizer: UIGestureRecognizer {
 
     /// 인식이 끝날 때마다 UIKit이 호출 — 대기 중인 드래그 시작을 취소하고 눌림 표시를 해제
     override func reset() {
-        NSObject.cancelPreviousPerformRequests(withTarget: self, selector: #selector(beginDrag), object: nil)
+        dragTimer?.cancel()
+        dragTimer = nil
         onPressChanged(false)
     }
 
-    @objc private func beginDrag() {
+    private func beginDrag() {
         if state == .possible { state = .began }
     }
 }

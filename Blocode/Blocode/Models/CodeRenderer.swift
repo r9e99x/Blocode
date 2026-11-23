@@ -40,11 +40,10 @@ enum CodeRenderer {
         var counter = 0                 // 보조 함수 이름 번호 — 등장 순서대로 1부터
 
         // 본문 들여쓰기 단계 — Python·Swift는 맨 위 줄에서 바로 시작, C·C++은 main 안, Java는 클래스 > main 안
-        let bodyDepth: Int
-        switch language {
-        case .python, .swift: bodyDepth = 0
-        case .c, .cpp:        bodyDepth = 1
-        case .java:           bodyDepth = 2
+        let bodyDepth = switch language {
+        case .python, .swift: 0
+        case .c, .cpp:        1
+        case .java:           2
         }
         let body = renderList(blocks, language: language, depth: bodyDepth, loopDepth: 0,
                               helpers: &helpers, counter: &counter)
@@ -53,9 +52,7 @@ enum CodeRenderer {
         let helperText = helpers.joined(separator: "\n\n")
 
         switch language {
-        case .python:
-            return (helpers.isEmpty ? "" : helperText + "\n\n") + text
-        case .swift:
+        case .python, .swift:
             return (helpers.isEmpty ? "" : helperText + "\n\n") + text
         case .c:
             return "#include <stdio.h>\n\n" + (helpers.isEmpty ? "" : helperText + "\n\n")
@@ -154,16 +151,15 @@ enum CodeRenderer {
 
     /// 명령(앞으로, 회전 등) 함수 이름
     private static func commandName(_ type: BlockType, language: CodeLanguage) -> String {
-        let names: (snake: String, camel: String)
-        switch type {
-        case .moveForward:    names = ("move_forward", "moveForward")
-        case .moveBackward:   names = ("move_backward", "moveBackward")
-        case .turnLeft:       names = ("turn_left", "turnLeft")
-        case .turnRight:      names = ("turn_right", "turnRight")
-        case .collectItem:    names = ("collect_item", "collectItem")
-        case .activateSwitch: names = ("activate_switch", "activateSwitch")
+        let names: (snake: String, camel: String) = switch type {
+        case .moveForward:    ("move_forward", "moveForward")
+        case .moveBackward:   ("move_backward", "moveBackward")
+        case .turnLeft:       ("turn_left", "turnLeft")
+        case .turnRight:      ("turn_right", "turnRight")
+        case .collectItem:    ("collect_item", "collectItem")
+        case .activateSwitch: ("activate_switch", "activateSwitch")
         // 컨테이너 블럭은 renderList에서 따로 처리하므로 여기 오지 않음
-        case .repeatBlock, .ifBlock, .functionBlock: names = ("", "")
+        case .repeatBlock, .ifBlock, .functionBlock: ("", "")
         }
         return isSnake(language) ? names.snake : names.camel
     }

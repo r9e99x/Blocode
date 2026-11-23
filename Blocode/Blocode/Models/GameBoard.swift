@@ -9,7 +9,7 @@ import Foundation
 
 // MARK: - BoardEvent
 /// 판에 일어난 변화 종류 — 화면이 어떤 연출로 그릴지 정하는 데 사용
-enum BoardEvent: Equatable {
+nonisolated enum BoardEvent: Equatable {
     case moved                    // 한 칸 이동
     case turned                   // 회전
     case teleported               // 포탈로 순간이동
@@ -28,7 +28,8 @@ protocol GameBoardRendering: AnyObject {
 // MARK: - GameBoard
 /// 게임 진행 상태의 원본과 판 위의 규칙 — 캐릭터 위치·방향, 모은 보석, 열린 문
 /// UI를 모르는 순수 값 타입이라 화면 없이 규칙만 검증할 수 있음
-struct GameBoard {
+/// nonisolated: 다른 계산용 모델(MapData·MapSolver 등)과 같이 메인 액터에 묶지 않음 — 메인 밖 계산·테스트에서도 바로 씀
+nonisolated struct GameBoard {
 
     /// 캐릭터 이동 방향 — 앞으로/뒤로만 구분 (회전은 turn으로 처리)
     enum MoveDirection {
@@ -81,10 +82,9 @@ struct GameBoard {
 
     /// 한 칸 이동 — 벽이면 그대로 두고 false 반환
     mutating func move(_ moveDirection: MoveDirection) -> Bool {
-        let target: Position
-        switch moveDirection {
-        case .forward:  target = position.next(direction: direction)
-        case .backward: target = position.previous(direction: direction)
+        let target = switch moveDirection {
+        case .forward:  position.next(direction: direction)
+        case .backward: position.previous(direction: direction)
         }
         guard isWalkable(target) else { return false }
         position = target

@@ -193,12 +193,11 @@ struct MapEditorGridView: View {
         arrow.addLine(to: CGPoint(x: a, y: a * 0.8))
         arrow.addLine(to: CGPoint(x: -a, y: a * 0.8))
         arrow.closeSubpath()
-        let angle: Double
-        switch editor.map.startDirection {
-        case .up: angle = 0
-        case .right: angle = .pi / 2
-        case .down: angle = .pi
-        case .left: angle = .pi * 1.5
+        let angle: Double = switch editor.map.startDirection {
+        case .up: 0
+        case .right: .pi / 2
+        case .down: .pi
+        case .left: .pi * 1.5
         }
         let transform = CGAffineTransform(translationX: center.x, y: center.y).rotated(by: angle)
         context.fill(arrow.applying(transform), with: .color(.characterArrow))

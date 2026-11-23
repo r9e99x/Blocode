@@ -29,6 +29,8 @@ struct OnboardingView: View {
 
     /// 현재 표시 중인 슬라이드 인덱스
     @State private var currentPage = 0
+    /// 다음 버튼 눌림 상태 (3D 효과)
+    @State private var isNextPressed = false
 
     /// 온보딩 일러스트의 강조 민트 — 여러 슬라이드가 같은 값을 쓰므로 한 곳에서 정의 (값은 기존 그대로)
     private static let onboardingMint = Color(red: 124/255, green: 196/255, blue: 158/255)
@@ -233,8 +235,6 @@ struct OnboardingView: View {
     }
 
     // MARK: - 다음 버튼 (3D 다크 스타일)
-
-    @State private var isNextPressed = false
 
     private func nextButton(isCompactHeight: Bool) -> some View {
         // 아이폰 가로모드(세로 공간 부족)에서는 슬라이드 콘텐츠를 키운 만큼 버튼은 살짝 줄임

@@ -49,6 +49,8 @@ struct SidebarShell: View {
 
     @State private var homeVM = HomeViewModel()
     @State private var chapterSelectVM = ChapterSelectViewModel()
+    /// 잠긴 챕터·잠긴 기능(나만의 맵, 일일 퍼즐)을 눌렀을 때의 해금 조건 팝업 — 셸 전체에서 하나를 공유
+    @State private var lockInfo: LockInfo? = nil
     private let settings = SettingsService.shared  // @Observable — 테마를 읽기만 해도 바뀔 때 다시 그려짐
 
     var body: some View {
@@ -235,7 +237,6 @@ struct SidebarShell: View {
 
     // MARK: - 콘텐츠 패널 (섹션에 따라 전환)
 
-    @ViewBuilder
     private var contentPane: some View {
         Group {
             switch section {
@@ -319,9 +320,6 @@ struct SidebarShell: View {
     }
 
     // MARK: - 챕터 지도 (지그재그 + 3D + 눌림 + 잠금 팝업)
-
-    /// 잠긴 챕터·잠긴 기능(나만의 맵, 일일 퍼즐)을 눌렀을 때의 해금 조건 팝업 — 셸 전체에서 하나를 공유
-    @State private var lockInfo: LockInfo? = nil
 
     private var chapterMapContent: some View {
         VStack(alignment: .leading, spacing: 0) {

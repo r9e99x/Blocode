@@ -54,13 +54,11 @@ final class ReminderNotificationDelegate: NSObject, UNUserNotificationCenterDele
         userInfo[destinationKey] as? String == dailyPuzzleDestination
     }
 
+    /// 알림을 눌렀을 때 — async 버전(완료 콜백 대신 함수가 끝나면 처리 완료로 봄)
+    /// 시스템이 메인 밖에서 부를 수 있어 nonisolated로 받고, 이동 요청은 메인 액터에서 기록
     nonisolated func userNotificationCenter(_ center: UNUserNotificationCenter,
-                                            didReceive response: UNNotificationResponse,
-                                            withCompletionHandler completionHandler: @escaping () -> Void) {
-        let opensDailyPuzzle = Self.opensDailyPuzzle(response.notification.request.content.userInfo)
-        if opensDailyPuzzle {
-            Task { @MainActor in NotificationRouter.shared.requestDailyPuzzle() }
-        }
-        completionHandler()
+                                            didReceive response: UNNotificationResponse) async {
+        guard Self.opensDailyPuzzle(response.notification.request.content.userInfo) else { return }
+        await NotificationRouter.shared.requestDailyPuzzle()
     }
 }

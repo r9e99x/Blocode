@@ -376,18 +376,14 @@ struct ClearOverlayView: View {
         // (라이트: 기존 darkInk+탄색 베벨+크림 화살표 / 다크: 밝은 몸체+쿨 그레이 베벨+다크 화살표)
         return ThreeDSurface(topDepth: topD, bottomDepth: botD) {
             // ① 위 뒷면 — 라이트 #807869 / 다크 쿨 그레이
-            ZStack {
-                RoundedRectangle(cornerRadius: cr)
-                    .fill(Color.characterTopBack)
-            }
-            .frame(width: size, height: size)
+            RoundedRectangle(cornerRadius: cr)
+                .fill(Color.characterTopBack)
+                .frame(width: size, height: size)
         } bottomBack: {
             // ② 아래 뒷면 — 라이트 #beb59f / 다크 쿨 그레이 (그림자 효과)
-            ZStack {
-                RoundedRectangle(cornerRadius: cr)
-                    .fill(Color.characterBottomBack)
-            }
-            .frame(width: size, height: size)
+            RoundedRectangle(cornerRadius: cr)
+                .fill(Color.characterBottomBack)
+                .frame(width: size, height: size)
         } front: {
             // ③ 앞면 — (라이트 다크 브라운 / 다크 회백색) + 화살표
             ZStack {

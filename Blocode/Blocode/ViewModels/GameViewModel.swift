@@ -409,18 +409,9 @@ final class GameViewModel {
 
             // 블럭 종류에 따라 실행
             switch block.type {
-            case .moveForward:
-                // 앞으로 이동 — 실패 시 실패 처리 후 종료
-                let success = await moveCharacter(.forward)
-                if !success {
-                    // 라인 번호는 사용자에게 보이는 최상위 행 번호(1-based) 기준
-                    handleFailure(at: path, message: "벽에 부딪혔어요 · 라인 \(path[0] + 1)")
-                    return
-                }
-
-            case .moveBackward:
-                // 뒤로 이동 — 실패 시 실패 처리 후 종료
-                let success = await moveCharacter(.backward)
+            case .moveForward, .moveBackward:
+                // 앞으로/뒤로 이동 — 벽이면 실패 처리 후 종료
+                let success = await moveCharacter(block.type == .moveForward ? .forward : .backward)
                 if !success {
                     // 라인 번호는 사용자에게 보이는 최상위 행 번호(1-based) 기준
                     handleFailure(at: path, message: "벽에 부딪혔어요 · 라인 \(path[0] + 1)")

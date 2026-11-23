@@ -43,7 +43,7 @@ final class LearningService {
     /// 열린 카드 수 / 전체 카드 수 — 탭 위 "수집 n/m" 표시용
     func progress(in category: LearningCategory) -> (unlocked: Int, total: Int) {
         let cards = LearningCatalog.cards(in: category)
-        return (cards.filter(isUnlocked).count, cards.count)
+        return (cards.count(where: isUnlocked), cards.count)
     }
 
     // MARK: - 수집

@@ -292,7 +292,7 @@ private struct NestedBlockArea: View {
         VStack(alignment: .leading, spacing: metrics.areaSpacing) {
 
             if let children = parent.children, !children.isEmpty {
-                ForEach(Array(children.enumerated()), id: \.element.id) { index, child in
+                ForEach(children.enumerated(), id: \.element.id) { index, child in
                     childItem(child, index: index)
                 }
             } else {

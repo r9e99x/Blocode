@@ -57,7 +57,7 @@ nonisolated struct Position: Codable, Equatable, Hashable {
     /// 현재 방향의 반대 방향으로 한 칸 이동했을 때의 좌표 반환 (뒤로 이동)
     /// 180도 회전(turnedRight × 2)한 방향으로 next를 호출하여 뒤 좌표 계산
     func previous(direction: Direction) -> Position {
-        return next(direction: direction.turnedRight.turnedRight)
+        next(direction: direction.turnedRight.turnedRight)
     }
 }
 
@@ -114,18 +114,18 @@ nonisolated struct MapData: Codable {
 
     /// 맵의 가로 칸 수 — grid 첫 행의 열 수
     var width: Int {
-        return grid.first?.count ?? 0
+        grid.first?.count ?? 0
     }
 
     /// 맵의 세로 칸 수 — grid의 행 수
     var height: Int {
-        return grid.count
+        grid.count
     }
 
     /// 특정 좌표가 맵 범위 안에 있는지 확인 (경계 검사)
     func isInBounds(_ position: Position) -> Bool {
-        return position.x >= 0 && position.x < width &&
-               position.y >= 0 && position.y < height
+        position.x >= 0 && position.x < width &&
+        position.y >= 0 && position.y < height
     }
 
     /// 특정 좌표가 이동 가능한 바닥 타일인지 확인
@@ -137,6 +137,6 @@ nonisolated struct MapData: Codable {
 
     /// 특정 좌표가 목표 지점인지 확인 — 클리어 판정에 사용
     func isGoal(_ position: Position) -> Bool {
-        return position == goal
+        position == goal
     }
 }

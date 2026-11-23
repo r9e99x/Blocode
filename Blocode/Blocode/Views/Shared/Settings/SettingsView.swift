@@ -400,7 +400,7 @@ struct SettingsView: View {
             sectionLabel("개발자")
             settingsCard {
                 VStack(spacing: 0) {
-                    ForEach(Array(vm.chapters.enumerated()), id: \.element.id) { index, chapter in
+                    ForEach(vm.chapters.enumerated(), id: \.element.id) { index, chapter in
                         settingsRow(
                             title: "챕터 \(chapter.number) · \(chapter.title)",
                             subtitle: "1~\(chapter.number)챕터 전체 스테이지 3별 처리"
@@ -446,7 +446,6 @@ struct SettingsView: View {
     }
 
     /// 카드 컨테이너 — 배경색 + 모서리 + 그림자로 카드 형태 구성
-    @ViewBuilder
     private func settingsCard<Content: View>(@ViewBuilder content: () -> Content) -> some View {
         content()
             .background(Color.cardBackground)
@@ -455,7 +454,6 @@ struct SettingsView: View {
     }
 
     /// 설정 행 — 아이콘(선택) + 제목 + 부제목(선택) + 오른쪽 트레일링 뷰
-    @ViewBuilder
     private func settingsRow<Trailing: View>(
         icon: String? = nil,
         iconColor: Color? = nil,

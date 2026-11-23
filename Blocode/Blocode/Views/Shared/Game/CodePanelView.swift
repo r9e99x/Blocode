@@ -306,7 +306,7 @@ struct CodePanelView: View {
                 // 팔레트 삽입 드래그와 동일한 ghost 오버레이 방식(StageView.reorderGhost)을 그대로 재사용
                 ScrollView {
                     LazyVStack(spacing: 8) {
-                        ForEach(Array(viewModel.codeBlocks.enumerated()), id: \.element.id) { offset, block in
+                        ForEach(viewModel.codeBlocks.enumerated(), id: \.element.id) { offset, block in
                             // 삽입 인디케이터 — 첫 번째 위치 (팔레트 삽입 / 순서 변경 공용)
                             if let dragType = drag.paletteType, drag.paletteInside, drag.paletteInsertIndex == 0 && offset == 0 {
                                 insertionIndicator(color: dragType.blockColor)

@@ -55,9 +55,9 @@ struct MapEditorView: View {
             if showLeaveConfirm { leaveConfirm }
         }
         .sheet(isPresented: $showSettings) { settingsSheet }
-        .fullScreenCoverCompat(isPresented: Binding(get: { testStage != nil },
-                                                    set: { if !$0 { testStage = nil } })) {
-            testPlayScreen
+        // 테스트 플레이 — 스테이지가 생기면 열리고 nil이 되면 닫힘 (값 기반 표시)
+        .fullScreenCoverCompat(item: $testStage) { stage in
+            testPlayScreen(stage)
         }
         // 이름 길이 제한 — 규칙은 ViewModel, 자르는 시점만 화면이 알림 (입력칸이 잘린 글자로 갱신되도록 다음 갱신에서)
         .onChange(of: editor.name) { _, _ in editor.limitNameLength() }
@@ -200,18 +200,15 @@ struct MapEditorView: View {
     }
 
     /// 만든 맵을 직접 플레이 — 클리어하면 그 블럭 수로 별 3개 기준이 내려감
-    @ViewBuilder
-    private var testPlayScreen: some View {
-        if let stage = testStage {
-            StageView(stage: stage, navPath: .constant(NavigationPath()),
-                      onExit: { testStage = nil },
-                      onCleared: { editor.recordTestClear(blockCount: $0) })
-                .id(stage.id)
-                .preferredColorScheme(SettingsService.shared.theme.colorScheme)
-                #if os(macOS)
-                .frame(minWidth: 960, minHeight: 680)  // 맥 시트는 내용 크기를 따르므로 게임 화면이 충분히 크도록
-                #endif
-        }
+    private func testPlayScreen(_ stage: Stage) -> some View {
+        StageView(stage: stage, navPath: .constant(NavigationPath()),
+                  onExit: { testStage = nil },
+                  onCleared: { editor.recordTestClear(blockCount: $0) })
+            .id(stage.id)
+            .preferredColorScheme(SettingsService.shared.theme.colorScheme)
+            #if os(macOS)
+            .frame(minWidth: 960, minHeight: 680)  // 맥 시트는 내용 크기를 따르므로 게임 화면이 충분히 크도록
+            #endif
     }
 
     private var leaveConfirm: some View {

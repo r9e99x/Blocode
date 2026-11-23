@@ -341,7 +341,7 @@ nonisolated enum PuzzleGenerator {
         if wantsSwitch {
             let middle = Array(route[(route.count / 4)...(route.count * 3 / 4)])
             let corridors = middle.filter { cell in
-                cell != start && cell != goal && neighbors(of: cell).filter { isFloor(grid, $0) }.count == 2
+                cell != start && cell != goal && neighbors(of: cell).count(where: { isFloor(grid, $0) }) == 2
             }
             guard let gate = corridors.randomElement(using: &rng) else { return nil }
             grid[gate.y][gate.x] = 0
@@ -383,7 +383,7 @@ nonisolated enum PuzzleGenerator {
         let validation = MapValidator.validate(map, palette: palette)
         guard validation.isValid, let solution = validation.shortestSolution,
               difficulty.shortestRange(for: theme).contains(solution.count),
-              solution.filter({ $0 == .turnLeft || $0 == .turnRight }).count >= difficulty.minimumTurns else { return nil }
+              solution.count(where: { $0 == .turnLeft || $0 == .turnRight }) >= difficulty.minimumTurns else { return nil }
 
         // 기믹이 실제로 필요해야 함 — 문은 스위치 없이 못 지나가고, 포탈은 지름길이고, 보석은 돌아가야 함
         if !switches.isEmpty {

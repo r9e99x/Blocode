@@ -61,7 +61,7 @@ struct ChapterMapView: View {
 
                 // 챕터 노드 — 카드 중심을 xCenterFracs 위치에 맞춤
                 // (노드 실제 폭 size + 20과 일치시켜야 점선 연결점이 카드 중심에서 어긋나지 않음)
-                ForEach(Array(chapters.enumerated()), id: \.element.id) { i, chapter in
+                ForEach(chapters.enumerated(), id: \.element.id) { i, chapter in
                     chapterNode(chapter)
                         .offset(x: xCenterFrac(i) * w - (size + 20) / 2, y: topPad + CGFloat(i) * row)
                 }

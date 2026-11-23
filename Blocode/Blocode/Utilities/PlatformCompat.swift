@@ -60,4 +60,18 @@ extension View {
         self.sheet(isPresented: isPresented, content: content)
         #endif
     }
+
+    /// 전체 화면 모달 표시 (값 기반) — 값이 생기면 그 값으로 열리고, nil이 되면 닫힘
+    /// (Bool 바인딩을 따로 만들어 값과 맞추지 않아도 되는 SwiftUI 표준 방식)
+    @ViewBuilder
+    func fullScreenCoverCompat<Item: Identifiable, CoverContent: View>(
+        item: Binding<Item?>,
+        @ViewBuilder content: @escaping (Item) -> CoverContent
+    ) -> some View {
+        #if os(iOS)
+        self.fullScreenCover(item: item, content: content)
+        #else
+        self.sheet(item: item, content: content)
+        #endif
+    }
 }

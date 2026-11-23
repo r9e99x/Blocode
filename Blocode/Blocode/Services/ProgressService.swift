@@ -14,7 +14,7 @@ import os
 /// 스테이지 하나의 클리어 기록을 뷰에 전달하기 위한 경량 값 타입(DTO)
 /// 실제 영속 저장은 SwiftData의 `StageProgress` 모델이 담당하며,
 /// 이 구조체는 SwiftData 모델을 뷰가 그대로 쓰지 않도록 감싸는 읽기 전용 미러임
-struct StageResult: Codable {
+struct StageResult {
     var isCleared: Bool       // 클리어 여부
     var stars: Int            // 획득 별 수 0~3
     var bestBlockCount: Int   // 지금까지 사용한 최소 블럭 수

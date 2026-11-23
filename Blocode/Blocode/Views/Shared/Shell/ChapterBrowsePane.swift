@@ -64,6 +64,7 @@ struct ChapterBrowsePane: View {
     @State private var selectedStage: Int?
     @State private var lockInfo: LockInfo? = nil
     @State private var pressedStageNumber: Int? = nil
+    @State private var isStartPressed = false  // 시작 버튼 눌림 상태 (3D 효과)
 
     init(chapterNumber: Int, onBackToMap: @escaping () -> Void,
          onSelectChapter: @escaping (Int) -> Void, onStart: @escaping (Int, Int) -> Void) {
@@ -236,8 +237,6 @@ struct ChapterBrowsePane: View {
     }
 
     // MARK: 3열 — 스테이지 미리보기
-
-    @State private var isStartPressed = false
 
     @ViewBuilder
     private func stagePreview(padding: CGFloat) -> some View {
