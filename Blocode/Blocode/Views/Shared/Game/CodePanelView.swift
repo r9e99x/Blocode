@@ -113,8 +113,9 @@ struct CodePanelView: View {
                 .opacity(viewModel.gameState == .running ? 0.4 : 1.0)
                 .padding(.top, 8)
 
-            // 컨트롤 바
+            // 컨트롤 바 — 아이패드는 가운데 600pt 안에 모음 (넓은 화면 양 끝으로 버튼이 흩어지지 않게)
             ControlBarView(viewModel: viewModel)
+                .frame(maxWidth: isPadIdiom ? 600 : .infinity)
                 .padding(.top, 6)
                 .padding(.bottom, 24)
         }

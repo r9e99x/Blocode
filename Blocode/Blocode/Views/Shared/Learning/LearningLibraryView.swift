@@ -67,7 +67,7 @@ struct LearningLibraryView: View {
             }
             Spacer()
         }
-        .frame(maxWidth: 680)
+        .frame(maxWidth: contentMaxWidth)
         .frame(maxWidth: .infinity)
         .padding(.horizontal, 24)
         .padding(.top, 28)
@@ -101,13 +101,16 @@ struct LearningLibraryView: View {
                 .buttonStyle(.plain)
             }
         }
-        .frame(maxWidth: 680)
+        .frame(maxWidth: contentMaxWidth)
         .frame(maxWidth: .infinity)
         .padding(.horizontal, 24)
         .padding(.bottom, 12)
     }
 
     // MARK: - 목록
+
+    /// 내용 최대 폭 — 아이패드는 2열이라 넓게 (아이폰·맥은 기존 680 그대로)
+    private var contentMaxWidth: CGFloat { isPadIdiom ? 1100 : 680 }
 
     private var list: some View {
         ScrollView {
@@ -122,12 +125,22 @@ struct LearningLibraryView: View {
                             .padding(.top, section.id == sections.first?.id ? 0 : 10)
                             .padding(.leading, 4)
                     }
-                    ForEach(section.cards) { card in
-                        cardRow(card)
+                    if isPadIdiom {
+                        // 아이패드 — 카드를 2열로 (예전엔 가운데 한 줄만 써서 양옆이 넓게 비었음)
+                        LazyVGrid(columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)],
+                                  spacing: 10) {
+                            ForEach(section.cards) { card in
+                                cardRow(card)
+                            }
+                        }
+                    } else {
+                        ForEach(section.cards) { card in
+                            cardRow(card)
+                        }
                     }
                 }
             }
-            .frame(maxWidth: 680)
+            .frame(maxWidth: contentMaxWidth)
             .frame(maxWidth: .infinity)
             .padding(.horizontal, 24)
             .padding(.bottom, 32)

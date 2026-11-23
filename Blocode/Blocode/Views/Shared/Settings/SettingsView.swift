@@ -22,6 +22,7 @@ struct SettingsView: View {
 
     @State private var showResetAlert   = false  // 진행도 초기화 확인 알럿 표시 여부
     @State private var isScrolled       = false  // 스크롤 여부 (헤더 그림자 표시용)
+    @State private var usesTwoColumns   = false  // 아이패드에서 폭이 넉넉하면 섹션을 2칸으로 (아이폰·맥은 항상 한 줄)
     @State private var devUnlockedLabel: String? = nil  // 개발자 해금 완료 알럿에 표시할 챕터 설명 (nil이면 알럿 숨김)
 
     // 팔레트 블럭 색상 프리뷰 (테마 카드 상단 색상 도트)
@@ -80,21 +81,44 @@ struct SettingsView: View {
                 // 설정 섹션 스크롤 영역
                 ScrollView {
                     VStack(spacing: 28) {
-                        themeSection      // 테마 선택 섹션
-                        feedbackSection   // 효과음/배경음악 섹션
-                        if vm.dailyPuzzleUnlocked { reminderSection }   // 복습 알림 섹션 (일일 퍼즐이 열린 뒤에만)
-                        gameSection       // 실행 속도 섹션
-                        dataSection       // 진행도 초기화 섹션
-                        developerSection  // 챕터 강제 해금(테스트 편의) — 임시, 정식 배포 전 제거 예정
+                        // 아이패드 탭 안에서는 다른 탭(나만의 맵·개념 카드)과 같은 머리글
+                        if isEmbedded && isPadIdiom { padHeader }
+
+                        if usesTwoColumns {
+                            // 아이패드 넓은 화면 — 왼쪽(화면·소리·알림) / 오른쪽(게임·데이터·개발자)
+                            // (예전엔 가운데 560pt 한 줄만 써서 양옆이 넓게 비었음)
+                            HStack(alignment: .top, spacing: 28) {
+                                VStack(spacing: 28) {
+                                    themeSection
+                                    feedbackSection
+                                    if vm.dailyPuzzleUnlocked { reminderSection }
+                                }
+                                VStack(spacing: 28) {
+                                    gameSection
+                                    dataSection
+                                    developerSection
+                                }
+                            }
+                        } else {
+                            themeSection      // 테마 선택 섹션
+                            feedbackSection   // 효과음/배경음악 섹션
+                            if vm.dailyPuzzleUnlocked { reminderSection }   // 복습 알림 섹션 (일일 퍼즐이 열린 뒤에만)
+                            gameSection       // 실행 속도 섹션
+                            dataSection       // 진행도 초기화 섹션
+                            developerSection  // 챕터 강제 해금(테스트 편의) — 임시, 정식 배포 전 제거 예정
+                        }
                         footerView        // 버전 정보
                     }
                     .padding(.horizontal, 20)
                     .padding(.top, 12)
                     .padding(.bottom, 40)
-                    // 와이드 화면(아이패드·맥)에선 설정 목록을 중앙 560pt로 제한 (아이폰 영향 없음)
-                    .frame(maxWidth: 560)
+                    // 와이드 화면(아이패드·맥)에선 설정 목록을 중앙 560pt로 제한 (아이폰 영향 없음), 아이패드 2칸은 1000pt
+                    .frame(maxWidth: usesTwoColumns ? 1000 : 560)
                     .frame(maxWidth: .infinity)
                 }
+                // 아이패드에서 폭이 900pt 이상이면 2칸 — 넘을 때와 돌아올 때만 알림이 옴
+                // (폭 계산은 메인 스레드 밖에서 돌 수 있어서, 아이패드 판별은 결과를 받는 쪽에서 함)
+                .onGeometryChange(for: Bool.self) { $0.size.width >= 900 } action: { usesTwoColumns = isPadIdiom && $0 }
                 // 스크롤 위치에 따라 헤더 그림자 토글
                 // 스크롤 위치를 "4pt 넘었는지"로 바꿔 받아서, 넘을 때와 돌아올 때만 알림이 옴 (예전엔 스크롤 매 프레임 알림)
                 .onScrollGeometryChange(for: Bool.self) { geo in
@@ -127,6 +151,22 @@ struct SettingsView: View {
         } message: {
             Text("\(devUnlockedLabel ?? "")까지 전부 3별로 처리됐어요.")
         }
+    }
+
+    // MARK: - 아이패드 머리글
+
+    /// 아이패드 탭 안 머리글 — 나만의 맵("my maps")·개념 카드("library")와 같은 모양
+    private var padHeader: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text("앱 설정")
+                .font(.system(size: 13, weight: .medium))
+                .foregroundStyle(.secondary)
+            Text("settings")
+                .font(.system(size: 30, weight: .bold, design: .serif))
+                .italic()
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.top, 16)
     }
 
     // MARK: - 테마 섹션

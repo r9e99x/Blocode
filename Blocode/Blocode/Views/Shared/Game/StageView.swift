@@ -136,7 +136,7 @@ struct StageView: View {
                     if geo.size.height > geo.size.width {
                         padPortraitGameLayout(totalHeight: geo.size.height)
                     } else {
-                        splitGameLayout(totalWidth: geo.size.width)
+                        padLandscapeGameLayout(totalWidth: geo.size.width)
                     }
                 } else {
                     wideGameLayout(totalWidth: geo.size.width)
@@ -311,16 +311,12 @@ struct StageView: View {
         }
     }
 
-    // MARK: - 아이패드·맥 공용 게임 레이아웃
-    // 좌: 코드 패널(세로로 길게) / 우: 정사각 맵(남은 공간) — 코드 패널 안의 배치 차이는 CodePanelView가 플랫폼별로 처리
+    #if os(macOS)
+    // MARK: - 맥 게임 레이아웃
+    // 좌: 코드 패널(세로로 길게) / 우: 정사각 맵(남은 공간) — 아이패드 가로는 padLandscapeGameLayout
 
     private func splitGameLayout(totalWidth: CGFloat) -> some View {
-        // 코드 패널 폭 — 아이패드는 터치 팔레트 블럭이 더 커서 맥보다 살짝 넓게
-        #if os(macOS)
-        let leftWidth = min(max(totalWidth * 0.36, 400), 480)
-        #else
-        let leftWidth = min(max(totalWidth * 0.38, 420), 520)
-        #endif
+        let leftWidth = min(max(totalWidth * 0.36, 400), 480)  // 코드 패널 폭
 
         return VStack(spacing: 0) {
             navigationBar
@@ -343,21 +339,50 @@ struct StageView: View {
             }
         }
     }
+    #endif
+
+    // MARK: - 아이패드 가로 게임 레이아웃
+
+    /// 좌: 코드 패널(세로로 길게) / 우: 정사각 맵(남은 공간을 가득) — 맥 분할과 같은 구성에 아이패드 값
+    /// (팔레트 블럭이 아이패드에서 커져서 코드 패널을 맥보다 넓게)
+    private func padLandscapeGameLayout(totalWidth: CGFloat) -> some View {
+        let leftWidth = min(max(totalWidth * 0.40, 440), 560)
+
+        return VStack(spacing: 0) {
+            navigationBar
+
+            HStack(spacing: 0) {
+                // 좌측 — 코드 패널 (공간이 넉넉해 확장/축소 토글 없이 항상 펼침)
+                codePanel(alwaysExpanded: true)
+                    .frame(width: leftWidth)
+
+                // 우측 — 정사각형 맵 (남은 공간을 가득 채우고 가운데 정렬)
+                mapView
+                    .aspectRatio(1.0, contentMode: .fit)
+                    .padding(.horizontal, 24)
+                    .padding(.vertical, 8)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
+        }
+    }
 
     // MARK: - 아이패드 세로 게임 레이아웃
 
     /// 위: 정사각 맵 / 아래: 코드 패널
     /// 세로 화면에서 좌우로 나누면 패널이 좁아져 팔레트 블럭이 밖으로 밀리고 맵도 작아지므로 위아래로 쌓음
-    /// - Parameter totalHeight: 전체 화면 높이 — 코드 패널이 쓸 공간을 남기려고 맵을 절반까지로 제한
+    /// - Parameter totalHeight: 전체 화면 높이 — 코드 패널이 쓸 공간을 남기려고 맵을 55%까지로 제한
+    ///   (예전 50%는 블럭이 적을 때 코드 칸이 넓게 비어서 맵을 조금 키움)
     private func padPortraitGameLayout(totalHeight: CGFloat) -> some View {
         VStack(spacing: 0) {
             navigationBar
 
             mapView
                 .aspectRatio(1.0, contentMode: .fit)
-                .frame(maxHeight: totalHeight * 0.5)
+                .frame(maxHeight: totalHeight * 0.55)
                 .padding(.horizontal, 16)
                 .padding(.vertical, 4)
+                // 코드 패널(늘어나는 목록)과 공간을 반씩 나눠 갖지 않고 맵이 먼저 크기를 가짐 — 맨 바깥에 둬야 VStack이 읽음
+                .layoutPriority(1)
 
             // 세로로 공간이 넉넉해 아이패드 좌우 분할과 같이 확장/축소 토글 없이 항상 펼침
             codePanel(alwaysExpanded: true)

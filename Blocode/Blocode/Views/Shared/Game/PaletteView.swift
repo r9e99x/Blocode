@@ -36,28 +36,44 @@ struct PaletteView: View {
     #endif
 
     var body: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 10) {
-                // 스테이지별 허용 블럭만 가로로 나열 (availableBlocks 기준)
-                ForEach(availableBlocks, id: \.self) { type in
-                    PaletteCardView(
-                        type: type,
-                        onTap:        { onSelect(type) },
-                        // 드래그 콜백이 있을 때만 전달 (없으면 nil)
-                        onDragStart:  onDragStart  != nil ? { pt in onDragStart?(type, pt)  } : nil,
-                        onDragChange: onDragChange != nil ? { pt in onDragChange?(type, pt) } : nil,
-                        onDragEnd:    onDragEnd    != nil ? { pt in onDragEnd?(type, pt)    } : nil
-                    )
+        Group {
+            if isPadIdiom {
+                // 아이패드 — 폭이 넓어 블럭이 다 들어가면 스크롤 없이 가운데 정렬 (넘칠 때만 가로 스크롤)
+                // (예전엔 왼쪽에 몰려 오른쪽이 넓게 비어 보였음)
+                ViewThatFits(in: .horizontal) {
+                    cardsRow
+                        .frame(maxWidth: .infinity)
+                    ScrollView(.horizontal, showsIndicators: false) { cardsRow }
                 }
+            } else {
+                ScrollView(.horizontal, showsIndicators: false) { cardsRow }
             }
-            .padding(.horizontal, 14)
-            .padding(.vertical, verticalPadding)
         }
         .background(Color.statCardBackground)  // 팔레트 컨테이너 — 홈 통계 카드와 같은 크림/미드 남색
         .clipShape(RoundedRectangle(cornerRadius: 20))
         .shadow(color: Color.black.opacity(0.06), radius: 10, x: 0, y: 2)
         .padding(.horizontal, 16)
         .padding(.bottom, 4)
+    }
+}
+
+extension PaletteView {
+    /// 블럭 카드 한 줄 — 스테이지별 허용 블럭만 가로로 나열 (availableBlocks 기준)
+    private var cardsRow: some View {
+        HStack(spacing: 10) {
+            ForEach(availableBlocks, id: \.self) { type in
+                PaletteCardView(
+                    type: type,
+                    onTap:        { onSelect(type) },
+                    // 드래그 콜백이 있을 때만 전달 (없으면 nil)
+                    onDragStart:  onDragStart  != nil ? { pt in onDragStart?(type, pt)  } : nil,
+                    onDragChange: onDragChange != nil ? { pt in onDragChange?(type, pt) } : nil,
+                    onDragEnd:    onDragEnd    != nil ? { pt in onDragEnd?(type, pt)    } : nil
+                )
+            }
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, verticalPadding)
     }
 }
 
@@ -77,24 +93,24 @@ struct PaletteCardView: View {
     /// 드래그 활성화 여부 — onDragStart 콜백이 있을 때만 활성화
     private var dragEnabled: Bool { onDragStart != nil }
 
-    // 3D 카드 파라미터 — 맥은 코드 패널 폭이 좁아 카드도 축소, iOS/아이패드는 기존 크기 유지
+    // 3D 카드 파라미터 — 맥은 코드 패널 폭이 좁아 카드도 축소, 아이폰은 기존 크기, 아이패드는 손가락·화면에 맞춰 크게
     #if os(macOS)
     private let btnSize:   CGFloat = 36
     private let radius:    CGFloat = 11
     private let topDepth:  CGFloat = 1.3
     private let botDepth:  CGFloat = 2.1
     #else
-    private let btnSize:   CGFloat = 46   // 버튼 크기 (팔레트 세로 크기 축소 — 기존 54)
-    private let radius:    CGFloat = 14   // 모서리 반지름
-    private let topDepth:  CGFloat = 1.6  // 위 뒷면 두께
-    private let botDepth:  CGFloat = 2.8  // 아래 뒷면 두께
+    private var btnSize:   CGFloat { isPadIdiom ? 56 : 46 }   // 버튼 크기 (아이폰은 팔레트 세로 크기 축소 — 기존 54)
+    private var radius:    CGFloat { isPadIdiom ? 17 : 14 }   // 모서리 반지름
+    private var topDepth:  CGFloat { isPadIdiom ? 1.8 : 1.6 } // 위 뒷면 두께
+    private var botDepth:  CGFloat { isPadIdiom ? 3.2 : 2.8 } // 아래 뒷면 두께
     #endif
 
-    // 아이콘 크기 — iOS는 버튼 축소에 맞춰 함께 축소, 맥은 기존 값 그대로 유지
+    // 아이콘 크기 — 아이폰은 버튼 축소에 맞춰 함께 축소, 맥은 기존 값 그대로 유지
     #if os(macOS)
     private let iconSize: CGFloat = 18
     #else
-    private let iconSize: CGFloat = 16
+    private var iconSize: CGFloat { isPadIdiom ? 20 : 16 }
     #endif
 
     var body: some View {

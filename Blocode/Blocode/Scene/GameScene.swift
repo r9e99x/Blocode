@@ -210,7 +210,8 @@ class GameScene: SKScene, GameBoardRendering {
         let refRows = max(rows, 5)
         let maxByWidth  = (availableWidth  + gap) / CGFloat(refCols) - gap
         let maxByHeight = (availableHeight + gap) / CGFloat(refRows) - gap
-        let tileSize    = min(maxByWidth, maxByHeight, 76)  // 최대 76pt 제한
+        // 최대 크기 제한 — 맥·아이폰 76pt, 아이패드는 화면이 커서 76pt에 걸리면 맵 둘레가 넓게 비므로 110pt
+        let tileSize    = min(maxByWidth, maxByHeight, isPadIdiom ? 110 : 76)
 
         let cellSize  = tileSize + gap  // 하나의 셀 크기 (타일 + 간격)
         let mapWidth  = CGFloat(cols) * cellSize - gap
