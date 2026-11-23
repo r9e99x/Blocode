@@ -36,6 +36,7 @@ struct HomeViewModelTests {
         #expect(vm.earnedStars == 3)
         #expect(vm.completedChapters == 0)
         #expect(vm.nextStage?.stage == 2)
+        #expect(vm.nextStageDetail?.id == "ch1_stage2")  // 아이패드 홈 카드가 보여 줄 스테이지도 같이 바뀜
         #expect(vm.dynamicSubtitle == "오늘도 한 스테이지씩 나아가요.")
     }
 
@@ -68,6 +69,7 @@ struct HomeViewModelTests {
         #expect(vm.completedChapters == vm.chapterCount)
         #expect(vm.earnedStars == vm.totalPossibleStars)
         #expect(vm.nextStage == nil)
+        #expect(vm.nextStageDetail == nil)  // 모두 완료 — 아이패드 홈은 완료 카드를 보여 줌
         #expect(vm.dynamicSubtitle == "모든 챕터를 완료했어요! 대단해요 🎉")
     }
 }

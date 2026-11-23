@@ -141,6 +141,13 @@ final class HomeViewModel {
         progress.nextStage()  // 챕터 잠금까지 반영 (ChapterCatalog 기준)
     }
 
+    /// 이어서 할 스테이지의 내용 — 아이패드 홈 "다음 스테이지" 카드(이름·미리보기 맵)에 사용, 모두 완료면 nil
+    /// (StageLoader가 불러온 스테이지를 기억해 두므로 다시 그릴 때마다 파일을 읽지 않음)
+    var nextStageDetail: Stage? {
+        guard let next = nextStage else { return nil }
+        return StageLoader.load(chapter: next.chapter, stage: next.stage)
+    }
+
     /// 오늘의 한 줄 — 날짜마다 바뀜
     var dailyQuote: DailyQuote { DailyQuote.quote(for: now(), calendar: calendar) }
 

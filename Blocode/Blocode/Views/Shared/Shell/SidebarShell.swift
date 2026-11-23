@@ -5,9 +5,10 @@
 //  Created by 조준희 on 7/2/26.
 //
 
-// 아이패드·맥 공용 최상위 화면 (아이폰은 ContentView의 NavigationStack 화면을 그대로 사용)
-// 색상·3D 효과·눌림 효과는 전부 공용 컴포넌트를 재사용 — 맥 전용 부분(윈도우 제목, 툴바 뒤로가기)만 #if로 분기
+// 맥 전용 최상위 화면 (아이폰은 ContentView, 아이패드는 PadShell을 사용)
+// 색상·3D 효과·눌림 효과는 전부 공용 컴포넌트를 재사용
 // 챕터 브라우저(ChapterBrowsePane)와 미리보기 맵(StagePreviewMapView)은 별도 파일
+#if os(macOS)
 import SwiftUI
 
 // MARK: - SidebarShell
@@ -17,7 +18,7 @@ import SwiftUI
 /// 뒤로가기 시 셸로 복귀한다 (StageView의 onReturnToChapterList로 연결)
 struct SidebarShell: View {
 
-    /// 플랫폼별 사이드바 항목 크기 — 아이패드는 터치를 고려해 세로 여백을 넉넉히 줘서 탭 영역을 키움
+    /// 사이드바 항목 크기
     private struct ItemMetrics {
         let spacing: CGFloat        // 아이콘-글자 간격
         let iconFontSize: CGFloat   // 아이콘 크기
@@ -26,11 +27,7 @@ struct SidebarShell: View {
         let verticalPadding: CGFloat
         let cornerRadius: CGFloat
 
-        #if os(macOS)
         static let current = ItemMetrics(spacing: 10, iconFontSize: 14, iconWidth: 18, titleFontSize: 14, verticalPadding: 10, cornerRadius: 10)
-        #else
-        static let current = ItemMetrics(spacing: 12, iconFontSize: 16, iconWidth: 20, titleFontSize: 15, verticalPadding: 14, cornerRadius: 12)
-        #endif
     }
 
     private let item = ItemMetrics.current
@@ -76,9 +73,7 @@ struct SidebarShell: View {
                 }
             }
             .background(Color.appBackground.ignoresSafeArea())
-            #if os(macOS)
             .navigationTitle(windowTitle)
-            #endif
             // 게임·에디터 화면 — 아이폰 홈과 같은 연결 코드를 함께 씀 (맥 툴바 뒤로가기도 그 안에서 처리)
             .navigationDestination(for: AppRoute.self) { route in
                 GameRouteDestination(route: route, navPath: $navPath) {
@@ -112,7 +107,6 @@ struct SidebarShell: View {
         navPath = NavigationPath([route])
     }
 
-    #if os(macOS)
     /// 윈도우 타이틀 바 텍스트 — 현재 섹션/챕터 반영 (맥 전용)
     private var windowTitle: String {
         switch section {
@@ -127,7 +121,6 @@ struct SidebarShell: View {
         case .settings: return "Blocode — 설정"
         }
     }
-    #endif
 
     // MARK: - 사이드바
 
@@ -141,8 +134,7 @@ struct SidebarShell: View {
                     .foregroundStyle(.primary)
             }
             .padding(.horizontal, 16)
-            // 아이패드 창 모드에선 왼쪽 위에 창 버튼(닫기·최소화·크기)이 겹쳐 그려져서 로고를 그 아래로 내림
-            .padding(.top, isPadIdiom ? 44 : 20)
+            .padding(.top, 20)
             .padding(.bottom, 24)
 
             sidebarItem(icon: "house", title: "홈", isSelected: section == .home) {
@@ -341,13 +333,8 @@ struct SidebarShell: View {
 
 // MARK: - Preview
 
-#if os(macOS)
 #Preview("셸 홈") {
     SidebarShell()
         .frame(width: 1280, height: 860)
-}
-#else
-#Preview("셸 홈", traits: .landscapeLeft) {
-    SidebarShell()
 }
 #endif
