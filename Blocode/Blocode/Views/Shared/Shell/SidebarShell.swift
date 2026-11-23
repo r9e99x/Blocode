@@ -139,7 +139,8 @@ struct SidebarShell: View {
                     .foregroundStyle(.primary)
             }
             .padding(.horizontal, 16)
-            .padding(.top, 20)
+            // 아이패드 창 모드에선 왼쪽 위에 창 버튼(닫기·최소화·크기)이 겹쳐 그려져서 로고를 그 아래로 내림
+            .padding(.top, isPadIdiom ? 44 : 20)
             .padding(.bottom, 24)
 
             sidebarItem(icon: "house", title: "홈", isSelected: section == .home) {

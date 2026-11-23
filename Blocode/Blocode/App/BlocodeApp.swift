@@ -59,6 +59,9 @@ struct BlocodeApp: App {
             #if os(macOS)
             // macOS: 와이드(분할) 레이아웃이 항상 성립하도록 최소 윈도우 크기 지정
             .frame(minWidth: 1080, minHeight: 720)
+            #else
+            // 아이패드: 창 크기 조절이 가능해서, 240pt 사이드바 옆 내용이 찌그러지지 않을 만큼만 최소 크기를 둠 (아이폰은 제한 없음)
+            .frame(minWidth: isPadIdiom ? 700 : nil, minHeight: isPadIdiom ? 600 : nil)
             #endif
             // 앱 실행 시 배경음악 재생 시작 (설정에서 꺼져 있으면 내부적으로 무시됨)
             .onAppear {
@@ -84,5 +87,7 @@ struct BlocodeApp: App {
         .modelContainer(ProgressService.shared.modelContainer)
         // 맥 기본 윈도우 크기 — 큰 화면 활용 (아이폰/아이패드에선 무시됨)
         .defaultSize(width: 1280, height: 860)
+        // 창의 최소 크기를 내용의 최소 크기(위 frame)에 맞춤 — 아이패드 창 크기 조절에서도 지켜짐
+        .windowResizability(.contentMinSize)
     }
 }
