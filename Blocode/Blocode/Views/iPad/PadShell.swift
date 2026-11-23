@@ -133,20 +133,22 @@ struct PadShell: View {
     @ViewBuilder
     private var chaptersContent: some View {
         if let chapter = browsingChapter {
-            ChapterBrowsePane(
+            PadChapterView(
                 chapterNumber: chapter,
+                chapterSelectVM: chapterSelectVM,
+                lockInfo: $lockInfo,
                 onBackToMap: { browsingChapter = nil },
                 onSelectChapter: { browsingChapter = $0 },
                 onStart: { ch, num in chaptersPath.append(AppRoute.stage(chapter: ch, number: num)) }
             )
             .id(chapter)  // 챕터 전환 시 뷰 정체성 갱신 → ViewModel/선택 스테이지 초기화
-            .background(Color.appBackground.ignoresSafeArea())
         } else {
             chapterMap
         }
     }
 
-    /// 지그재그 챕터 지도 (아이폰·맥과 같은 공용 부품)
+    /// 지그재그 챕터 지도 (아이폰·맥과 같은 공용 부품) — 아이패드는 카드를 키우고 지도 폭을 720으로 묶어 가운데에
+    /// (예전엔 화면 끝까지 퍼져서 가로에서 연결선이 길고 카드가 상대적으로 작아 보였음)
     private var chapterMap: some View {
         ScrollView(.vertical, showsIndicators: false) {
             VStack(alignment: .leading, spacing: 4) {
@@ -160,8 +162,11 @@ struct PadShell: View {
             .padding(.bottom, 20)
 
             ChapterMapView(vm: chapterSelectVM,
-                           metrics: .init(cardSize: 100, rowSpacing: 172, cornerRadius: 24, numberFontSize: 40, lockFontSize: 24),
+                           metrics: .init(cardSize: 120, rowSpacing: 196, cornerRadius: 28, numberFontSize: 48, lockFontSize: 28),
+                           showsProgressBadge: true,  // 아이폰 지도처럼 "깬 수/전체" 배지
                            lockInfo: $lockInfo) { browsingChapter = $0 }
+                .frame(maxWidth: 720)
+                .frame(maxWidth: .infinity)
                 .padding(.horizontal, 40)
         }
         .background(Color.appBackground.ignoresSafeArea())

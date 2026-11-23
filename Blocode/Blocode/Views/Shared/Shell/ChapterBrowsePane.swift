@@ -5,16 +5,17 @@
 //  Created by 조준희 on 7/16/26.
 //
 
-// 아이패드·맥 공용 챕터 브라우저 (아이폰은 이 타입을 호출하지 않음 — ChapterView 사용)
+// 맥 전용 챕터 브라우저 (아이폰은 ChapterView, 아이패드는 PadChapterView 사용)
+#if os(macOS)
 import SwiftUI
 
 // MARK: - ChapterBrowsePane
 /// 챕터 브라우징 중 메인 사이드바 자리를 대체하는 3단 컬럼
 /// 좌: 챕터 목록(메인 사이드바 폭·배경과 동일) / 중: 스테이지 목록(챕터색 헤더 포함) / 우: 스테이지 미리보기
-/// 두 플랫폼은 크기 숫자만 다름 (터치용인 아이패드가 살짝 더 큼) — 전부 Metrics에 모음
+/// 크기 숫자는 전부 Metrics에 모음
 struct ChapterBrowsePane: View {
 
-    /// 플랫폼별 크기 수치
+    /// 크기 수치
     private struct Metrics {
         let stageColumnWidth: CGFloat      // 2열(스테이지 목록) 폭
         let backFontSize: CGFloat          // "‹ CHAPTERS" 글자
@@ -33,7 +34,6 @@ struct ChapterBrowsePane: View {
         let startButtonHeight: CGFloat     // 시작 버튼 높이
         let startButtonRadius: CGFloat     // 시작 버튼 모서리
 
-        #if os(macOS)
         static let current = Metrics(
             stageColumnWidth: 340, backFontSize: 11, chapterRowSpacing: 10,
             chapterBadgeSize: 28, chapterBadgeRadius: 8, chapterNumberFontSize: 13, chapterLockFontSize: 10,
@@ -41,15 +41,6 @@ struct ChapterBrowsePane: View {
             stageIcon: .init(size: 36, cornerRadius: 12, lockFontSize: 13, checkFontSize: 14, numberFontSize: 16),
             stageNameFontSize: 14, stageStarSize: 11, previewMapMaxWidth: 360,
             startButtonHeight: 54, startButtonRadius: 16)
-        #else
-        static let current = Metrics(
-            stageColumnWidth: 360, backFontSize: 12, chapterRowSpacing: 12,
-            chapterBadgeSize: 32, chapterBadgeRadius: 9, chapterNumberFontSize: 14, chapterLockFontSize: 11,
-            chapterTitleFontSize: 14, chapterStarsFontSize: 11, rowVerticalPadding: 12,
-            stageIcon: .init(size: 40, cornerRadius: 13, lockFontSize: 14, checkFontSize: 15, numberFontSize: 17),
-            stageNameFontSize: 15, stageStarSize: 12, previewMapMaxWidth: 380,
-            startButtonHeight: 58, startButtonRadius: 18)
-        #endif
     }
 
     private let m = Metrics.current
@@ -77,23 +68,18 @@ struct ChapterBrowsePane: View {
         vm.chapterInfo?.color ?? .accentColor
     }
 
-    /// 이 폭보다 좁으면 왼쪽 두 칸을 줄여 미리보기 칸을 확보 — 작은 아이패드 세로에서만 걸림 (맥 창은 최소 폭이 1080이라 해당 없음)
-    private let narrowLayoutWidth: CGFloat = 900
-
     var body: some View {
-        GeometryReader { geo in
-            let isNarrow = geo.size.width < narrowLayoutWidth
-            HStack(spacing: 0) {
-                chapterListColumn
-                    .frame(width: isNarrow ? 180 : 240)
-                    .background(Color.cardBackground)
-                Divider()
-                stageListColumn
-                    .frame(width: isNarrow ? 260 : m.stageColumnWidth)
-                Divider()
-                stagePreview(padding: isNarrow ? 20 : 32)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-            }
+        // 맥 창은 최소 폭이 1080이라 세 칸이 늘 들어감 (예전 좁은 화면 분기는 작은 아이패드 세로용이었음)
+        HStack(spacing: 0) {
+            chapterListColumn
+                .frame(width: 240)
+                .background(Color.cardBackground)
+            Divider()
+            stageListColumn
+                .frame(width: m.stageColumnWidth)
+            Divider()
+            stagePreview(padding: 32)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         }
         // 잠긴 챕터/스테이지 탭 시 해금 조건 팝업 (표시 패턴은 공용 모디파이어)
         .lockInfoPopup($lockInfo)
@@ -309,13 +295,8 @@ struct ChapterBrowsePane: View {
 
 // MARK: - Preview
 
-#if os(macOS)
 #Preview("챕터 2 브라우저") {
     ChapterBrowsePane(chapterNumber: 2, onBackToMap: {}, onSelectChapter: { _ in }, onStart: { _, _ in })
         .frame(width: 1280, height: 860)
-}
-#else
-#Preview("챕터 2 브라우저", traits: .landscapeLeft) {
-    ChapterBrowsePane(chapterNumber: 2, onBackToMap: {}, onSelectChapter: { _ in }, onStart: { _, _ in })
 }
 #endif
