@@ -166,6 +166,37 @@ struct ReminderServiceTests {
         }
     }
 
+    /// 조건이 참이 될 때까지 기다림 — 지켜보기는 비동기로 다시 예약하므로 결과를 기다려야 함
+    private func waitUntil(_ condition: () -> Bool) async throws {
+        let deadline = ContinuousClock.now + .seconds(10)
+        while !condition(), ContinuousClock.now < deadline { try await Task.sleep(for: .milliseconds(5)) }
+        #expect(condition())
+    }
+
+    @Test("지켜보기를 켜면 시작 때 예약하고, 시간·켜기 변화와 클리어에 맞춰 알아서 다시 예약함")
+    func observingReschedulesOnChange() async throws {
+        let f = makeFixture(minutes: 20 * 60)
+        f.service.startObserving()
+        defer { f.service.stopObserving() }
+
+        // 시작하자마자 현재 설정으로 3일치 예약
+        try await waitUntil { f.center.pending.count == 3 }
+        let before = f.center.pending["blocode.reminder.1"]?.date
+
+        // 알림 시각을 바꾸면 refresh를 따로 부르지 않아도 새 시각으로 다시 예약
+        f.settings.reminderMinutes = 8 * 60
+        try await waitUntil { f.center.pending["blocode.reminder.1"]?.date != before }
+
+        // 오늘 스테이지를 깨면 다시 예약 — 오늘 알림이 빠져 첫 알림이 내일 이후가 됨
+        f.progress.recordClear(stageId: Stage.makeID(chapter: 1, number: 1), stars: 3, blockCount: 1)
+        let tomorrow = Calendar.current.startOfDay(for: f.now).addingTimeInterval(24 * 3600)
+        try await waitUntil { (f.center.pending["blocode.reminder.0"]?.date ?? .distantPast) >= tomorrow }
+
+        // 끄면 예약을 모두 지움
+        f.settings.reminderEnabled = false
+        try await waitUntil { f.center.pending.isEmpty }
+    }
+
     @Test("다시 계산해도 예약이 쌓이지 않고 시간 변경이 반영됨")
     func refreshReplaces() async {
         let f = makeFixture(minutes: 20 * 60)

@@ -32,6 +32,8 @@ struct OnboardingView: View {
 
     /// 온보딩 일러스트의 강조 민트 — 여러 슬라이드가 같은 값을 쓰므로 한 곳에서 정의 (값은 기존 그대로)
     private static let onboardingMint = Color(red: 124/255, green: 196/255, blue: 158/255)
+    /// 블럭 예시 카드 배경 — UIColor.systemBackground와 같은 값(라이트 흰색 / 다크 검정), 한 번만 만들어 둠
+    private static let mockCardBackground = Color.dynamic(light: (1.0, 1.0, 1.0), dark: (0.0, 0.0, 0.0))
 
     // MARK: - 슬라이드 데이터
     private var pages: [OnboardingPage] {
@@ -342,10 +344,7 @@ struct OnboardingView: View {
                              color: Color(red: 142/255, green: 176/255, blue: 200/255),
                              icon: "arrow.turn.up.right")
             }
-            .background(
-                // UIColor.systemBackground와 동일 값 (라이트 흰색 / 다크 검정 — 크로스플랫폼)
-                Color.dynamic(light: (1.0, 1.0, 1.0), dark: (0.0, 0.0, 0.0))
-            )
+            .background(Self.mockCardBackground)
             .clipShape(RoundedRectangle(cornerRadius: 20))
             .shadow(color: Color.black.opacity(0.07), radius: 14, x: 0, y: 4)
             .padding(.horizontal, 30)

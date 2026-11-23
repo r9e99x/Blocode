@@ -36,7 +36,26 @@ final class CustomMapListViewModel {
 
     /// 화면에 보여 줄 목록 — 저장소의 맵을 읽을 때마다 가공 (읽기 추적으로 저장·삭제가 바로 반영됨)
     /// shortcut: 화면이 다시 그려질 때마다 맵 JSON을 다시 풀어 씀, 내 맵이 수백 개로 늘어 목록이 버벅이면 maps가 바뀔 때만 다시 만드는 캐시로
-    var rows: [Row] { service.maps.map { Self.makeRow($0) } }  // 함수 이름을 그대로 넘기면 메인 액터 경고가 나서 클로저로 감쌈
+    /// 저장된 맵이 바뀔 때만 다시 만듦 — 예전엔 화면을 그릴 때마다 모든 맵의 JSON을 디코딩했음
+    var rows: [Row] {
+        let maps = service.maps  // 관찰 대상 — 저장·삭제하면 화면이 다시 그려짐
+        let key = maps.map { RowKey(id: $0.id, updatedAt: $0.updatedAt, name: $0.name, threeStar: $0.threeStar) }
+        if key != cachedKey {
+            cachedRows = maps.map { Self.makeRow($0) }  // 함수 이름을 그대로 넘기면 메인 액터 경고가 나서 클로저로 감쌈
+            cachedKey = key
+        }
+        return cachedRows
+    }
+
+    /// 줄을 다시 만들지 판단하는 열쇠 — 맵을 고치면 수정 시각이 바뀌고, 화면에 보이는 이름·별 기준도 함께 비교해 확실히 함
+    private struct RowKey: Equatable {
+        let id: UUID
+        let updatedAt: Date
+        let name: String
+        let threeStar: Int
+    }
+    @ObservationIgnored private var cachedKey: [RowKey] = []
+    @ObservationIgnored private var cachedRows: [Row] = []
 
     var isEmpty: Bool { service.maps.isEmpty }
 

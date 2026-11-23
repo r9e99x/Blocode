@@ -39,11 +39,12 @@ struct ChapterSelectView: View {
                     .frame(maxWidth: .infinity)
             }
             // 스크롤 위치에 따라 헤더 축소 상태 갱신
-            .onScrollGeometryChange(for: CGFloat.self) { geo in
-                geo.contentOffset.y
-            } action: { _, newY in
+            // 스크롤 위치를 "30pt 넘었는지"로 바꿔 받아서, 넘을 때와 돌아올 때만 알림이 옴 (예전엔 스크롤 매 프레임 알림)
+            .onScrollGeometryChange(for: Bool.self) { geo in
+                geo.contentOffset.y > 30
+            } action: { _, scrolled in
                 withAnimation(.easeInOut(duration: 0.18)) {
-                    isCompact = newY > 30  // 30pt 이상 스크롤 시 축소
+                    isCompact = scrolled  // 30pt 이상 스크롤 시 축소
                 }
             }
         }

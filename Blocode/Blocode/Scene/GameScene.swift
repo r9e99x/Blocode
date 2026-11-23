@@ -119,9 +119,31 @@ class GameScene: SKScene, GameBoardRendering {
     /// 매 프레임 씬 크기를 지금 표시 중인 뷰에 맞춤
     /// 회전으로 배치가 바뀌면 사라지는 이전 뷰가 이 씬의 크기를 늦게 덮어써 타일이 작게 그려지는 일이 생김
     override func update(_ currentTime: TimeInterval) {
-        guard let viewSize = view?.bounds.size, viewSize.width > 0, viewSize.height > 0,
-              size != viewSize else { return }
-        size = viewSize
+        if let viewSize = view?.bounds.size, viewSize.width > 0, viewSize.height > 0, size != viewSize {
+            size = viewSize
+        }
+        pauseRenderingWhenIdle()
+    }
+
+    // MARK: - 그리기 멈춤 (배터리)
+    // 맵이 멈춰 있어도 SpriteKit은 매 프레임 다시 그림 — 움직이는 것이 없으면 뷰를 멈추고, 바뀔 때 다시 켬
+
+    /// 움직이는 노드가 없던 연속 프레임 수
+    private var idleFrames = 0
+    /// 이만큼(60fps 기준 약 0.5초) 움직임이 없으면 그리기를 멈춤
+    private let idleFramesBeforePause = 30
+
+    /// 진행 중인 애니메이션(캐릭터 이동·순간이동, 보석 사라짐)이 없으면 잠시 뒤 그리기를 멈춤
+    private func pauseRenderingWhenIdle() {
+        let isAnimating = characterNode?.hasActions() == true || itemNodes.values.contains { $0.hasActions() }
+        idleFrames = isAnimating ? 0 : idleFrames + 1
+        if idleFrames >= idleFramesBeforePause { view?.isPaused = true }
+    }
+
+    /// 화면을 바꾸기 직전에 부름 — 멈춰 있던 그리기를 다시 켬 (맵 다시 그리기·판 변화가 모두 여기를 지남)
+    private func wakeRendering() {
+        idleFrames = 0
+        view?.isPaused = false
     }
 
     // MARK: - 레이아웃 계산
@@ -168,6 +190,7 @@ class GameScene: SKScene, GameBoardRendering {
 
     /// 모든 자식 노드를 제거하고 맵, 목표 지점, 캐릭터를 새로 렌더링
     func setupMap() {
+        wakeRendering()
         // 기존 노드 전체 제거
         removeAllChildren()
         itemNodes = [:]  // 노드 자체는 removeAllChildren으로 이미 제거됨 — 참조만 비움
@@ -540,6 +563,7 @@ class GameScene: SKScene, GameBoardRendering {
 
     /// VM이 판을 바꿀 때마다 호출 — 새 상태를 저장하고 변화 종류에 맞는 연출로 그림
     func update(board newBoard: GameBoard, event: BoardEvent, speed: Double) {
+        wakeRendering()
         let hadGimmickChanges = board.hasGimmickChanges
         board = newBoard
         animationSpeed = speed

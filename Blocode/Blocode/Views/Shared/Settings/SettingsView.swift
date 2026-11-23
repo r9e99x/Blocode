@@ -25,7 +25,7 @@ struct SettingsView: View {
     @State private var devUnlockedLabel: String? = nil  // 개발자 해금 완료 알럿에 표시할 챕터 설명 (nil이면 알럿 숨김)
 
     // 팔레트 블럭 색상 프리뷰 (테마 카드 상단 색상 도트)
-    private let paletteColors: [Color] = [
+    private static let paletteColors: [Color] = [
         Color(red: 0.55, green: 0.82, blue: 0.68),  // 민트
         Color(red: 0.45, green: 0.62, blue: 0.95),  // 블루
         Color(red: 0.95, green: 0.55, blue: 0.52)   // 레드
@@ -88,11 +88,12 @@ struct SettingsView: View {
                     .frame(maxWidth: .infinity)
                 }
                 // 스크롤 위치에 따라 헤더 그림자 토글
-                .onScrollGeometryChange(for: CGFloat.self) { geo in
-                    geo.contentOffset.y
-                } action: { _, newY in
+                // 스크롤 위치를 "4pt 넘었는지"로 바꿔 받아서, 넘을 때와 돌아올 때만 알림이 옴 (예전엔 스크롤 매 프레임 알림)
+                .onScrollGeometryChange(for: Bool.self) { geo in
+                    geo.contentOffset.y > 4
+                } action: { _, scrolled in
                     withAnimation(.easeInOut(duration: 0.18)) {
-                        isScrolled = newY > 4  // 4pt 이상 스크롤 시 그림자 표시
+                        isScrolled = scrolled  // 4pt 이상 스크롤 시 그림자 표시
                     }
                 }
             }
@@ -169,9 +170,9 @@ struct SettingsView: View {
                 VStack(alignment: .leading, spacing: 8) {
                     // 블럭 색상 도트 3개 (팔레트 색상 미리보기)
                     HStack(spacing: 5) {
-                        ForEach(0..<paletteColors.count, id: \.self) { i in
+                        ForEach(Self.paletteColors.indices, id: \.self) { i in
                             RoundedRectangle(cornerRadius: 5)
-                                .fill(paletteColors[i])
+                                .fill(Self.paletteColors[i])
                                 .frame(width: 20, height: 20)
                         }
                     }

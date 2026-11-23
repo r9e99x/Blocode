@@ -40,7 +40,8 @@ struct StageView: View {
     /// 랜덤 퍼즐 클리어 후 "한 판 더"로 새 퍼즐을 여는 동작 — 있으면 마지막 버튼이 이 동작을 함
     var onNewPuzzle: (() -> Void)? = nil
 
-    /// 드래그 상태 — 고스트 오버레이가 최상위 ZStack에 렌더링되므로 StageView에서 관리
+    /// 드래그 상태 — 고스트 층(최상위 ZStack)과 코드 패널이 같은 객체를 나눠 씀
+    /// StageView 자신은 내용을 읽지 않아서, 끄는 동안 게임 화면 전체가 다시 그려지지 않음
     @State private var drag = BlockDragState()
 
     /// 코드 패널 확장 여부 — 맵 크기 조절 및 하단 고정용 Spacer와 연동되므로 StageView에서 관리
@@ -210,15 +211,8 @@ struct StageView: View {
                     .transition(.opacity)
             }
 
-            // MARK: Ghost drag block — 모든 UI 위에 렌더링
-            if let type = drag.paletteType {
-                ghostBlock(type: type, at: drag.palettePosition)
-            }
-
-            // MARK: 코드 리스트 순서 변경 고스트 — 팔레트 고스트와 동일하게 최상위에 렌더링
-            if let reorderIndex = drag.reorderIndex, viewModel.codeBlocks.indices.contains(reorderIndex) {
-                reorderGhost(block: viewModel.codeBlocks[reorderIndex], at: drag.reorderPosition)
-            }
+            // MARK: 끌기 고스트 — 모든 UI 위에 렌더링 (손가락 위치는 이 층만 읽음)
+            DragGhostLayer(drag: drag, viewModel: viewModel)
         }
         .animation(.spring(duration: 0.3), value: viewModel.gameState)
         .background(Color.appBackground.ignoresSafeArea())
@@ -376,7 +370,7 @@ struct StageView: View {
     private func codePanel(alwaysExpanded: Bool = false) -> some View {
         CodePanelView(
             viewModel: viewModel,
-            drag: $drag,
+            drag: drag,
             isPanelExpanded: $isPanelExpanded,
             alwaysExpanded: alwaysExpanded
         )
@@ -426,14 +420,7 @@ struct StageView: View {
 
             // 보석 수집 카운터 — 보석이 있는 스테이지에서만 표시 (기믹 없는 기존 스테이지는 items가 nil이라 렌더 안 됨)
             if let items = stage.mapData.items, !items.isEmpty {
-                HStack(spacing: 3) {
-                    Image(systemName: "diamond.fill")
-                        .font(.system(size: 10))
-                        .foregroundStyle(Color.accentMint)
-                    Text("\(viewModel.collectedItems.count)/\(items.count)")
-                        .font(.system(size: 12, weight: .semibold, design: .monospaced))
-                        .foregroundStyle(.secondary)
-                }
+                GemCounter(viewModel: viewModel, total: items.count)
             }
 
             // 별점 표시 — 클리어 후 획득한 별 수 반영
@@ -558,59 +545,6 @@ struct StageView: View {
         }
     }
 
-    // MARK: 드래그 고스트 블럭
-
-    /// 드래그 중 손가락 위치에 표시되는 반투명 고스트 블럭
-    private func ghostBlock(type: BlockType, at position: CGPoint) -> some View {
-        // 드래그 위치가 코드 리스트 영역 안인지 — 밖이면 흐리게 표시(놓으면 취소됨을 알림)
-        let insideCodeArea = drag.codeListFrame.contains(position)
-        return VStack(spacing: 5) {
-            Image(systemName: type.iconName)
-                .font(.system(size: 20, weight: .bold))
-                .foregroundStyle(.white)
-            Text(type.displayName)
-                .font(.system(size: 11, weight: .bold))
-                .foregroundStyle(.white)
-        }
-        .frame(width: 72, height: 72)
-        .background(type.blockColor)
-        .clipShape(RoundedRectangle(cornerRadius: 16))
-        .shadow(color: type.blockColor.opacity(0.5), radius: 14, y: 6)
-        .scaleEffect(1.1)  // 손가락 위에 살짝 크게
-        .opacity(insideCodeArea ? 1.0 : 0.45)  // 영역 밖이면 흐리게 — 여기서 놓으면 취소
-        .position(x: position.x, y: position.y - 50)  // 손가락 위쪽에 표시
-        .allowsHitTesting(false)  // 고스트 블럭은 터치 통과
-        .transition(.scale(scale: 0.7).combined(with: .opacity))
-        .animation(.spring(duration: 0.2), value: drag.paletteType != nil)
-        .animation(.easeInOut(duration: 0.15), value: insideCodeArea)
-    }
-
-    /// 코드 리스트 내 순서 변경(재정렬) 중 손가락 위치에 표시되는 고스트 — 팔레트 고스트와 동일한 스타일
-    /// (전체 행 대신 아이콘+이름 칩으로 단순화 — 순서 변경 중엔 삭제 버튼 등 부가 컨트롤이 필요 없음)
-    private func reorderGhost(block: Block, at position: CGPoint) -> some View {
-        let insideCodeArea = drag.codeListFrame.contains(position)
-        return HStack(spacing: 8) {
-            Image(systemName: block.type.iconName)
-                .font(.system(size: 15, weight: .semibold))
-                .foregroundStyle(.white)
-            Text(block.type.displayName)
-                .font(.system(size: 14, weight: .semibold))
-                .foregroundStyle(.white)
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
-        .background(block.type.blockColor)
-        .clipShape(RoundedRectangle(cornerRadius: 14))
-        .shadow(color: block.type.blockColor.opacity(0.5), radius: 14, y: 6)
-        .scaleEffect(1.05)
-        .opacity(insideCodeArea ? 1.0 : 0.45)  // 코드 영역 밖이면 흐리게 — 여기서 놓으면 취소(순서 변경 없음)
-        .position(x: position.x, y: position.y)
-        .allowsHitTesting(false)
-        .transition(.scale(scale: 0.7).combined(with: .opacity))
-        .animation(.spring(duration: 0.2), value: drag.reorderIndex != nil)
-        .animation(.easeInOut(duration: 0.15), value: insideCodeArea)
-    }
-
     // MARK: - 실패 토스트 배너
 
     /// 실행 실패 시 상단에서 내려오는 빨간 배너
@@ -696,6 +630,98 @@ struct StageView: View {
         // 씬을 그리기 담당으로 연결 (VM은 판이 바뀔 때 알리기만 함)
         viewModel.renderer = gameScene
         self.scene = gameScene
+    }
+}
+
+// MARK: - 끌기 고스트 층
+/// 손가락을 따라다니는 고스트 블럭 — 위치가 1초에 60~120번 바뀌므로 이 작은 층만 다시 그려지도록 StageView에서 떼어 냄
+private struct DragGhostLayer: View {
+    let drag: BlockDragState
+    let viewModel: GameViewModel
+
+    var body: some View {
+        ZStack {
+            // 팔레트에서 끌어 오는 블럭
+            if let type = drag.paletteType {
+                ghostBlock(type: type, at: drag.palettePosition)
+            }
+            // 코드 리스트 순서 변경 — 팔레트 고스트와 같은 층
+            if let reorderIndex = drag.reorderIndex, viewModel.codeBlocks.indices.contains(reorderIndex) {
+                reorderGhost(block: viewModel.codeBlocks[reorderIndex], at: drag.reorderPosition)
+            }
+        }
+        .allowsHitTesting(false)  // 고스트는 터치 통과
+    }
+
+
+    /// 드래그 중 손가락 위치에 표시되는 반투명 고스트 블럭
+    private func ghostBlock(type: BlockType, at position: CGPoint) -> some View {
+        // 드래그 위치가 코드 리스트 영역 안인지 — 밖이면 흐리게 표시(놓으면 취소됨을 알림)
+        let insideCodeArea = drag.paletteInside
+        return VStack(spacing: 5) {
+            Image(systemName: type.iconName)
+                .font(.system(size: 20, weight: .bold))
+                .foregroundStyle(.white)
+            Text(type.displayName)
+                .font(.system(size: 11, weight: .bold))
+                .foregroundStyle(.white)
+        }
+        .frame(width: 72, height: 72)
+        .background(type.blockColor)
+        .clipShape(RoundedRectangle(cornerRadius: 16))
+        .shadow(color: type.blockColor.opacity(0.5), radius: 14, y: 6)
+        .scaleEffect(1.1)  // 손가락 위에 살짝 크게
+        .opacity(insideCodeArea ? 1.0 : 0.45)  // 영역 밖이면 흐리게 — 여기서 놓으면 취소
+        .position(x: position.x, y: position.y - 50)  // 손가락 위쪽에 표시
+        .allowsHitTesting(false)  // 고스트 블럭은 터치 통과
+        .transition(.scale(scale: 0.7).combined(with: .opacity))
+        .animation(.spring(duration: 0.2), value: drag.paletteType != nil)
+        .animation(.easeInOut(duration: 0.15), value: insideCodeArea)
+    }
+
+    /// 코드 리스트 내 순서 변경(재정렬) 중 손가락 위치에 표시되는 고스트 — 팔레트 고스트와 동일한 스타일
+    /// (전체 행 대신 아이콘+이름 칩으로 단순화 — 순서 변경 중엔 삭제 버튼 등 부가 컨트롤이 필요 없음)
+    private func reorderGhost(block: Block, at position: CGPoint) -> some View {
+        let insideCodeArea = drag.reorderInside
+        return HStack(spacing: 8) {
+            Image(systemName: block.type.iconName)
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundStyle(.white)
+            Text(block.type.displayName)
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(.white)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+        .background(block.type.blockColor)
+        .clipShape(RoundedRectangle(cornerRadius: 14))
+        .shadow(color: block.type.blockColor.opacity(0.5), radius: 14, y: 6)
+        .scaleEffect(1.05)
+        .opacity(insideCodeArea ? 1.0 : 0.45)  // 코드 영역 밖이면 흐리게 — 여기서 놓으면 취소(순서 변경 없음)
+        .position(x: position.x, y: position.y)
+        .allowsHitTesting(false)
+        .transition(.scale(scale: 0.7).combined(with: .opacity))
+        .animation(.spring(duration: 0.2), value: drag.reorderIndex != nil)
+        .animation(.easeInOut(duration: 0.15), value: insideCodeArea)
+    }
+}
+
+// MARK: - 보석 카운터
+/// 상단 보석 개수 — 캐릭터가 움직일 때마다 판(board) 전체가 바뀌므로, 판을 읽는 곳을 이 작은 뷰로 떼어 내
+/// 걸음마다 게임 화면 전체가 다시 계산되지 않게 함
+private struct GemCounter: View {
+    let viewModel: GameViewModel
+    let total: Int
+
+    var body: some View {
+        HStack(spacing: 3) {
+            Image(systemName: "diamond.fill")
+                .font(.system(size: 10))
+                .foregroundStyle(Color.accentMint)
+            Text("\(viewModel.collectedItems.count)/\(total)")
+                .font(.system(size: 12, weight: .semibold, design: .monospaced))
+                .foregroundStyle(.secondary)
+        }
     }
 }
 

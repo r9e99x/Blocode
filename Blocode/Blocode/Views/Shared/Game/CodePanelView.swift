@@ -9,16 +9,40 @@ import SwiftUI
 
 // MARK: - BlockDragState
 /// 팔레트 삽입 드래그와 코드 리스트 순서 변경 드래그의 상태 — StageView(고스트)와 CodePanelView(삽입선)가 공유
-struct BlockDragState {
+/// @Observable 클래스: 손가락 위치(…Position)는 고스트 층만 읽고, 코드 패널은 삽입 위치·영역 안 여부만 읽음
+/// → 끄는 동안 매 프레임 게임 화면 전체와 모든 블럭 행이 다시 계산되지 않음 (예전 값 타입 @State는 위치가 바뀔 때마다 StageView 전체를 다시 그렸음)
+@Observable
+final class BlockDragState {
     var paletteType: BlockType? = nil      // 팔레트에서 드래그 중인 블럭 타입 (nil이면 비활성)
-    var palettePosition: CGPoint = .zero   // 팔레트 드래그 현재 글로벌 좌표
+    var palettePosition: CGPoint = .zero   // 팔레트 드래그 현재 글로벌 좌표 (고스트만 읽음)
     var paletteInsertIndex: Int = 0        // 삽입될 예상 인덱스
+    var paletteInside = false              // 팔레트 드래그 위치가 코드 리스트 영역 안인지
 
     var reorderIndex: Int? = nil           // 순서 변경 중인 블럭의 원래 인덱스 (nil이면 비활성)
-    var reorderPosition: CGPoint = .zero   // 순서 변경 드래그 현재 글로벌 좌표
+    var reorderPosition: CGPoint = .zero   // 순서 변경 드래그 현재 글로벌 좌표 (고스트만 읽음)
     var reorderTargetIndex: Int = 0        // 놓일 예상 인덱스
+    var reorderInside = false              // 순서 변경 드래그 위치가 코드 리스트 영역 안인지
 
     var codeListFrame: CGRect = .zero      // 코드 리스트 영역의 글로벌 프레임 (놓으면 취소되는 영역 판단용)
+
+    /// 팔레트 드래그 위치 갱신 — 삽입 위치·영역 안 여부는 값이 달라질 때만 써서, 그 값을 읽는 코드 패널이 매 프레임 다시 그려지지 않음
+    func movePalette(to point: CGPoint, insertIndex: Int) {
+        palettePosition = point
+        update(\.paletteInsertIndex, to: insertIndex)
+        update(\.paletteInside, to: codeListFrame.contains(point))
+    }
+
+    /// 순서 변경 드래그 위치 갱신 — movePalette와 같은 방식
+    func moveReorder(to point: CGPoint, targetIndex: Int) {
+        reorderPosition = point
+        update(\.reorderTargetIndex, to: targetIndex)
+        update(\.reorderInside, to: codeListFrame.contains(point))
+    }
+
+    /// 값이 실제로 바뀔 때만 씀 — 같은 값을 다시 써도 관찰 중인 화면은 바뀐 것으로 알기 때문
+    private func update<Value: Equatable>(_ keyPath: ReferenceWritableKeyPath<BlockDragState, Value>, to value: Value) {
+        if self[keyPath: keyPath] != value { self[keyPath: keyPath] = value }
+    }
 }
 
 // MARK: - CodePanelView
@@ -30,11 +54,12 @@ struct CodePanelView: View {
 
     var viewModel: GameViewModel  // 게임 상태 / 블럭 관리
 
-    @Binding var drag: BlockDragState  // 드래그 상태 — StageView의 고스트 오버레이와 공유
+    let drag: BlockDragState  // 드래그 상태 — StageView의 고스트 층과 같은 객체를 공유
 
-    /// 각 행의 글로벌 중간 Y 좌표 (드래그 삽입 인덱스 계산용)
-    /// 스크롤할 때마다 바뀌므로 BlockDragState에 넣지 않음 — 넣으면 스크롤 중 StageView 전체가 다시 그려짐
-    @State private var rowMidYs: [Int: CGFloat] = [:]
+    /// 각 행의 글로벌 중간 Y 좌표를 행 순서대로 (드래그 삽입 인덱스 계산용)
+    /// 보고받을 때 한 번만 정렬해 둠 — 예전엔 손가락이 움직일 때마다(1초 60~120번) 정렬했음
+    /// 스크롤할 때마다 바뀌므로 BlockDragState에 넣지 않음 — 넣으면 스크롤 중 고스트 층까지 다시 그려짐
+    @State private var sortedRowMidYs: [CGFloat] = []
 
     /// "코드로 보기" 시트 표시 여부
     @State private var showCodeView = false
@@ -135,14 +160,12 @@ struct CodePanelView: View {
                 guard viewModel.canEdit else { return }
                 withAnimation(.spring(duration: 0.2)) {
                     drag.paletteType = type
-                    drag.palettePosition = pt
-                    drag.paletteInsertIndex = calculateInsertIndex(for: pt.y)
+                    drag.movePalette(to: pt, insertIndex: calculateInsertIndex(for: pt.y))
                 }
             },
             onDragChange: { _, pt in
                 // 드래그 중: 위치와 삽입 인덱스 갱신
-                drag.palettePosition = pt
-                drag.paletteInsertIndex = calculateInsertIndex(for: pt.y)
+                drag.movePalette(to: pt, insertIndex: calculateInsertIndex(for: pt.y))
             },
             onDragEnd: { type, location in
                 // 코드 리스트 영역 안에서 손을 뗐을 때만 삽입 (영역 밖이면 취소)
@@ -242,7 +265,7 @@ struct CodePanelView: View {
             if viewModel.codeBlocks.isEmpty {
                 Group {
                     // 드래그 중 코드 영역 안이면 "여기에 놓기" 드롭존, 평소엔 안내 메시지
-                    if let dragType = drag.paletteType, drag.codeListFrame.contains(drag.palettePosition) {
+                    if let dragType = drag.paletteType, drag.paletteInside {
                         // 드롭존 — 점선 박스 + 블럭 색 (블럭이 없으니 삽입선 대신 영역 강조)
                         RoundedRectangle(cornerRadius: 14)
                             .fill(dragType.blockColor.opacity(0.10))
@@ -285,10 +308,10 @@ struct CodePanelView: View {
                     LazyVStack(spacing: 8) {
                         ForEach(Array(viewModel.codeBlocks.enumerated()), id: \.element.id) { offset, block in
                             // 삽입 인디케이터 — 첫 번째 위치 (팔레트 삽입 / 순서 변경 공용)
-                            if let dragType = drag.paletteType, drag.codeListFrame.contains(drag.palettePosition), drag.paletteInsertIndex == 0 && offset == 0 {
+                            if let dragType = drag.paletteType, drag.paletteInside, drag.paletteInsertIndex == 0 && offset == 0 {
                                 insertionIndicator(color: dragType.blockColor)
                             }
-                            if let reorderColor, drag.codeListFrame.contains(drag.reorderPosition), drag.reorderTargetIndex == 0 && offset == 0 {
+                            if let reorderColor, drag.reorderInside, drag.reorderTargetIndex == 0 && offset == 0 {
                                 insertionIndicator(color: reorderColor)
                             }
 
@@ -305,13 +328,11 @@ struct CodePanelView: View {
                                     guard viewModel.canEdit else { return }
                                     withAnimation(.spring(duration: 0.2)) {
                                         drag.reorderIndex = offset
-                                        drag.reorderPosition = pt
-                                        drag.reorderTargetIndex = calculateInsertIndex(for: pt.y)
+                                        drag.moveReorder(to: pt, targetIndex: calculateInsertIndex(for: pt.y))
                                     }
                                 },
                                 onReorderDragChange: { pt in
-                                    drag.reorderPosition = pt
-                                    drag.reorderTargetIndex = calculateInsertIndex(for: pt.y)
+                                    drag.moveReorder(to: pt, targetIndex: calculateInsertIndex(for: pt.y))
                                 },
                                 onReorderDragEnd: { location in
                                     // 코드 리스트 영역 안에서 손을 뗐을 때만 순서 변경 (영역 밖이면 취소)
@@ -335,10 +356,10 @@ struct CodePanelView: View {
                             })
 
                             // 삽입 인디케이터 — 현재 블럭 다음 위치 (팔레트 삽입 / 순서 변경 공용)
-                            if let dragType = drag.paletteType, drag.codeListFrame.contains(drag.palettePosition), drag.paletteInsertIndex == offset + 1 {
+                            if let dragType = drag.paletteType, drag.paletteInside, drag.paletteInsertIndex == offset + 1 {
                                 insertionIndicator(color: dragType.blockColor)
                             }
-                            if let reorderColor, drag.codeListFrame.contains(drag.reorderPosition), drag.reorderTargetIndex == offset + 1 {
+                            if let reorderColor, drag.reorderInside, drag.reorderTargetIndex == offset + 1 {
                                 insertionIndicator(color: reorderColor)
                             }
                         }
@@ -352,7 +373,7 @@ struct CodePanelView: View {
         .frame(maxHeight: .infinity)
         // 각 행의 중간 Y 좌표를 preference로 수집 (드래그 삽입 인덱스 계산용)
         .onPreferenceChange(RowMidYKey.self) { midYs in
-            rowMidYs = midYs
+            sortedRowMidYs = midYs.sorted { $0.key < $1.key }.map(\.value)
         }
         // 코드 리스트 글로벌 프레임 추적 (드래그 감지용)
         // size가 아닌 frame(위치+크기) 변화를 추적 — 빈 상태에선 size가 안 바뀌어
@@ -383,16 +404,9 @@ struct CodePanelView: View {
     // MARK: - 드래그 삽입 인덱스 계산
 
     /// 드래그 Y 좌표를 기반으로 삽입될 인덱스 계산
+    /// 드래그 위치가 어떤 행의 중간보다 위면 그 행 앞에, 모든 행보다 아래면 맨 뒤에 삽입
     private func calculateInsertIndex(for globalY: CGFloat) -> Int {
-        if rowMidYs.isEmpty { return 0 }
-        // 인덱스 오름차순으로 정렬
-        let sorted = rowMidYs.sorted { $0.key < $1.key }
-        // 드래그 위치가 행 중간 Y보다 위면 해당 행 앞에 삽입
-        for (i, entry) in sorted.enumerated() {
-            if globalY < entry.value { return i }
-        }
-        // 모든 행보다 아래면 맨 뒤에 삽입
-        return sorted.count
+        sortedRowMidYs.firstIndex { globalY < $0 } ?? sortedRowMidYs.count
     }
 }
 

@@ -18,26 +18,26 @@ struct HomeContinueButton: View {
     @State private var isPressed = false
 
     // 다크 버튼 색상 — 라이트: 기존 값 그대로 / 다크: 슬레이트 톤
-    private let face = Color.dynamic(light: (0.165, 0.145, 0.125), dark: (72/255, 78/255, 96/255))
+    private static let face = Color.dynamic(light: (0.165, 0.145, 0.125), dark: (72/255, 78/255, 96/255))
     // 눌림 시 앞면 색 — 라이트: #565048 / 다크: 슬레이트를 살짝 밝게
-    private let pressedFace = Color.dynamic(light: (86/255, 80/255, 72/255), dark: (88/255, 95/255, 116/255))
+    private static let pressedFace = Color.dynamic(light: (86/255, 80/255, 72/255), dark: (88/255, 95/255, 116/255))
     // 눌림 시 글자색 (라이트/다크 공통)
-    private let pressedText = Color(red: 213/255, green: 211/255, blue: 209/255)
+    private static let pressedText = Color(red: 213/255, green: 211/255, blue: 209/255)
 
     var body: some View {
         Button {
             SoundService.shared.play(.buttonTap)
             action()
         } label: {
-            SolidThreeDButton(height: 58, cornerRadius: 18, face: face, pressedFace: pressedFace, isPressed: isPressed) {
+            SolidThreeDButton(height: 58, cornerRadius: 18, face: Self.face, pressedFace: Self.pressedFace, isPressed: isPressed) {
                 HStack {
                     HStack(spacing: 8) {
                         Image(systemName: isFirstTime ? "sparkles" : "play.fill")
                             .font(.system(size: 13, weight: .bold))
-                            .foregroundStyle(isPressed ? pressedText : .white.opacity(0.9))
+                            .foregroundStyle(isPressed ? Self.pressedText : .white.opacity(0.9))
                         Text(isFirstTime ? "시작하기" : "이어서 하기")
                             .font(.system(size: 17, weight: .semibold))
-                            .foregroundStyle(isPressed ? pressedText : .white)
+                            .foregroundStyle(isPressed ? Self.pressedText : .white)
                     }
                     Spacer()
                     // 오른쪽 보조 텍스트 — 첫 실행이면 숨김, 다음 스테이지가 있으면 "1-3", 모두 완료면 "완료 ✓"
@@ -45,11 +45,11 @@ struct HomeContinueButton: View {
                         if let next {
                             Text("\(next.chapter)-\(next.stage)")
                                 .font(.system(size: 13, weight: .medium, design: .rounded))
-                                .foregroundStyle(isPressed ? pressedText.opacity(0.6) : .white.opacity(0.55))
+                                .foregroundStyle(isPressed ? Self.pressedText.opacity(0.6) : .white.opacity(0.55))
                         } else {
                             Text("완료 ✓")
                                 .font(.system(size: 13, weight: .medium))
-                                .foregroundStyle(isPressed ? pressedText.opacity(0.6) : .white.opacity(0.55))
+                                .foregroundStyle(isPressed ? Self.pressedText.opacity(0.6) : .white.opacity(0.55))
                         }
                     }
                 }
@@ -64,6 +64,12 @@ struct HomeContinueButton: View {
 // MARK: - HomeBrowseButton
 /// 홈 "챕터 둘러보기" 크림색 3D 버튼 — 아이폰 홈·아이패드 셸·맥 셸 공용 (제목을 바꿔 "내 맵" 버튼으로도 사용)
 struct HomeBrowseButton: View {
+
+    // 3D 크림 버튼 색 — 한 번만 만들어 둠 (예전엔 그릴 때마다 동적 색 3개를 새로 만들었음, 값은 그대로)
+    private static let face = Color.dynamic(light: (252/255, 249/255, 238/255), dark: (0.22, 0.23, 0.27))
+    private static let topBack = Color.dynamic(light: (252/255, 249/255, 238/255), dark: (0.18, 0.19, 0.22))
+    private static let bottomBack = Color.dynamic(light: (196/255, 192/255, 181/255), dark: (0.13, 0.14, 0.17))
+
     var title = "챕터 둘러보기"
     var isLocked = false  // 잠금 상태 — 자물쇠 + 흐리게, 팝업은 호출부가 띄움
     let action: () -> Void  // 탭 동작 (화면 이동은 호출부가 결정)
@@ -77,9 +83,7 @@ struct HomeBrowseButton: View {
         } label: {
             // 크림 버튼 색상 — 라이트: #fcf9ee 앞면·위 뒷면 / #c4c0b5 아래 뒷면(그림자), 다크: 슬레이트 톤
             SolidThreeDButton(height: 52, cornerRadius: 18,
-                              face: Color.dynamic(light: (252/255, 249/255, 238/255), dark: (0.22, 0.23, 0.27)),
-                              topBack: Color.dynamic(light: (252/255, 249/255, 238/255), dark: (0.18, 0.19, 0.22)),
-                              bottomBack: Color.dynamic(light: (196/255, 192/255, 181/255), dark: (0.13, 0.14, 0.17)),
+                              face: Self.face, topBack: Self.topBack, bottomBack: Self.bottomBack,
                               pressedOverlayOpacity: 0.06, isPressed: isPressed) {
                 HStack(spacing: 6) {
                     if isLocked { Image(systemName: "lock.fill").font(.system(size: 13, weight: .semibold)) }

@@ -251,36 +251,59 @@ struct CustomMapListView: View {
 /// 맵이 없거나 손상됐으면 안내와 돌아가기 버튼을 보여 줌
 struct CustomMapPlayView: View {
 
+    private let id: UUID
+    private let service: CustomMapService?
     private let showsOwnBackButton: Bool
     private let onExit: () -> Void
-    /// 플레이할 맵 — 화면을 만들 때 한 번만 찾음 (없거나 손상됐으면 nil)
-    private let stage: Stage?
+
+    /// 플레이할 맵 — 화면이 처음 나타날 때 한 번만 디코딩 (init에서 하면 부모가 다시 그릴 때마다 디코딩함)
+    private enum Content {
+        case loading         // 아직 읽지 않음
+        case ready(Stage)    // 플레이 가능
+        case missing         // 지워졌거나 손상된 맵
+    }
+    @State private var content: Content = .loading
 
     /// - Parameter service: 맵 저장소 — 테스트·프리뷰는 격리된 저장소를 주입
     init(id: UUID, service: CustomMapService? = nil, showsOwnBackButton: Bool = true, onExit: @escaping () -> Void) {
-        self.stage = (service ?? .shared).map(withID: id)?.stage
+        self.id = id
+        self.service = service
         self.showsOwnBackButton = showsOwnBackButton
         self.onExit = onExit
     }
 
     var body: some View {
-        if let stage {
-            StageView(stage: stage, navPath: .constant(NavigationPath()),
-                      showsOwnBackButton: showsOwnBackButton, onExit: onExit)
-                .id(stage.id)
-        } else {
-            VStack(spacing: 16) {
-                Image(systemName: "exclamationmark.triangle")
-                    .font(.system(size: 40, weight: .semibold))
-                    .foregroundStyle(Color.primary.opacity(0.45))
-                Text("맵을 열 수 없어요")
-                    .font(.system(size: 18, weight: .bold))
-                EditorTextButton(title: "돌아가기", action: onExit)
-                    .frame(maxWidth: 200)
+        Group {
+            switch content {
+            case .loading:
+                Color.appBackground.ignoresSafeArea()
+                    .hideNavigationBar()
+            case .ready(let stage):
+                StageView(stage: stage, navPath: .constant(NavigationPath()),
+                          showsOwnBackButton: showsOwnBackButton, onExit: onExit)
+                    .id(stage.id)
+            case .missing:
+                VStack(spacing: 16) {
+                    Image(systemName: "exclamationmark.triangle")
+                        .font(.system(size: 40, weight: .semibold))
+                        .foregroundStyle(Color.primary.opacity(0.45))
+                    Text("맵을 열 수 없어요")
+                        .font(.system(size: 18, weight: .bold))
+                    EditorTextButton(title: "돌아가기", action: onExit)
+                        .frame(maxWidth: 200)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background(Color.appBackground.ignoresSafeArea())
+                .hideNavigationBar()
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background(Color.appBackground.ignoresSafeArea())
-            .hideNavigationBar()
+        }
+        .onAppear {
+            guard case .loading = content else { return }
+            if let stage = (service ?? .shared).map(withID: id)?.stage {
+                content = .ready(stage)
+            } else {
+                content = .missing
+            }
         }
     }
 }

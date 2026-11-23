@@ -426,9 +426,8 @@ struct ClearOverlayView: View {
     }
 
     /// 컨페티 뷰 — 색깔 도트들이 캐릭터 주변에 흩어지는 효과
-    private var confettiView: some View {
-        // (x오프셋, y오프셋, 색상, 크기) 튜플 배열
-        let dots: [(CGFloat, CGFloat, Color, CGFloat)] = [
+    /// 컨페티 도트 (x오프셋, y오프셋, 색상, 크기) — 한 번만 만들어 둠
+    private static let confettiDots: [(CGFloat, CGFloat, Color, CGFloat)] = [
             (-70, -20, Color(red: 0.55, green: 0.82, blue: 0.68), 8),
             (-50,  30, Color(red: 0.55, green: 0.65, blue: 0.90), 9),
             (-80,  50, Color(red: 0.95, green: 0.72, blue: 0.30), 8),
@@ -438,6 +437,9 @@ struct ClearOverlayView: View {
             (-30, -50, Color(red: 0.95, green: 0.72, blue: 0.30), 7),
             ( 30, -45, Color(red: 0.85, green: 0.50, blue: 0.50), 8),
         ]
+
+    private var confettiView: some View {
+        let dots = Self.confettiDots
         return ZStack {
             ForEach(0..<dots.count, id: \.self) { i in
                 let (x, y, color, size) = dots[i]

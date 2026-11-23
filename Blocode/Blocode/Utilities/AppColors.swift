@@ -36,46 +36,35 @@ extension Color {
 }
 
 // MARK: - 크로스 플랫폼 시맨틱 컬러
+// 모든 색은 static let — 처음 쓸 때 한 번만 만들어 둠 (예전 static var는 읽을 때마다 동적 색 객체를 새로 만들었음, 값은 그대로)
 /// iOS의 UIColor.* 시스템 색상을 iOS / macOS 모두에서 동작하는 SwiftUI Color로 래핑
 extension Color {
 
     /// UIColor.tertiaryLabel / NSColor.tertiaryLabelColor 대응
     /// — 비활성화된 텍스트, 보조 설명 등 가장 흐린 텍스트 색상
-    static var tertiaryLabelColor: Color {
-        Color.primary.opacity(0.3)  // primary의 30% 불투명도로 흐리게 표현
-    }
+    static let tertiaryLabelColor = Color.primary.opacity(0.3)  // primary의 30% 불투명도로 흐리게 표현
 
     /// UIColor.tertiarySystemBackground 대응 (뱃지, 캡슐 배경 등)
     /// — 가장 연한 배경색, 작은 UI 요소의 배경으로 사용
-    static var tertiaryBackground: Color {
-        Color.primary.opacity(0.04)  // primary의 4% 불투명도
-    }
+    static let tertiaryBackground = Color.primary.opacity(0.04)  // primary의 4% 불투명도
 
     /// UIColor.separator 대응 (구분선)
     /// — 섹션 구분선이나 경계선에 사용하는 반투명 색상
-    static var separatorColor: Color {
-        Color.primary.opacity(0.12)  // primary의 12% 불투명도
-    }
+    static let separatorColor = Color.primary.opacity(0.12)  // primary의 12% 불투명도
 
     /// UIColor.systemGray3 대응 (비활성 버튼 등)
     /// — 중간 회색조 색상, 비활성 상태 UI에 사용
-    static var systemGray3Color: Color {
-        Color.primary.opacity(0.35)  // primary의 35% 불투명도
-    }
+    static let systemGray3Color = Color.primary.opacity(0.35)  // primary의 35% 불투명도
 
     /// 앱 전체 페이지 배경 — 라이트: 따뜻한 아이보리 / 다크: 짙은 네이비 차콜
     /// (iOS/macOS 공통 — Color.dynamic 헬퍼가 플랫폼별 다이나믹 프로바이더를 처리)
-    static var appBackground: Color {
-        Color.dynamic(light: (0.957, 0.925, 0.843),   // 라이트: #f4ecd7 — 따뜻한 아이보리
-                      dark: (0.09, 0.10, 0.13))       // 다크: #171A21 — 짙은 네이비 차콜
-    }
+    static let appBackground = Color.dynamic(light: (0.957, 0.925, 0.843),   // 라이트: #f4ecd7 — 따뜻한 아이보리
+                                             dark: (0.09, 0.10, 0.13))       // 다크: #171A21 — 짙은 네이비 차콜
 
     // MARK: - 공통 UI 색상
 
     /// 별점 골드 색상 — 획득한 별 아이콘에 일괄 사용
-    static var starGold: Color {
-        Color(red: 0.95, green: 0.72, blue: 0.28)
-    }
+    static let starGold = Color(red: 0.95, green: 0.72, blue: 0.28)
 
     /// 홈 통계 "챕터 완료" 아이콘 민트 — 아이폰 홈과 아이패드·맥 셸이 함께 씀
     static let statSealMint = Color(red: 0.576, green: 0.788, blue: 0.671)
@@ -85,38 +74,28 @@ extension Color {
 
     /// 카드/소형 버튼 배경 — 설정 버튼, 홈 버튼 등
     /// 라이트: #fbf6e8 (크림) / 다크: #23262e (짙은 남색)
-    static var cardBackground: Color {
-        Color.dynamic(light: (0.984, 0.965, 0.910),
-                      dark: (0.14, 0.15, 0.18))
-    }
+    static let cardBackground = Color.dynamic(light: (0.984, 0.965, 0.910),
+                                              dark: (0.14, 0.15, 0.18))
 
     /// 코드 패널 배경 — 게임 화면 하단 코드 편집 패널
     /// 라이트: #fbf6e8 (크림) / 다크: #1c1f29 (더 짙은 남색)
-    static var panelBackground: Color {
-        Color.dynamic(light: (0.984, 0.965, 0.910),
-                      dark: (0.11, 0.12, 0.16))
-    }
+    static let panelBackground = Color.dynamic(light: (0.984, 0.965, 0.910),
+                                               dark: (0.11, 0.12, 0.16))
 
     /// 통계 카드 배경 — 홈 화면 별/챕터/연속 카드
     /// 라이트: #fbf6e8 (크림) / 다크: #2e3148 (미드 남색)
-    static var statCardBackground: Color {
-        Color.dynamic(light: (251/255, 246/255, 232/255),
-                      dark: (0.18, 0.19, 0.23))
-    }
+    static let statCardBackground = Color.dynamic(light: (251/255, 246/255, 232/255),
+                                                  dark: (0.18, 0.19, 0.23))
 
     /// 잠금 상태 배경 — 잠긴 스테이지/챕터 아이콘 배경
     /// 라이트: #e5ded1 (연한 베이지) / 다크: #33353f (차콜 그레이)
-    static var lockedBackground: Color {
-        Color.dynamic(light: (229/255, 222/255, 209/255),
-                      dark: (0.20, 0.21, 0.25))
-    }
+    static let lockedBackground = Color.dynamic(light: (229/255, 222/255, 209/255),
+                                                dark: (0.20, 0.21, 0.25))
 
     /// 게임 맵 배경 — SpriteKit 맵 영역 배경
     /// 라이트: #efe5cd (따뜻한 크림) / 다크: #1a1f2e (짙은 남색)
-    static var mapBackground: Color {
-        Color.dynamic(light: (239/255, 229/255, 205/255),
-                      dark: (0.10, 0.12, 0.18))
-    }
+    static let mapBackground = Color.dynamic(light: (239/255, 229/255, 205/255),
+                                             dark: (0.10, 0.12, 0.18))
 
     // MARK: - 3D 베벨/캐릭터 공용 색상
     // 3D 버튼·아이콘·캐릭터에 반복되던 하드코딩 색을 한 곳에서 관리
@@ -134,10 +113,8 @@ extension Color {
     static let failureRed = Color(red: 0.95, green: 0.25, blue: 0.20)
 
     /// 클리어 화면 X(닫기) 버튼 배경 — 라이트: 흰색 / 다크: 미드 남색
-    static var closeButtonBackground: Color {
-        Color.dynamic(light: (1.0, 1.0, 1.0),
-                      dark: (0.18, 0.19, 0.23))
-    }
+    static let closeButtonBackground = Color.dynamic(light: (1.0, 1.0, 1.0),
+                                                     dark: (0.18, 0.19, 0.23))
 
     // MARK: - 기믹 색상 (맵의 보석/스위치/포탈 — 라이트/다크 동일 고정값)
     // 맵(SpriteKit)과 온보딩 일러스트가 같은 색을 쓰도록 아래 SKColor와 값을 나란히 관리
@@ -154,17 +131,11 @@ extension Color {
     // MARK: - 맵 타일 색상 (맵 에디터 격자용 — GameScene.Palette와 같은 값, 라이트는 기존 고정값)
 
     /// 바닥(길) 타일
-    static var mapTileFloor: Color {
-        Color.dynamic(light: (232/255, 221/255, 194/255), dark: (0.24, 0.27, 0.36))
-    }
+    static let mapTileFloor = Color.dynamic(light: (232/255, 221/255, 194/255), dark: (0.24, 0.27, 0.36))
     /// 바닥 타일 테두리
-    static var mapTileFloorStroke: Color {
-        Color.dynamic(light: (210/255, 198/255, 172/255), dark: (0.33, 0.37, 0.47))
-    }
+    static let mapTileFloorStroke = Color.dynamic(light: (210/255, 198/255, 172/255), dark: (0.33, 0.37, 0.47))
     /// 벽 타일
-    static var mapTileWall: Color {
-        Color.dynamic(light: (187/255, 167/255, 126/255), dark: (0.11, 0.12, 0.16))
-    }
+    static let mapTileWall = Color.dynamic(light: (187/255, 167/255, 126/255), dark: (0.11, 0.12, 0.16))
 
     // MARK: - 다크모드 전용 파생 색상
     // 다크 배경(네이비)과 따뜻한 탄색 트림이 충돌하는 화면에서만 쓰는 다이나믹 컬러 모음.
@@ -172,62 +143,44 @@ extension Color {
 
     /// 캐릭터/미니 블럭 아이콘 몸체
     /// 라이트: #2a2520 (darkInk와 동일) / 다크: 밝은 회백색 (게임 캐릭터 다크 몸체와 동일 값)
-    static var characterBody: Color {
-        Color.dynamic(light: (42/255, 37/255, 32/255),
-                      dark: (0.88, 0.88, 0.90))
-    }
+    static let characterBody = Color.dynamic(light: (42/255, 37/255, 32/255),
+                                             dark: (0.88, 0.88, 0.90))
 
     /// 캐릭터/미니 블럭 아이콘 위 뒷면 — 라이트: #807869 / 다크: 쿨 그레이 림
-    static var characterTopBack: Color {
-        Color.dynamic(light: (128/255, 120/255, 105/255),
-                      dark: (0.70, 0.71, 0.75))
-    }
+    static let characterTopBack = Color.dynamic(light: (128/255, 120/255, 105/255),
+                                                dark: (0.70, 0.71, 0.75))
 
     /// 캐릭터/미니 블럭 아이콘 아래 뒷면 — 라이트: #beb59f / 다크: 중간 쿨 그레이 (그림자)
-    static var characterBottomBack: Color {
-        Color.dynamic(light: (190/255, 181/255, 159/255),
-                      dark: (0.52, 0.53, 0.60))
-    }
+    static let characterBottomBack = Color.dynamic(light: (190/255, 181/255, 159/255),
+                                                   dark: (0.52, 0.53, 0.60))
 
     /// 캐릭터/미니 블럭 아이콘 화살표
     /// 라이트: 크림 #f4ecd7 / 다크: 다크 잉크 (다크에선 몸체가 밝아지므로 화살표를 어둡게 반전)
-    static var characterArrow: Color {
-        Color.dynamic(light: (244/255, 236/255, 215/255),
-                      dark: (42/255, 37/255, 32/255))
-    }
+    static let characterArrow = Color.dynamic(light: (244/255, 236/255, 215/255),
+                                              dark: (42/255, 37/255, 32/255))
 
     /// 슬레이트 3D 버튼 앞면 — 잠금 팝업 확인 / 클리어 화면 버튼 / "지금 여기" 스테이지 아이콘
     /// 라이트: #2a2520 (darkInk와 동일) / 다크: 슬레이트 블루그레이
-    static var slateButtonFace: Color {
-        Color.dynamic(light: (42/255, 37/255, 32/255),
-                      dark: (72/255, 78/255, 96/255))
-    }
+    static let slateButtonFace = Color.dynamic(light: (42/255, 37/255, 32/255),
+                                               dark: (72/255, 78/255, 96/255))
 
     /// 슬레이트 3D 버튼 위 뒷면 — 라이트: #807869 / 다크: 밝은 슬레이트
-    static var slateButtonTopBack: Color {
-        Color.dynamic(light: (128/255, 120/255, 105/255),
-                      dark: (104/255, 112/255, 134/255))
-    }
+    static let slateButtonTopBack = Color.dynamic(light: (128/255, 120/255, 105/255),
+                                                  dark: (104/255, 112/255, 134/255))
 
     /// 슬레이트 3D 버튼 아래 뒷면 — 라이트: #beb59f / 다크: 앞면보다 약간 어두운 슬레이트 (그림자 방향)
-    static var slateButtonBottomBack: Color {
-        Color.dynamic(light: (190/255, 181/255, 159/255),
-                      dark: (56/255, 61/255, 76/255))
-    }
+    static let slateButtonBottomBack = Color.dynamic(light: (190/255, 181/255, 159/255),
+                                                     dark: (56/255, 61/255, 76/255))
 
     /// 실행 버튼 활성(민트) — 라이트: 기존 accentMint와 동일 / 다크: 톤 다운한 딥 민트
     /// (비활성·실행 중 회색은 기존 값을 그대로 사용하므로 여기 포함하지 않음)
-    static var runButtonActiveMint: Color {
-        Color.dynamic(light: (0.27, 0.72, 0.58),
-                      dark: (0.20, 0.56, 0.45))
-    }
+    static let runButtonActiveMint = Color.dynamic(light: (0.27, 0.72, 0.58),
+                                                   dark: (0.20, 0.56, 0.45))
 
     /// 게임 화면 되돌리기/설정 버튼 앞면
     /// 라이트: panelBackground 라이트와 동일한 크림 / 다크: 배경보다 살짝 밝은 슬레이트 (버튼 면이 배경에 묻히지 않도록)
-    static var controlIconButtonFace: Color {
-        Color.dynamic(light: (0.984, 0.965, 0.910),
-                      dark: (0.16, 0.17, 0.22))
-    }
+    static let controlIconButtonFace = Color.dynamic(light: (0.984, 0.965, 0.910),
+                                                     dark: (0.16, 0.17, 0.22))
 }
 
 // MARK: - 모델별 표현 색상
@@ -246,7 +199,16 @@ extension BlockType {
 
     /// 블럭 고유 색상 — 라이트: 기존 파스텔 톤 그대로 / 다크: ×0.78 톤 다운
     /// (팔레트 카드·코드 행·최소화 칩·자식 행·드래그 고스트가 전부 이 색에서 파생되므로 한 곳만 관리)
-    var blockColor: Color {
+    var blockColor: Color { Self.blockColors[self] ?? .gray }
+
+    /// 연한 배경색 (블럭 행 하이라이트용) — 불투명도 12%로 적용
+    var lightColor: Color { Self.lightColors[self] ?? .gray }
+
+    /// 블럭 색 표 — 처음 쓸 때 한 번만 만들어 둠 (예전엔 행·팔레트를 그릴 때마다 동적 색을 새로 만들었음)
+    private static let blockColors = Dictionary(uniqueKeysWithValues: allCases.map { ($0, $0.makeBlockColor()) })
+    private static let lightColors = blockColors.mapValues { $0.opacity(0.12) }
+
+    private func makeBlockColor() -> Color {
         switch self {
         case .moveForward: Self.pastel(124/255, 196/255, 158/255) // 민트 그린
         case .moveBackward: Self.pastel(207/255, 127/255, 122/255) // 살먼 로즈
@@ -258,11 +220,6 @@ extension BlockType {
         case .collectItem: Self.pastel(0.42, 0.82, 0.68)          // 민트 보석 — AppColors.gemMint와 동일 톤
         case .activateSwitch: Self.pastel(0.93, 0.62, 0.28)          // 주황 스위치 — AppColors.switchOrange와 동일 톤
         }
-    }
-
-    /// 연한 배경색 (블럭 행 하이라이트용) — 불투명도 12%로 적용
-    var lightColor: Color {
-        blockColor.opacity(0.12)
     }
 }
 
@@ -283,7 +240,12 @@ extension ChapterInfo {
     /// 챕터 카드/헤더 색상
     /// 라이트: 카탈로그 RGB 그대로 (기존 고정값과 동일 — 절대 변경 금지)
     /// 다크: 같은 색조를 22% 어둡게(×0.78) — 다크 배경에서 카드가 너무 튀지 않도록 톤 다운
-    var color: Color {
+    var color: Color { Self.colors[id] ?? makeColor() }
+
+    /// 챕터 색 표 — 카탈로그 챕터는 한 번만 만들어 둠 (카드·행·헤더를 그릴 때마다 새로 만들지 않게)
+    private static let colors = Dictionary(uniqueKeysWithValues: ChapterCatalog.all.map { ($0.id, $0.makeColor()) })
+
+    private func makeColor() -> Color {
         Color.dynamic(light: rgb,
                       dark: (rgb.red * 0.78, rgb.green * 0.78, rgb.blue * 0.78))
     }

@@ -87,7 +87,7 @@ final class SettingsViewModel {
         set {
             let parts = Calendar.current.dateComponents([.hour, .minute], from: newValue)
             settings.reminderMinutes = (parts.hour ?? 20) * 60 + (parts.minute ?? 0)
-            Task { await reminder.refresh() }
+            // 다시 예약은 ReminderService가 설정 변화를 지켜보다가 함 (시간 선택기를 돌리는 동안의 여러 변화를 몰아서 한 번)
         }
     }
 
@@ -101,8 +101,7 @@ final class SettingsViewModel {
             }
         } else {
             settings.reminderEnabled = false
-            reminderDenied = false
-            Task { await reminder.refresh() }
+            reminderDenied = false  // 예약 지우기는 ReminderService가 설정 변화를 지켜보다가 함
         }
     }
 

@@ -302,6 +302,10 @@ struct CustomMapServiceTests {
         #expect(list.rows.map(\.name) == ["길"])
         #expect(list.rows.first?.sizeText == "5×3" && list.rows.first?.isPlayable == true)
 
+        // 줄은 맵이 바뀔 때만 다시 만들지만(캐시), 이름을 고치면 바로 새 이름이 보여야 함
+        _ = try save(service, name: "숲", id: try #require(saved).id)
+        #expect(list.rows.map(\.name) == ["숲"])
+
         list.delete(id: try #require(saved).id)
         #expect(list.isEmpty)
         _ = progress

@@ -108,6 +108,34 @@ final class ReminderService {
         }
     }
 
+    // MARK: - 변화 지켜보기
+
+    /// 설정·진행도 변화를 지켜보며 다시 예약하는 작업 — startObserving()이 한 번만 시작
+    private var observation: Task<Void, Never>?
+
+    /// 알림에 영향을 주는 값(켜기·시각·클리어 기록·연속 일수)이 바뀌면 알아서 다시 예약 — 앱이 처음 나타날 때 한 번 부름
+    /// Observations(Swift 6.2): 바뀐 값을 비동기로 모아서 전달해, 시간 선택기를 돌리는 동안 여러 번 바뀌어도 예약은 몰아서 함
+    /// 시작하자마자 현재 값을 한 번 내보내므로 앱을 켤 때의 첫 예약도 여기서 됨
+    /// 알림 권한(기기 설정)과 날짜가 넘어가는 건 지켜볼 수 없는 값이라, 앱이 활성화될 때 refresh()를 따로 부름
+    func startObserving() {
+        guard observation == nil else { return }
+        let settings = settings
+        let progress = progress
+        let changes = Observations {
+            // 읽은 값이 바뀔 때마다 한 번씩 알려 줌 (값 자체는 쓰지 않음) — results는 클리어할 때마다, 잠금 여부도 여기서 갈림
+            _ = (settings.reminderEnabled, settings.reminderMinutes, progress.streak, progress.results)
+        }
+        observation = Task { [weak self] in
+            for await _ in changes { await self?.refresh() }
+        }
+    }
+
+    /// 지켜보기를 멈춤 — 테스트가 끝날 때 사용
+    func stopObserving() {
+        observation?.cancel()
+        observation = nil
+    }
+
     // MARK: - 예약
 
     /// 설정과 진행 상태에 맞춰 알림을 다시 예약 — 꺼져 있거나 권한이 없으면 예약을 모두 지움

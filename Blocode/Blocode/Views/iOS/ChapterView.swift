@@ -31,6 +31,10 @@ struct ChapterView: View {
     // MARK: - 챕터 색상 (챕터 번호 → 색상)
     /// 챕터 색상 — 헤더 배경과 스테이지 아이콘에 사용
     /// (색상 값 자체는 카탈로그가 보유 — 화면별 색상 이중 정의 제거)
+    /// "지금 여기" 아이콘 아래 뒷면 색 — 행마다 새로 만들지 않도록 한 번만 만들어 둠 (값은 그대로)
+    private static let currentBottomBack = Color.dynamic(light: (195/255, 189/255, 172/255),
+                                                         dark: (56/255, 61/255, 76/255))
+
     var chapterColor: Color {
         vm.chapterInfo?.color ?? Color.accentColor
     }
@@ -276,8 +280,7 @@ struct ChapterView: View {
                             metrics: .init(size: 52, cornerRadius: 18, lockFontSize: 18, checkFontSize: 20, numberFontSize: 26),
                             isPressed: pressedStageNumber == stage.stageNumber,
                             showsPressedOverlay: true,
-                            currentBottomBack: Color.dynamic(light: (195/255, 189/255, 172/255),
-                                                             dark: (56/255, 61/255, 76/255)))
+                            currentBottomBack: Self.currentBottomBack)
 
                 // 스테이지 텍스트 정보
                 VStack(alignment: .leading, spacing: 3) {
