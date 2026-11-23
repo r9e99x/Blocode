@@ -28,3 +28,25 @@ struct CardIconLabel: View {
             .shadow(color: Color.black.opacity(shadowOpacity), radius: 8, x: 0, y: shadowY)
     }
 }
+
+// MARK: - SheetCloseButton
+/// 시트 오른쪽 위 닫기 버튼 (동그란 ×) — 코드 보기·개념 카드 시트가 같이 씀 (예전엔 두 시트에 같은 코드가 있었음)
+struct SheetCloseButton: View {
+    let action: () -> Void
+
+    var body: some View {
+        Button {
+            SoundService.shared.play(.buttonTap)
+            action()
+        } label: {
+            Image(systemName: "xmark")
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(.secondary)
+                .frame(width: 30, height: 30)
+                .background(Color.closeButtonBackground)
+                .clipShape(Circle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("닫기")
+    }
+}

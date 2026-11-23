@@ -125,6 +125,13 @@ extension Color {
     static let switchOrange = Color(red: 0.93, green: 0.62, blue: 0.28)
     /// 포탈 보라
     static let portalPurple = Color(red: 0.62, green: 0.45, blue: 0.85)
+    // MARK: - 장식 색 (여러 화면이 같은 값을 쓰던 것 — 라이트/다크 동일 고정값)
+
+    /// 장식 민트 — 설정 테마 미리보기 점·클리어 화면 컨페티
+    static let decorMint = Color(red: 0.55, green: 0.82, blue: 0.68)
+    /// 장식 라벤더 — 설정 배경음악 아이콘·클리어 화면 컨페티
+    static let decorLavender = Color(red: 0.65, green: 0.52, blue: 0.82)
+
     /// 목표 지점 주황 (맵의 목표 원)
     static let mapGoal = Color(red: 0.93, green: 0.67, blue: 0.24)
 

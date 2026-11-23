@@ -235,13 +235,11 @@ struct EditorTextButton: View {
     var face: Color = .slateButtonFace
     let action: () -> Void
 
-    @State private var isPressed = false
-
     var body: some View {
-        Button {
+        PressableButton {
             SoundService.shared.play(.buttonTap)
             action()
-        } label: {
+        } label: { isPressed in
             SolidThreeDButton(height: 44, cornerRadius: 14, face: face, isPressed: isPressed) {
                 HStack(spacing: 6) {
                     if let icon { Image(systemName: icon).font(.system(size: 12, weight: .bold)) }
@@ -250,7 +248,5 @@ struct EditorTextButton: View {
                 .foregroundStyle(.white)
             }
         }
-        .buttonStyle(.plain)
-        .onPressState(isPressed: $isPressed)
     }
 }

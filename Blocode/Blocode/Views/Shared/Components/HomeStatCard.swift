@@ -36,3 +36,21 @@ struct HomeStatCard: View {
         .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 2)
     }
 }
+
+// MARK: - HomeStatsRow
+/// 홈 통계 3장(획득 별·챕터 완료·연속) — 아이폰 홈과 아이패드·맥 셸이 같이 씀 (예전엔 두 곳에 같은 코드가 있었음)
+struct HomeStatsRow: View {
+    let vm: HomeViewModel
+    var spacing: CGFloat = 10
+
+    var body: some View {
+        HStack(spacing: spacing) {
+            HomeStatCard(icon: "star.fill", iconColor: Color.starGold,  // 별 금색은 앱 전체에서 하나로 통일
+                         value: "\(vm.earnedStars)/\(vm.totalPossibleStars)", label: "획득 별")
+            HomeStatCard(icon: "checkmark.seal.fill", iconColor: Color.statSealMint,
+                         value: "\(vm.completedChapters)/\(vm.chapterCount)", label: "챕터 완료")
+            HomeStatCard(icon: "flame.fill", iconColor: Color.statFlameOrange,
+                         value: "\(vm.streak)일째", label: "연속")
+        }
+    }
+}

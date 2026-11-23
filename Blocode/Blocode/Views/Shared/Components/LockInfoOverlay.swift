@@ -81,7 +81,6 @@ struct ConfirmCardOverlay: View {
     let onDismiss: () -> Void      // 배경 탭(과 "취소") 동작
     var showsCancel: Bool = false  // 주 버튼 아래 "취소" 텍스트 버튼 표시 여부
 
-    @State private var isPrimaryPressed = false  // 주 버튼 눌림 상태 (3D 효과)
 
     var body: some View {
         ZStack {
@@ -116,18 +115,16 @@ struct ConfirmCardOverlay: View {
                     .lineSpacing(3)
 
                 // 주 버튼 (슬레이트 3D + 눌림 효과) — 라이트: darkInk+탄색 베벨 / 다크: 슬레이트 톤
-                Button {
+                PressableButton {
                     SoundService.shared.play(.buttonTap)
                     onPrimary()
-                } label: {
-                    SolidThreeDButton(height: 50, cornerRadius: 25, isPressed: isPrimaryPressed) {
+                } label: { isPressed in
+                    SolidThreeDButton(height: 50, cornerRadius: 25, isPressed: isPressed) {
                         Text(primaryTitle)
                             .font(.system(size: 16, weight: .bold))
                             .foregroundStyle(.white)
                     }
                 }
-                .buttonStyle(.plain)
-                .onPressState(isPressed: $isPrimaryPressed)
                 .padding(.top, 2)
 
                 // "취소" — 보조 액션이라 3D 없이 텍스트로만 (주 버튼과 위계 구분)
@@ -150,16 +147,18 @@ struct ConfirmCardOverlay: View {
     }
 }
 
-// MARK: - 재도전 확인 팝업 표시 패턴 공용화
-/// lockInfoPopup과 동일한 구조 — retryConfirmInfo가 nil이 아니면 오버레이로 표시, 닫힐 때 애니메이션과 함께 nil 복귀
-private struct RetryConfirmPopupModifier: ViewModifier {
-    @Binding var retryConfirmInfo: RetryConfirmInfo?
+// MARK: - 팝업 표시 공용 수정자
+/// 값이 있으면 화면 위에 팝업을 띄우고, 닫으면 애니메이션과 함께 값을 nil로 되돌림
+/// (예전엔 잠금 안내·재도전 확인이 같은 모양의 수정자를 따로 하나씩 가졌음)
+private struct ItemPopupModifier<Item, Popup: View>: ViewModifier {
+    @Binding var item: Item?
+    let popup: (_ item: Item, _ close: @escaping () -> Void) -> Popup
 
     func body(content: Content) -> some View {
         content.overlay {
-            if let info = retryConfirmInfo {
-                RetryConfirmOverlay(info: info) {
-                    withAnimation(.easeInOut(duration: 0.2)) { retryConfirmInfo = nil }
+            if let item {
+                popup(item) {
+                    withAnimation(.easeInOut(duration: 0.2)) { self.item = nil }
                 }
                 .transition(.opacity)
             }
@@ -169,34 +168,17 @@ private struct RetryConfirmPopupModifier: ViewModifier {
 
 extension View {
     /// 재도전 확인 팝업 오버레이 — 값이 있으면 표시, 취소/배경 탭 시 nil로 닫힘
-    /// (onRetry 실행 시 닫는 것은 호출부 책임 — RetryConfirmInfo.onRetry 안에서 nil 대입)
     func retryConfirmPopup(_ retryConfirmInfo: Binding<RetryConfirmInfo?>) -> some View {
-        modifier(RetryConfirmPopupModifier(retryConfirmInfo: retryConfirmInfo))
+        modifier(ItemPopupModifier(item: retryConfirmInfo) { info, close in
+            RetryConfirmOverlay(info: info, onCancel: close)
+        })
     }
-}
 
-// MARK: - 잠금 팝업 표시 패턴 공용화
-/// "lockInfo가 nil이 아니면 오버레이로 팝업 표시 + 닫기 시 애니메이션과 함께 nil 복귀" 패턴을
-/// 한 곳에서 관리 — 챕터 선택/챕터 상세/맥 챕터맵/맥 브라우저가 동일하게 사용
-private struct LockInfoPopupModifier: ViewModifier {
-    @Binding var lockInfo: LockInfo?
-
-    func body(content: Content) -> some View {
-        content.overlay {
-            if let info = lockInfo {
-                LockInfoOverlay(info: info) {
-                    withAnimation(.easeInOut(duration: 0.2)) { lockInfo = nil }
-                }
-                .transition(.opacity)
-            }
-        }
-    }
-}
-
-extension View {
     /// 잠금 안내 팝업 오버레이 — 값이 있으면 표시, 확인/배경 탭 시 nil로 닫힘
     func lockInfoPopup(_ lockInfo: Binding<LockInfo?>) -> some View {
-        modifier(LockInfoPopupModifier(lockInfo: lockInfo))
+        modifier(ItemPopupModifier(item: lockInfo) { info, close in
+            LockInfoOverlay(info: info, onClose: close)
+        })
     }
 }
 

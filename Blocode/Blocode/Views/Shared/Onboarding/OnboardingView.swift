@@ -29,11 +29,13 @@ struct OnboardingView: View {
 
     /// 현재 표시 중인 슬라이드 인덱스
     @State private var currentPage = 0
-    /// 다음 버튼 눌림 상태 (3D 효과)
-    @State private var isNextPressed = false
 
     /// 온보딩 일러스트의 강조 민트 — 여러 슬라이드가 같은 값을 쓰므로 한 곳에서 정의 (값은 기존 그대로)
     private static let onboardingMint = Color(red: 124/255, green: 196/255, blue: 158/255)
+    // 일러스트 전용 색 — 한 번만 만들어 둠 (값은 그대로, 다크에서도 바뀌지 않는 고정값)
+    private static let welcomeCircle = Color(red: 147/255, green: 201/255, blue: 163/255).opacity(0.18)  // 환영 원
+    private static let mockLavender = Color(red: 168/255, green: 141/255, blue: 192/255)  // 예시 반복 블럭
+    private static let mockBlue = Color(red: 142/255, green: 176/255, blue: 200/255)      // 예시 회전 블럭
     /// 블럭 예시 카드 배경 — UIColor.systemBackground와 같은 값(라이트 흰색 / 다크 검정), 한 번만 만들어 둠
     private static let mockCardBackground = Color.dynamic(light: (1.0, 1.0, 1.0), dark: (0.0, 0.0, 0.0))
 
@@ -245,22 +247,20 @@ struct OnboardingView: View {
         let isLast   = currentPage == Self.pages.count - 1
         let label    = isLast ? "시작하기" : "다음  ›"
 
-        return Button {
+        return PressableButton {
             withAnimation(.easeInOut(duration: 0.3)) {
                 if isLast { finish() }
                 else { currentPage += 1 }
             }
-        } label: {
+        } label: { isPressed in
             // 슬레이트 3D 버튼 (공용 부품 — 라이트 다크 잉크 / 다크 슬레이트, 눌림 시 검정 0.10)
             SolidThreeDButton(height: frontH, cornerRadius: cr, topDepth: topD, bottomDepth: botD,
-                              isPressed: isNextPressed) {
+                              isPressed: isPressed) {
                 Text(label)
                     .font(.system(size: fontSize, weight: .semibold))
                     .foregroundStyle(.white)
             }
         }
-        .buttonStyle(.plain)
-        .onPressState(isPressed: $isNextPressed)  // 공용 눌림 추적 (다른 3D 버튼과 동일 방식)
     }
 
     // MARK: - 온보딩 완료 처리
@@ -289,7 +289,7 @@ struct OnboardingView: View {
         ZStack {
             // 장식 원형 배경
             Circle()
-                .fill(Color(red: 147/255, green: 201/255, blue: 163/255).opacity(0.18))
+                .fill(Self.welcomeCircle)
                 .frame(width: 200, height: 200)
 
             VStack(spacing: 16) {
@@ -332,7 +332,7 @@ struct OnboardingView: View {
                              icon: "arrow.up")
                 Divider().opacity(0.3)
                 mockBlockRow(number: 2, label: "repeat  3",
-                             color: Color(red: 168/255, green: 141/255, blue: 192/255),
+                             color: Self.mockLavender,
                              icon: "repeat")
                 Divider().opacity(0.3)
                 mockBlockRow(number: 3, label: "앞으로",
@@ -340,7 +340,7 @@ struct OnboardingView: View {
                              icon: "arrow.up")
                 Divider().opacity(0.3)
                 mockBlockRow(number: 4, label: "오른쪽 회전",
-                             color: Color(red: 142/255, green: 176/255, blue: 200/255),
+                             color: Self.mockBlue,
                              icon: "arrow.turn.up.right")
             }
             .background(Self.mockCardBackground)

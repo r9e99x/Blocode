@@ -83,19 +83,7 @@ struct CodeViewSheet: View {
             .foregroundStyle(.secondary)
             .padding(.trailing, 10)
 
-            Button {
-                SoundService.shared.play(.buttonTap)
-                dismiss()
-            } label: {
-                Image(systemName: "xmark")
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(.secondary)
-                    .frame(width: 30, height: 30)
-                    .background(Color.closeButtonBackground)
-                    .clipShape(Circle())
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel("닫기")
+            SheetCloseButton { dismiss() }
         }
         .padding(.horizontal, 20)
         .padding(.top, 20)

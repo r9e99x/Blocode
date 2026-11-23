@@ -277,14 +277,7 @@ struct SidebarShell: View {
                         .font(.system(size: 14)).foregroundStyle(.secondary)
                         .padding(.top, 6)
 
-                    HStack(spacing: 12) {
-                        HomeStatCard(icon: "star.fill", iconColor: Color.starGold,
-                                 value: "\(homeVM.earnedStars)/\(homeVM.totalPossibleStars)", label: "획득 별")
-                        HomeStatCard(icon: "checkmark.seal.fill", iconColor: Color.statSealMint,
-                                 value: "\(homeVM.completedChapters)/\(homeVM.chapterCount)", label: "챕터 완료")
-                        HomeStatCard(icon: "flame.fill", iconColor: Color.statFlameOrange,
-                                 value: "\(homeVM.streak)일째", label: "연속")
-                    }
+                    HomeStatsRow(vm: homeVM, spacing: 12)  // 아이폰 홈과 같은 통계 3장
                     .padding(.top, 32)
 
                     // 오늘의 퍼즐 카드 — 누르면 일일 퍼즐, 주사위는 랜덤 퍼즐

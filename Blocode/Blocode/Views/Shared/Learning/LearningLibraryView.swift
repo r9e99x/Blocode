@@ -255,19 +255,7 @@ struct LearningCardSheet: View {
                     .font(.system(size: 22, weight: .bold))
             }
             Spacer()
-            Button {
-                SoundService.shared.play(.buttonTap)
-                dismiss()
-            } label: {
-                Image(systemName: "xmark")
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(.secondary)
-                    .frame(width: 30, height: 30)
-                    .background(Color.closeButtonBackground)
-                    .clipShape(Circle())
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel("닫기")
+            SheetCloseButton { dismiss() }
         }
         .padding(.horizontal, 20)
         .padding(.top, 20)

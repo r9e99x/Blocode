@@ -438,16 +438,11 @@ struct StageView: View {
     #if os(macOS)
     // MARK: - 맥 전용 상단바 컨트롤 (되돌리기 / 실행 / 설정)
 
-    @State private var isMacResetPressed = false
-    @State private var isMacRunPressed = false
-    @State private var isMacStepPressed = false
-    @State private var isMacSettingsPressed = false
     @State private var showMacSettings = false
 
     private var macControlsInline: some View {
         HStack(spacing: 8) {
-            macIconButton(icon: viewModel.characterMoved ? "arrow.uturn.backward" : "arrow.counterclockwise",
-                          isPressed: $isMacResetPressed) {
+            macIconButton(icon: viewModel.characterMoved ? "arrow.uturn.backward" : "arrow.counterclockwise") {
                 viewModel.resetOrClear()
             }
             .disabled(viewModel.isRunningContinuously)  // 단계별 실행 중에는 리셋으로 멈출 수 있음
@@ -455,13 +450,13 @@ struct StageView: View {
             macRunButton
 
             // 한 칸씩 실행 — 누를 때마다 강조된 블럭 하나만 실행
-            macIconButton(icon: "forward.end.fill", isPressed: $isMacStepPressed) {
+            macIconButton(icon: "forward.end.fill") {
                 viewModel.step()
             }
             .disabled(!viewModel.canStep)
             .opacity(viewModel.canStep ? 1 : 0.45)
 
-            macIconButton(icon: "gearshape", isPressed: $isMacSettingsPressed) {
+            macIconButton(icon: "gearshape") {
                 showMacSettings = true
             }
             .disabled(viewModel.gameState == .running)
@@ -474,36 +469,34 @@ struct StageView: View {
 
     /// 상단바용 소형 아이콘 버튼 — 되돌리기/설정
     /// iOS 컨트롤 바와 동일한 공용 Bevel3DButtonLabel 사용 (색상·베벨 강도 규칙 동일, 크기만 축소)
-    private func macIconButton(icon: String, isPressed: Binding<Bool>, action: @escaping () -> Void) -> some View {
-        Button {
+    private func macIconButton(icon: String, action: @escaping () -> Void) -> some View {
+        PressableButton {
             SoundService.shared.play(.buttonTap)
             action()
-        } label: {
+        } label: { isPressed in
             Bevel3DButtonLabel(color: Color.controlIconButtonFace, width: 34, height: 34, cornerRadius: 10,
                                topDepth: 1.5, botDepth: 2,
                                topOverlayOpacity: colorScheme == .dark ? 0.12 : 0.28,
                                bottomOverlayOpacity: colorScheme == .dark ? 0.30 : 0.22,
-                               isPressed: isPressed.wrappedValue) {
+                               isPressed: isPressed) {
                 Image(systemName: icon)
                     .font(.system(size: 14, weight: .medium))
                     .foregroundStyle(Color.secondary)
             }
         }
-        .buttonStyle(.plain)
-        .onPressState(isPressed: isPressed)
     }
 
     /// 상단바용 실행 버튼 — 비활성/실행중은 회색, 활성은 민트 (켜짐·글자·동작 규칙은 GameViewModel이 정해 아이폰 컨트롤 바와 공유)
     private var macRunButton: some View {
         let color: Color = viewModel.isRunButtonActive ? Color.runButtonActiveMint : Color.runButtonInactiveGray
 
-        return Button {
+        return PressableButton {
             SoundService.shared.play(.buttonTap)
             viewModel.runOrContinue()  // 단계별 중에는 남은 블럭을 이어서 실행
-        } label: {
+        } label: { isPressed in
             Bevel3DButtonLabel(color: color, width: 84, height: 34, cornerRadius: 10,
                                topDepth: 1.5, botDepth: 2,
-                               isPressed: isMacRunPressed) {
+                               isPressed: isPressed) {
                 HStack(spacing: 5) {
                     if viewModel.isRunningContinuously {
                         ProgressView().progressViewStyle(.circular).tint(.white).scaleEffect(0.6)
@@ -516,9 +509,7 @@ struct StageView: View {
                 .foregroundStyle(.white)
             }
         }
-        .buttonStyle(.plain)
         .allowsHitTesting(viewModel.isRunButtonActive)
-        .onPressState(isPressed: $isMacRunPressed)
     }
     #endif
 

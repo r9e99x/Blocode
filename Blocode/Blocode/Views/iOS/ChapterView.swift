@@ -19,7 +19,6 @@ struct ChapterView: View {
     @State private var vm: ChapterViewModel
 
     @State private var retryConfirmInfo: RetryConfirmInfo? = nil  // 재도전 확인 팝업 (nil이면 숨김)
-    @State private var pressedStageNumber: Int?   = nil  // 눌린 스테이지 아이콘 번호 추적
     @State private var lockInfo: LockInfo?         = nil  // 잠금 안내 팝업 (nil이면 숨김)
 
     init(navPath: Binding<NavigationPath>, chapter: Int) {
@@ -175,16 +174,7 @@ struct ChapterView: View {
         .padding(.bottom, 32 + depth)   // depth만큼 여유 확보
         .frame(maxWidth: .infinity, alignment: .leading)
         .background {
-            ZStack(alignment: .top) {
-                // 뒷면 — 어둡게, depth만큼 아래로 (3D 효과)
-                shape.fill(chapterColor)
-                    .overlay(shape.fill(Color.black.opacity(0.28)))
-                    .padding(.top, depth)
-
-                // 앞면 — depth만큼 짧게 (뒷면이 아래로 보이게)
-                shape.fill(chapterColor)
-                    .padding(.bottom, depth)
-            }
+            ChapterBevelBackground(shape: shape, color: chapterColor, depth: depth)
         }
     }
 
@@ -242,7 +232,7 @@ struct ChapterView: View {
         let earned    = vm.stars(stage)
         let isCurrent = vm.isCurrent(stage)  // 현재 진행 위치 여부
 
-        return Button {
+        return PressableButton {
             if locked {
                 // 잠긴 스테이지: 전용 잠금 사운드 + 해금 조건 팝업 표시
                 SoundService.shared.play(.lockButton)
@@ -270,7 +260,7 @@ struct ChapterView: View {
                 SoundService.shared.play(.buttonTap)
                 navPath.append(AppRoute.stage(chapter: stage.chapter, number: stage.stageNumber))
             }
-        } label: {
+        } label: { isPressed in
             HStack(spacing: 16) {
 
                 // 3D 스테이지 아이콘 (숫자 / 체크 / 자물쇠) — 맥·아이패드 브라우저와 공용 부품
@@ -278,7 +268,7 @@ struct ChapterView: View {
                 StageIcon3D(number: stage.stageNumber, locked: locked, cleared: cleared, isCurrent: isCurrent,
                             chapterColor: chapterColor,
                             metrics: .init(size: 52, cornerRadius: 18, lockFontSize: 18, checkFontSize: 20, numberFontSize: 26),
-                            isPressed: pressedStageNumber == stage.stageNumber,
+                            isPressed: isPressed,
                             showsPressedOverlay: true,
                             currentBottomBack: Self.currentBottomBack)
 
@@ -310,13 +300,7 @@ struct ChapterView: View {
             .padding(.horizontal, 20)
             .padding(.vertical, 12)
         }
-        .buttonStyle(.plain)
         .opacity(locked ? 0.72 : 1.0)
-        // 눌림 상태 추적
-        .onPressState(isPressed: Binding(
-            get: { pressedStageNumber == stage.stageNumber },
-            set: { pressed in pressedStageNumber = pressed ? stage.stageNumber : nil }
-        ))
     }
 }
 

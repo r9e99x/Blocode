@@ -47,15 +47,28 @@ struct ChapterHeaderCard: View {
         .padding(.bottom, 16 + depth)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background {
-            ZStack(alignment: .top) {
-                // 뒷면 — 어둡게, depth만큼 아래로 (3D 효과)
-                RoundedRectangle(cornerRadius: 16).fill(color)
-                    .overlay(RoundedRectangle(cornerRadius: 16).fill(Color.black.opacity(0.28)))
-                    .padding(.top, depth)
-                // 앞면 — depth만큼 짧게 (뒷면이 아래로 보이게)
-                RoundedRectangle(cornerRadius: 16).fill(color)
-                    .padding(.bottom, depth)
-            }
+            ChapterBevelBackground(shape: RoundedRectangle(cornerRadius: 16), color: color, depth: depth)
+        }
+    }
+}
+
+// MARK: - ChapterBevelBackground
+/// 챕터 색 3D 배경 — 앞면 아래로 depth만큼 어두운 면이 비쳐 입체로 보임
+/// (챕터 헤더 카드와 아이폰 챕터 화면 헤더가 같이 씀 — 예전엔 두 곳에 같은 코드가 있었음)
+struct ChapterBevelBackground<S: Shape>: View {
+    let shape: S
+    let color: Color
+    let depth: CGFloat
+
+    var body: some View {
+        ZStack(alignment: .top) {
+            // 뒷면 — 어둡게, depth만큼 아래로 (3D 효과)
+            shape.fill(color)
+                .overlay(shape.fill(Color.black.opacity(0.28)))
+                .padding(.top, depth)
+            // 앞면 — depth만큼 짧게 (뒷면이 아래로 보이게)
+            shape.fill(color)
+                .padding(.bottom, depth)
         }
     }
 }

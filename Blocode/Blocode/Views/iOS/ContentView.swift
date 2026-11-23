@@ -277,29 +277,7 @@ struct ContentView: View {
     // MARK: - 통계 카드 행
 
     private var statsRow: some View {
-        HStack(spacing: 10) {
-            // 획득 별 수 카드
-            HomeStatCard(
-                icon: "star.fill",
-                iconColor: Color.starGold,  // 별 금색은 앱 전체에서 하나로 통일
-                value: "\(vm.earnedStars)/\(vm.totalPossibleStars)",
-                label: "획득 별"
-            )
-            // 완료 챕터 수 카드
-            HomeStatCard(
-                icon: "checkmark.seal.fill",
-                iconColor: Color.statSealMint,
-                value: "\(vm.completedChapters)/\(vm.chapterCount)",
-                label: "챕터 완료"
-            )
-            // 연속 학습 일수 카드
-            HomeStatCard(
-                icon: "flame.fill",
-                iconColor: Color.statFlameOrange,
-                value: "\(vm.streak)일째",
-                label: "연속"
-            )
-        }
+        HomeStatsRow(vm: vm)  // 아이패드·맥 셸과 같은 통계 3장
     }
 
     // MARK: - 버튼 섹션

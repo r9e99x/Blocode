@@ -19,12 +19,6 @@ struct ControlBarView: View {
     /// 다크/라이트 모드 감지 — 되돌리기/설정 버튼의 베벨 강도를 다크에서만 낮추는 데 사용
     @Environment(\.colorScheme) private var colorScheme
 
-    // 각 버튼의 눌림 상태 (3D 효과용)
-    @State private var isResetPressed    = false
-    @State private var isRunPressed      = false
-    @State private var isStepPressed     = false
-    @State private var isSettingsPressed = false
-
     /// 설정 시트 표시 여부
     @State private var showSettings = false
 
@@ -37,38 +31,46 @@ struct ControlBarView: View {
             : Color.runButtonInactiveGray  // 솔리드 따뜻한 회색 — 값은 기존과 동일 (AppColors로 단일화)
     }
 
+    // MARK: - 아이콘 버튼
+
+    /// 되돌리기·한 칸씩·설정에 쓰는 정사각 3D 아이콘 버튼 (예전엔 같은 설정을 세 번 복사해 썼음)
+    /// 앞면: 다크에서 배경에 묻히지 않는 슬레이트 / 베벨: 다크에서만 강도 완화 (라이트는 기존 그대로)
+    private func iconButton(icon: String, size: CGFloat, tint: Color = .secondary,
+                            action: @escaping () -> Void) -> some View {
+        PressableButton {
+            SoundService.shared.play(.buttonTap)
+            action()
+        } label: { isPressed in
+            Bevel3DButtonLabel(color: Color.controlIconButtonFace, width: 54, height: 54, cornerRadius: 17,
+                               topOverlayOpacity: colorScheme == .dark ? 0.12 : 0.28,
+                               bottomOverlayOpacity: colorScheme == .dark ? 0.30 : 0.22,
+                               isPressed: isPressed) {
+                Image(systemName: icon)
+                    .font(.system(size: size, weight: .medium))
+                    .foregroundStyle(tint)  // 기본 secondary — UIColor.secondaryLabel과 동일 톤
+            }
+        }
+    }
+
     // MARK: - Body
 
     var body: some View {
         HStack(spacing: 0) {
 
             // 왼쪽: 리셋 / 전체 초기화 버튼
-            // 앞면: 다크에서 배경에 묻히지 않는 슬레이트 / 베벨: 다크에서만 강도 완화 (라이트는 기존 그대로)
-            Button {
-                SoundService.shared.play(.buttonTap)
+            iconButton(icon: viewModel.characterMoved ? "arrow.uturn.backward" : "arrow.counterclockwise", size: 20) {
                 viewModel.resetOrClear()
-            } label: {
-                Bevel3DButtonLabel(color: Color.controlIconButtonFace, width: 54, height: 54, cornerRadius: 17,
-                                   topOverlayOpacity: colorScheme == .dark ? 0.12 : 0.28,
-                                   bottomOverlayOpacity: colorScheme == .dark ? 0.30 : 0.22,
-                                   isPressed: isResetPressed) {
-                    Image(systemName: viewModel.characterMoved ? "arrow.uturn.backward" : "arrow.counterclockwise")
-                        .font(.system(size: 20, weight: .medium))
-                        .foregroundStyle(Color.secondary)  // UIColor.secondaryLabel과 동일 톤 (크로스플랫폼)
-                }
             }
-            .buttonStyle(.plain)
             .disabled(viewModel.isRunningContinuously)  // 단계별 실행 중에는 리셋으로 멈출 수 있음
-            .onPressState(isPressed: $isResetPressed)
             .frame(maxWidth: .infinity)
 
             // 가운데: 실행 버튼
-            Button {
+            PressableButton {
                 SoundService.shared.play(.buttonTap)
                 viewModel.runOrContinue()  // 단계별 중에는 남은 블럭을 이어서 실행
-            } label: {
+            } label: { isPressed in
                 Bevel3DButtonLabel(color: runButtonColor, width: 152, height: 54, cornerRadius: 27,
-                                   isPressed: isRunPressed) {
+                                   isPressed: isPressed) {
                     HStack(spacing: 8) {
                         if viewModel.isRunningContinuously {
                             ProgressView()
@@ -85,50 +87,24 @@ struct ControlBarView: View {
                     .foregroundStyle(.white)
                 }
             }
-            .buttonStyle(.plain)
             .allowsHitTesting(viewModel.isRunButtonActive)
-            .onPressState(isPressed: $isRunPressed)
             .animation(.easeInOut(duration: 0.15), value: viewModel.gameState)
 
             // 한 칸씩 실행 — 누를 때마다 강조된 블럭 하나만 실행
-            Button {
-                SoundService.shared.play(.buttonTap)
+            iconButton(icon: "forward.end.fill", size: 18,
+                       tint: viewModel.isStepping ? Color.runButtonActiveMint : Color.secondary) {
                 viewModel.step()
-            } label: {
-                Bevel3DButtonLabel(color: Color.controlIconButtonFace, width: 54, height: 54, cornerRadius: 17,
-                                   topOverlayOpacity: colorScheme == .dark ? 0.12 : 0.28,
-                                   bottomOverlayOpacity: colorScheme == .dark ? 0.30 : 0.22,
-                                   isPressed: isStepPressed) {
-                    Image(systemName: "forward.end.fill")
-                        .font(.system(size: 18, weight: .medium))
-                        .foregroundStyle(viewModel.isStepping ? Color.runButtonActiveMint : Color.secondary)
-                }
             }
-            .buttonStyle(.plain)
             .disabled(!viewModel.canStep)
             .opacity(viewModel.canStep ? 1 : 0.45)
-            .onPressState(isPressed: $isStepPressed)
             .frame(maxWidth: .infinity)
             .accessibilityLabel(viewModel.isStepping ? "다음 블럭 실행" : "한 칸씩 실행")
 
             // 오른쪽: 설정 버튼
-            // 앞면/베벨 색상 규칙은 리셋 버튼과 동일 (다크에서만 조정, 라이트는 기존 그대로)
-            Button {
-                SoundService.shared.play(.buttonTap)
+            iconButton(icon: "gearshape", size: 20) {
                 showSettings = true
-            } label: {
-                Bevel3DButtonLabel(color: Color.controlIconButtonFace, width: 54, height: 54, cornerRadius: 17,
-                                   topOverlayOpacity: colorScheme == .dark ? 0.12 : 0.28,
-                                   bottomOverlayOpacity: colorScheme == .dark ? 0.30 : 0.22,
-                                   isPressed: isSettingsPressed) {
-                    Image(systemName: "gearshape")
-                        .font(.system(size: 20, weight: .medium))
-                        .foregroundStyle(Color.secondary)  // UIColor.secondaryLabel과 동일 톤 (크로스플랫폼)
-                }
             }
-            .buttonStyle(.plain)
             .disabled(viewModel.gameState == .running)
-            .onPressState(isPressed: $isSettingsPressed)
             .frame(maxWidth: .infinity)
             // 설정 화면 (iOS: fullScreenCover / macOS: sheet)
             .fullScreenCoverCompat(isPresented: $showSettings) {

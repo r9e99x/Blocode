@@ -15,8 +15,6 @@ struct HomeContinueButton: View {
     let isFirstTime: Bool                   // 진행 기록이 없으면 "시작하기"
     let action: () -> Void                  // 탭 동작 (화면 이동은 호출부가 결정)
 
-    @State private var isPressed = false
-
     // 다크 버튼 색상 — 라이트: 기존 값 그대로 / 다크: 슬레이트 톤
     private static let face = Color.dynamic(light: (0.165, 0.145, 0.125), dark: (72/255, 78/255, 96/255))
     // 눌림 시 앞면 색 — 라이트: #565048 / 다크: 슬레이트를 살짝 밝게
@@ -25,10 +23,10 @@ struct HomeContinueButton: View {
     private static let pressedText = Color(red: 213/255, green: 211/255, blue: 209/255)
 
     var body: some View {
-        Button {
+        PressableButton {
             SoundService.shared.play(.buttonTap)
             action()
-        } label: {
+        } label: { isPressed in
             SolidThreeDButton(height: 58, cornerRadius: 18, face: Self.face, pressedFace: Self.pressedFace, isPressed: isPressed) {
                 HStack {
                     HStack(spacing: 8) {
@@ -56,8 +54,6 @@ struct HomeContinueButton: View {
                 .padding(.horizontal, 20)
             }
         }
-        .buttonStyle(.plain)
-        .onPressState(isPressed: $isPressed)
     }
 }
 
@@ -74,13 +70,11 @@ struct HomeBrowseButton: View {
     var isLocked = false  // 잠금 상태 — 자물쇠 + 흐리게, 팝업은 호출부가 띄움
     let action: () -> Void  // 탭 동작 (화면 이동은 호출부가 결정)
 
-    @State private var isPressed = false
-
     var body: some View {
-        Button {
+        PressableButton {
             if !isLocked { SoundService.shared.play(.buttonTap) }  // 잠겼으면 호출부가 잠금 사운드
             action()
-        } label: {
+        } label: { isPressed in
             // 크림 버튼 색상 — 라이트: #fcf9ee 앞면·위 뒷면 / #c4c0b5 아래 뒷면(그림자), 다크: 슬레이트 톤
             SolidThreeDButton(height: 52, cornerRadius: 18,
                               face: Self.face, topBack: Self.topBack, bottomBack: Self.bottomBack,
@@ -93,8 +87,6 @@ struct HomeBrowseButton: View {
                 .foregroundStyle(.primary)
             }
         }
-        .buttonStyle(.plain)
-        .onPressState(isPressed: $isPressed)
         .opacity(isLocked ? 0.5 : 1)
     }
 }

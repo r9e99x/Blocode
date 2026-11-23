@@ -63,8 +63,6 @@ struct ChapterBrowsePane: View {
     @State private var chapterSelectVM = ChapterSelectViewModel()
     @State private var selectedStage: Int?
     @State private var lockInfo: LockInfo? = nil
-    @State private var pressedStageNumber: Int? = nil
-    @State private var isStartPressed = false  // 시작 버튼 눌림 상태 (3D 효과)
 
     init(chapterNumber: Int, onBackToMap: @escaping () -> Void,
          onSelectChapter: @escaping (Int) -> Void, onStart: @escaping (Int, Int) -> Void) {
@@ -196,7 +194,7 @@ struct ChapterBrowsePane: View {
                 ForEach(vm.stages) { stage in
                     let locked = vm.isLocked(stage)
                     let cleared = vm.isCleared(stage)
-                    Button {
+                    PressableButton {
                         if locked {
                             SoundService.shared.play(.lockButton)
                             withAnimation(.easeInOut(duration: 0.2)) {
@@ -207,13 +205,13 @@ struct ChapterBrowsePane: View {
                             SoundService.shared.play(.buttonTap)
                             selectedStage = stage.stageNumber
                         }
-                    } label: {
+                    } label: { isPressed in
                         HStack(spacing: 14) {
                             // 3D 스테이지 아이콘 — 아이폰 챕터 화면과 공용 부품 (눌림은 내려앉기만)
                             StageIcon3D(number: stage.stageNumber, locked: locked, cleared: cleared,
                                         isCurrent: vm.isCurrent(stage), chapterColor: chapterColor,
                                         metrics: m.stageIcon,
-                                        isPressed: pressedStageNumber == stage.stageNumber)
+                                        isPressed: isPressed)
                             Text(stage.name).font(.system(size: m.stageNameFontSize, weight: .medium))
                                 .foregroundStyle(locked ? .secondary : .primary)
                             Spacer()
@@ -225,12 +223,7 @@ struct ChapterBrowsePane: View {
                         .padding(.vertical, m.rowVerticalPadding)
                         .contentShape(Rectangle())  // 글자·아이콘뿐 아니라 행 전체가 눌리도록
                     }
-                    .buttonStyle(.plain)
                     .opacity(locked ? 0.72 : 1.0)
-                    .onPressState(isPressed: Binding(
-                        get: { pressedStageNumber == stage.stageNumber },
-                        set: { pressed in pressedStageNumber = pressed ? stage.stageNumber : nil }
-                    ))
                 }
             }
         }
@@ -271,14 +264,14 @@ struct ChapterBrowsePane: View {
                 Spacer(minLength: 0)
 
                 // 시작하기 버튼 — 공용 SolidThreeDButton + 눌림 효과
-                Button {
+                PressableButton {
                     SoundService.shared.play(.buttonTap)
                     onStart(chapterNumber, stageNumber)
-                } label: {
+                } label: { isPressed in
                     // 슬레이트 3D 버튼 (공용 부품) — 잠긴 스테이지면 회색 앞면, 눌림은 내려앉기만(검정 오버레이 없음 — 기존 그대로)
                     SolidThreeDButton(height: m.startButtonHeight, cornerRadius: m.startButtonRadius,
                                       face: locked ? Color.systemGray3Color : Color.slateButtonFace,
-                                      pressedOverlayOpacity: 0, isPressed: isStartPressed) {
+                                      pressedOverlayOpacity: 0, isPressed: isPressed) {
                         HStack {
                             Image(systemName: "play.fill")
                             Text(vm.isCleared(stage) ? "다시 도전" : "시작하기").fontWeight(.semibold)
@@ -286,8 +279,6 @@ struct ChapterBrowsePane: View {
                         .foregroundStyle(.white)
                     }
                 }
-                .buttonStyle(.plain)
-                .onPressState(isPressed: $isStartPressed)
                 .disabled(locked)
             }
             .padding(padding)

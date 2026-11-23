@@ -28,7 +28,6 @@ struct ChapterMapView: View {
     @Binding var lockInfo: LockInfo?                // 잠긴 카드 탭 시 채움 — 팝업 표시 위치는 호출부가 결정
     let onOpen: (Int) -> Void                       // 열린 카드 탭 시 챕터 번호 전달
 
-    @State private var pressedChapterId: Int? = nil  // 눌린 카드 ID 추적
     @Environment(\.colorScheme) private var colorScheme  // 잠긴 카드 자물쇠 밝기를 다크에서만 높이는 데 사용
 
     /// 각 챕터 카드 중심의 X 비율 — 화면 너비 기준 0.0~1.0
@@ -36,6 +35,8 @@ struct ChapterMapView: View {
     /// 좌우 진폭이 거의 없어져(0.30→0.26) 지그재그가 끊겨 보이는 문제가 있었음
     private let xCenterFracs: [CGFloat] = [0.26, 0.70, 0.22, 0.68, 0.30, 0.72, 0.24, 0.66, 0.28, 0.74]
     private let topPad: CGFloat = 8  // 지도 상단 패딩
+    /// 진행 배지 배경 (짙은 회색) — 한 번만 만들어 둠
+    private static let badgeBackground = Color(red: 0.13, green: 0.13, blue: 0.13)
 
     /// 챕터 인덱스의 X 비율 — 챕터 수가 배열 길이를 넘어도 순환 접근해 인덱스 크래시 방지
     private func xCenterFrac(_ index: Int) -> CGFloat {
@@ -95,27 +96,24 @@ struct ChapterMapView: View {
         let unlocked = vm.isUnlocked(chapter)
 
         return VStack(spacing: 7) {
-            cardArea(chapter, unlocked: unlocked)
-                .contentShape(Rectangle())
-                .accessibilityIdentifier("chapterCard-\(chapter.number)")  // 화면 테스트가 카드를 찾는 이름 (눌리는 곳은 카드뿐이라)
-                .onTapGesture {
-                    if unlocked && chapter.stageCount > 0 {
-                        SoundService.shared.play(.buttonTap)
-                        onOpen(chapter.number)
-                    } else if !unlocked {
-                        // 잠긴 챕터: 전용 잠금 사운드 + 해금 조건 팝업 표시
-                        SoundService.shared.play(.lockButton)
-                        withAnimation(.easeInOut(duration: 0.2)) {
-                            lockInfo = LockInfo(message: vm.lockMessage(for: chapter),
-                                                accentColor: chapter.color)
-                        }
+            // 카드 — 버튼이라 눌림 모양은 버튼 스타일이 알려 줌 (VoiceOver에서도 버튼으로 읽힘)
+            PressableButton {
+                if unlocked && chapter.stageCount > 0 {
+                    SoundService.shared.play(.buttonTap)
+                    onOpen(chapter.number)
+                } else if !unlocked {
+                    // 잠긴 챕터: 전용 잠금 사운드 + 해금 조건 팝업 표시
+                    SoundService.shared.play(.lockButton)
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        lockInfo = LockInfo(message: vm.lockMessage(for: chapter),
+                                            accentColor: chapter.color)
                     }
                 }
-                // 눌림 상태 추적 — 탭과 동시 실행
-                .onPressState(isPressed: Binding(
-                    get: { pressedChapterId == chapter.id },
-                    set: { pressed in pressedChapterId = pressed ? chapter.id : nil }
-                ))
+            } label: { isPressed in
+                cardArea(chapter, unlocked: unlocked, isPressed: isPressed)
+                    .contentShape(Rectangle())
+            }
+            .accessibilityIdentifier("chapterCard-\(chapter.number)")  // 화면 테스트가 카드를 찾는 이름 (눌리는 곳은 카드뿐이라)
 
             // 챕터 이름
             Text(chapter.title)
@@ -131,10 +129,10 @@ struct ChapterMapView: View {
 
     /// 카드 영역 — 배지를 쓰는 화면은 배지가 튀어나올 자리까지 포함한 프레임으로 감쌈
     @ViewBuilder
-    private func cardArea(_ chapter: ChapterInfo, unlocked: Bool) -> some View {
+    private func cardArea(_ chapter: ChapterInfo, unlocked: Bool, isPressed: Bool) -> some View {
         if showsProgressBadge {
             ZStack(alignment: .topTrailing) {
-                card3D(chapter, unlocked: unlocked)
+                card3D(chapter, unlocked: unlocked, isPressed: isPressed)
 
                 // 진행 배지
                 if unlocked && chapter.stageCount > 0 {
@@ -143,20 +141,19 @@ struct ChapterMapView: View {
                         .foregroundStyle(.white)
                         .padding(.horizontal, 8)
                         .padding(.vertical, 4)
-                        .background(Color(red: 0.13, green: 0.13, blue: 0.13))
+                        .background(Self.badgeBackground)
                         .clipShape(Capsule())
                         .offset(x: 8, y: -8)
                 }
             }
             .frame(width: metrics.cardSize + 10, height: metrics.cardSize + 10)
         } else {
-            card3D(chapter, unlocked: unlocked)
+            card3D(chapter, unlocked: unlocked, isPressed: isPressed)
         }
     }
 
     /// 3D 챕터 카드 — 번호 또는 자물쇠
-    private func card3D(_ chapter: ChapterInfo, unlocked: Bool) -> some View {
-        let isPressed = pressedChapterId == chapter.id
+    private func card3D(_ chapter: ChapterInfo, unlocked: Bool, isPressed: Bool) -> some View {
         let size = metrics.cardSize
         let r = metrics.cornerRadius
         let face = unlocked ? chapter.color : Color.lockedBackground

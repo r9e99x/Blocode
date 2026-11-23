@@ -26,13 +26,21 @@ struct SettingsView: View {
 
     // 팔레트 블럭 색상 프리뷰 (테마 카드 상단 색상 도트)
     private static let paletteColors: [Color] = [
-        Color(red: 0.55, green: 0.82, blue: 0.68),  // 민트
+        Color.decorMint,                            // 민트
         Color(red: 0.45, green: 0.62, blue: 0.95),  // 블루
         Color(red: 0.95, green: 0.55, blue: 0.52)   // 레드
     ]
 
     // 토글 및 슬라이더 강조 색상 — 민트 그린
     private let toggleTint = Color.accentMint
+
+    // 설정 화면 전용 색 — 그릴 때마다 새로 만들지 않도록 한 번만 만들어 둠 (값은 그대로)
+    private static let darkThemeCardBackground = Color(red: 0.10, green: 0.12, blue: 0.20)  // 다크 테마 미리보기 카드
+    private static let soundIconColor = Color(red: 0.98, green: 0.72, blue: 0.28)
+    private static let reminderIconColor = Color(red: 0.93, green: 0.50, blue: 0.40)
+    private static let clockIconColor = Color(red: 0.45, green: 0.62, blue: 0.85)
+    private static let resetIconColor = Color(red: 0.95, green: 0.45, blue: 0.22)
+    private static let resetTextColor = Color(red: 0.93, green: 0.28, blue: 0.18)
 
     var body: some View {
         NavigationStack {
@@ -160,7 +168,7 @@ struct SettingsView: View {
 
         // 카드 배경색 — 테마 프리뷰를 직접 반영
         let cardBg: Color = isDark
-            ? Color(red: 0.10, green: 0.12, blue: 0.20)
+            ? Self.darkThemeCardBackground
             : Color.white
 
         return Button { vm.theme = theme } label: {
@@ -237,7 +245,7 @@ struct SettingsView: View {
                     // 효과음 토글
                     settingsRow(
                         icon: "speaker.wave.2.fill",
-                        iconColor: Color(red: 0.98, green: 0.72, blue: 0.28),  // 노란 계열
+                        iconColor: Self.soundIconColor,  // 노란 계열
                         title: "효과음"
                     ) {
                         Toggle("", isOn: $vm.soundEnabled)
@@ -250,7 +258,7 @@ struct SettingsView: View {
                     // 배경음악 토글
                     settingsRow(
                         icon: "music.note",
-                        iconColor: Color(red: 0.65, green: 0.52, blue: 0.82),  // 보라 계열
+                        iconColor: Color.decorLavender,  // 보라 계열
                         title: "배경음악"
                     ) {
                         Toggle("", isOn: $vm.musicEnabled)
@@ -272,7 +280,7 @@ struct SettingsView: View {
                 VStack(spacing: 0) {
                     settingsRow(
                         icon: "bell.fill",
-                        iconColor: Color(red: 0.93, green: 0.50, blue: 0.40),  // 코랄 계열
+                        iconColor: Self.reminderIconColor,  // 코랄 계열
                         title: "복습 알림"
                     ) {
                         Toggle("", isOn: Binding(get: { vm.reminderEnabled },
@@ -285,7 +293,7 @@ struct SettingsView: View {
                         rowDivider
                         settingsRow(
                             icon: "clock.fill",
-                            iconColor: Color(red: 0.45, green: 0.62, blue: 0.85),  // 파랑 계열
+                            iconColor: Self.clockIconColor,  // 파랑 계열
                             title: "알림 시간"
                         ) {
                             DatePicker("", selection: $vm.reminderTime, displayedComponents: .hourAndMinute)
@@ -376,13 +384,13 @@ struct SettingsView: View {
                     // 진행도 초기화 — 탭 시 확인 알럿 표시
                     settingsRow(
                         icon: "arrow.counterclockwise",
-                        iconColor: Color(red: 0.95, green: 0.45, blue: 0.22),  // 주황 계열
+                        iconColor: Self.resetIconColor,  // 주황 계열
                         title: "진행도 초기화",
                         subtitle: "모든 별과 기록 삭제"
                     ) {
                         Button("초기화") { showResetAlert = true }
                             .font(.system(size: 15, weight: .medium))
-                            .foregroundStyle(Color(red: 0.93, green: 0.28, blue: 0.18))  // 빨간 텍스트
+                            .foregroundStyle(Self.resetTextColor)  // 빨간 텍스트
                             .buttonStyle(.plain)
                     }
                 }
