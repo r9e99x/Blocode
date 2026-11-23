@@ -188,7 +188,7 @@ struct ClearOverlayView: View {
                 #endif
             }
             .padding(.horizontal, 24)
-            .padding(.top, 56)  // status bar 공간 확보
+            .padding(.top, 16)  // 별 3개 레이아웃의 닫기 버튼과 같은 높이 (안전 영역은 이미 비워져 있음)
             .opacity(contentVisible ? 1 : 0)
 
             Spacer(minLength: 0)
