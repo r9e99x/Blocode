@@ -42,8 +42,9 @@ final class ProgressService {
     static let shared = ProgressService()
 
     /// 저장 오류 로그 — print 대신 os.Logger 사용 (릴리즈 빌드에서도 Console.app에서 필터링 가능)
-    private let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "Blocode",
-                                category: "ProgressService")
+    /// static: 저장소를 만드는 도중(init 안, 모든 속성이 정해지기 전)에도 로그를 남길 수 있게 함
+    private static let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "Blocode",
+                                       category: "ProgressService")
 
     // MARK: SwiftData 컨테이너 / 컨텍스트
     /// 앱 전역에서 공유하는 단일 ModelContainer
@@ -83,16 +84,30 @@ final class ProgressService {
             // 주의: iCloud 동기화 시 여기에 cloudKitDatabase 옵션 추가 예정
             //       (Apple Developer 등록 필요 → 현재는 비활성)
         )
-        do {
-            modelContainer = try ModelContainer(for: schema, configurations: [config])
-        } catch {
-            // 컨테이너 생성 실패 시 앱 종료 (치명적 오류)
-            fatalError("SwiftData 컨테이너 생성 실패: \(error)")
-        }
+        modelContainer = Self.makeContainer(schema: schema, configuration: config).container
 
         // SwiftData → 메모리 미러 채우기
         reloadMirror()
         refreshStreak()
+    }
+
+    /// 컨테이너 만들기 — 저장소를 열지 못하면(파일 손상 등) 앱을 끄지 않고 메모리 저장소로 대신함
+    /// 원래 저장소 파일은 건드리지 않아 다음 실행에서 다시 열어 봄 (예전엔 fatalError라 켜자마자 꺼지고 계속 실행할 수 없었음)
+    /// 대신 이번 실행의 기록은 앱을 끄면 사라짐 — usedFallback으로 알 수 있음
+    static func makeContainer(schema: Schema, configuration: ModelConfiguration)
+        -> (container: ModelContainer, usedFallback: Bool) {
+        do {
+            return (try ModelContainer(for: schema, configurations: [configuration]), false)
+        } catch {
+            logger.error("진행도 저장소를 열지 못해 메모리 저장소로 실행: \(String(describing: error), privacy: .public)")
+            do {
+                let memory = ModelConfiguration(schema: schema, isStoredInMemoryOnly: true)
+                return (try ModelContainer(for: schema, configurations: [memory]), true)
+            } catch {
+                // 메모리 저장소까지 만들 수 없으면 실행할 방법이 없음 (사실상 일어나지 않는 경우)
+                fatalError("메모리 저장소도 만들 수 없음: \(error)")
+            }
+        }
     }
 
     /// 화면에 보일 연속 일수를 오늘 날짜 기준으로 다시 계산 — 앱을 켤 때와 다시 화면에 올라올 때 부름
@@ -288,10 +303,12 @@ final class ProgressService {
         do {
             try context.save()
         } catch {
-            logger.error("진행도 저장 실패(recordClear): \(String(describing: error), privacy: .public)")
+            Self.logger.error("진행도 저장 실패(recordClear): \(String(describing: error), privacy: .public)")
         }
-        // 메모리 미러 재구성 → 관찰 대상 변경으로 뷰 자동 갱신
-        reloadMirror()
+        // 메모리 미러는 바뀐 한 줄만 고침 → 관찰 대상 변경으로 뷰 자동 갱신
+        // (예전엔 저장할 때마다 진행도 전체를 다시 읽어 딕셔너리를 새로 만들었음 — 개발자 해금처럼 연달아 저장하면 매번 전체를 읽었음)
+        results[stageId] = StageResult(isCleared: progress.isCleared, stars: progress.stars,
+                                       bestBlockCount: progress.bestBlockCount)
         // 연속 일수 갱신
         updateStreak()
     }
@@ -348,7 +365,7 @@ final class ProgressService {
             try context.delete(model: StageProgress.self)
             try context.save()
         } catch {
-            logger.error("진행도 초기화 실패(resetAll): \(String(describing: error), privacy: .public)")
+            Self.logger.error("진행도 초기화 실패(resetAll): \(String(describing: error), privacy: .public)")
         }
         // 메모리 미러 비우기 → 관찰 대상 변경으로 뷰 자동 갱신
         results = [:]

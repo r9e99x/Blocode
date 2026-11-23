@@ -11,6 +11,7 @@ import Testing
 import Foundation
 import Observation
 import Synchronization
+import SwiftData
 @testable import Blocode
 
 extension ProgressService {
@@ -92,6 +93,41 @@ func observationFires(reading read: () -> Void, when change: () -> Void) -> Bool
 
 @Suite("진행도 저장", .timeLimit(.minutes(1)))
 struct ProgressServiceTests {
+
+    @Test("클리어를 저장하면 메모리 미러가 저장소 내용과 똑같음 (바뀐 한 줄만 고쳐도)")
+    func mirrorMatchesStoreAfterRecords() throws {
+        let progress = ProgressService.makeForTesting()
+        progress.recordClear(stageId: "ch1_stage1", stars: 2, blockCount: 9)
+        progress.recordClear(stageId: "ch1_stage1", stars: 3, blockCount: 7)   // 더 좋은 기록 — 갱신
+        progress.recordClear(stageId: "ch1_stage1", stars: 1, blockCount: 12)  // 더 나쁜 기록 — 별·블럭은 그대로
+        progress.recordClear(stageId: "ch2_stage3", stars: 1, blockCount: 20)
+
+        let rows = try progress.modelContainer.mainContext.fetch(FetchDescriptor<StageProgress>())
+        #expect(rows.count == progress.results.count)
+        for row in rows {
+            let mirror = try #require(progress.results[row.stageId])
+            #expect(mirror.isCleared == row.isCleared && mirror.stars == row.stars && mirror.bestBlockCount == row.bestBlockCount,
+                    "\(row.stageId): 미러와 저장소가 다름")
+        }
+        #expect(progress.stars(for: "ch1_stage1") == 3)
+        #expect(progress.result(for: "ch1_stage1")?.bestBlockCount == 7)
+    }
+
+    @Test("저장소를 열 수 없으면 앱을 끄지 않고 메모리 저장소로 대신함")
+    func unopenableStoreFallsBackToMemory() throws {
+        let schema = Schema([StageProgress.self, CustomMap.self])
+        // 데이터베이스가 아닌 내용으로 채운 손상된 저장소 파일 — 열기가 반드시 실패함
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent("broken-\(UUID().uuidString).store")
+        try Data("이건 데이터베이스가 아님".utf8).write(to: url)
+        defer { try? FileManager.default.removeItem(at: url) }
+        let broken = ModelConfiguration(schema: schema, url: url)
+        let (container, usedFallback) = ProgressService.makeContainer(schema: schema, configuration: broken)
+        #expect(usedFallback)
+        // 대신 만든 저장소에도 정상적으로 쓰고 읽을 수 있음
+        container.mainContext.insert(StageProgress(stageId: "ch1_stage1"))
+        try container.mainContext.save()
+        #expect(try container.mainContext.fetch(FetchDescriptor<StageProgress>()).count == 1)
+    }
 
     private let streakKey = "blocode_streak"
     private let lastClearDateKey = "blocode_last_clear_date"
