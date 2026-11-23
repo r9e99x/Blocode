@@ -46,8 +46,13 @@ struct BlocodeApp: App {
                     // (iOS/iPadOS는 이 분기를 전혀 컴파일하지 않음 — ContentView는 완전히 그대로 유지)
                     SidebarShell()
                     #else
-                    // 온보딩 완료 → 홈 화면
-                    ContentView()
+                    // 온보딩 완료 → 홈 화면: 아이패드는 맥과 같은 사이드바 셸, 아이폰은 NavigationStack 홈
+                    // (셸을 여기서 골라서, 아이패드에서 쓰지 않는 아이폰 홈의 ViewModel·상태가 만들어지지 않게 함)
+                    if isPadIdiom {
+                        SidebarShell()
+                    } else {
+                        ContentView()
+                    }
                     #endif
                 } else {
                     // 첫 실행 → 온보딩 화면

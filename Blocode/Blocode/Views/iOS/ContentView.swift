@@ -29,17 +29,8 @@ struct ContentView: View {
     /// 잠긴 기능을 눌렀을 때 띄우는 해금 조건 팝업
     @State private var lockInfo: LockInfo?
 
+    /// 아이폰 홈 화면 — NavigationStack 기반 (아이패드·맥은 BlocodeApp에서 SidebarShell을 고름)
     var body: some View {
-        // 아이패드는 맥과 같은 사이드바 셸로 분기 (아이폰은 기존 NavigationStack 경로 그대로)
-        if isPadIdiom {
-            SidebarShell()
-        } else {
-            defaultBody
-        }
-    }
-
-    /// 아이폰 홈 화면 — NavigationStack 기반 (아이패드·맥은 SidebarShell)
-    private var defaultBody: some View {
         // 루트 NavigationStack — path 바인딩으로 화면 전환 관리
         NavigationStack(path: $navPath) {
             // 화면 폭에 따라 홈 레이아웃 분기 (아이폰 세로: 세로 스택 / 아이폰 가로·맥: 좌우 분할)

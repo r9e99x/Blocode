@@ -42,7 +42,15 @@ final class LearningLibraryViewModel {
 
     /// 탭의 카드를 갈래 순서(코딩 → CS)로 묶음 — 갈래가 없는 카드만 있는 탭은 한 묶음
     func sections(in category: LearningCategory) -> [Section] {
-        let all = cards(in: category)
+        Self.sectionsByCategory[category] ?? []
+    }
+
+    /// 탭별 묶음 표 — 카탈로그만 보고 정해지므로 처음 쓸 때 한 번만 만듦 (예전엔 화면을 그릴 때마다 다시 묶었음)
+    private static let sectionsByCategory = Dictionary(uniqueKeysWithValues:
+        LearningCategory.allCases.map { ($0, makeSections(in: $0)) })
+
+    private static func makeSections(in category: LearningCategory) -> [Section] {
+        let all = LearningCatalog.cards(in: category)
         guard all.contains(where: { $0.topic != nil }) else {
             return all.isEmpty ? [] : [Section(topic: nil, cards: all)]
         }

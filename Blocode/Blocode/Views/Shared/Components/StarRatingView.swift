@@ -73,11 +73,16 @@ struct WrapLayout: Layout {
     var spacing: CGFloat = 4
     var lineSpacing: CGFloat = 4
 
-    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+    /// 각 별의 크기를 한 번만 재 둠 — 크기 계산과 배치에서 같은 값을 다시 묻지 않게 (Layout 캐시)
+    /// 별 개수·크기가 바뀌면 SwiftUI가 기본 updateCache로 이 함수를 다시 불러 줌
+    func makeCache(subviews: Subviews) -> [CGSize] {
+        subviews.map { $0.sizeThatFits(.unspecified) }
+    }
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout [CGSize]) -> CGSize {
         let maxWidth = proposal.width ?? .infinity
         var x: CGFloat = 0, y: CGFloat = 0, lineHeight: CGFloat = 0
-        for subview in subviews {
-            let size = subview.sizeThatFits(.unspecified)
+        for size in cache {
             if x > 0, x + size.width > maxWidth {
                 x = 0
                 y += lineHeight + lineSpacing
@@ -90,10 +95,9 @@ struct WrapLayout: Layout {
         return CGSize(width: maxWidth.isFinite ? maxWidth : x, height: y)
     }
 
-    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout [CGSize]) {
         var x = bounds.minX, y = bounds.minY, lineHeight: CGFloat = 0
-        for subview in subviews {
-            let size = subview.sizeThatFits(.unspecified)
+        for (subview, size) in zip(subviews, cache) {
             if x > bounds.minX, x + size.width > bounds.maxX {
                 x = bounds.minX
                 y += lineHeight + lineSpacing

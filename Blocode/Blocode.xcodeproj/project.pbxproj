@@ -303,8 +303,8 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = macosx;
 				SUPPORTED_PLATFORMS = macosx;
-				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_VERSION = 6.0;
 				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Blocode.app/Contents/MacOS/Blocode";
 			};
@@ -329,8 +329,8 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = macosx;
 				SUPPORTED_PLATFORMS = macosx;
-				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_VERSION = 6.0;
 				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Blocode.app/Contents/MacOS/Blocode";
 			};

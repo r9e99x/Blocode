@@ -9,7 +9,7 @@ import AVFoundation
 
 // MARK: - SoundEffect
 /// 재생 가능한 효과음 종류 — Resources/Sounds의 파일명(.m4a)과 1:1 대응
-enum SoundEffect: String, CaseIterable {
+nonisolated enum SoundEffect: String, CaseIterable {  // nonisolated: 메인 밖에서 파일 이름을 읽음
     case blockAdd          // 코드블럭 추가
     case blockReorder      // 코드블럭 순서 변경
     case buttonTap         // 일반 버튼 클릭
@@ -24,13 +24,17 @@ enum SoundEffect: String, CaseIterable {
 
 // MARK: - SoundService
 /// 효과음 재생을 담당하는 싱글톤 — SettingsService.soundEnabled 설정을 따름
-/// 모든 효과음 파일을 미리 로드해 재생 시점에 디코딩 지연 없이 즉시 재생되게 함
+/// 모든 소리 파일을 미리 불러와 재생 시점에 디코딩 지연 없이 즉시 재생되게 함
+/// 불러오기는 메인 스레드 밖에서 함 — 앱 시작 때 화면이 멈추지 않게 (인텔 맥에서 11개를 메인에서 불러오면 0.09~0.55초)
 final class SoundService {
 
     static let shared = SoundService()
 
     private var players: [SoundEffect: AVAudioPlayer] = [:]
     private var musicPlayer: AVAudioPlayer?  // 배경음악 — 효과음과 달리 루프 재생되는 단일 플레이어
+
+    /// 배경음악을 틀어 달라는 요청이 남아 있는지 — 파일을 다 불러오기 전에 요청되면 불러온 뒤 재생
+    private var wantsMusic = false
 
     private init() {
         #if os(iOS)
@@ -39,21 +43,42 @@ final class SoundService {
         try? AVAudioSession.sharedInstance().setCategory(.ambient)
         #endif
 
-        // 모든 효과음 미리 로드 — case를 추가하면 자동 포함 (파일명이 rawValue와 같아야 함)
+        // 메인 밖에서 불러온 플레이어를 받아 둠 — 다 불러오기 전(앱 시작 직후 잠깐)의 효과음은 소리 없이 지나감
+        Task { [weak self] in
+            let loaded = await Self.loadPlayers()
+            guard let self else { return }
+            players = loaded.effects
+            musicPlayer = loaded.music
+            if wantsMusic { startBackgroundMusic() }  // 기다리던 배경음악 요청 처리
+        }
+    }
+
+    /// 불러온 플레이어 묶음
+    /// nonisolated: 메인 밖(loadPlayers)에서 채우므로 메인 액터에 묶지 않음
+    nonisolated private struct LoadedPlayers {
+        var effects: [SoundEffect: AVAudioPlayer] = [:]
+        var music: AVAudioPlayer?
+    }
+
+    /// 모든 소리 파일을 동시 실행 스레드에서 불러옴 (@concurrent)
+    /// 여기서 새로 만든 플레이어라 다른 곳과 공유되지 않으므로 `sending`으로 메인에 넘길 수 있음 (Swift 6 영역 기반 격리)
+    @concurrent
+    private nonisolated static func loadPlayers() async -> sending LoadedPlayers {
+        var loaded = LoadedPlayers()
+        // 모든 효과음 — case를 추가하면 자동 포함 (파일명이 rawValue와 같아야 함)
         for effect in SoundEffect.allCases {
-            guard let url = Bundle.main.url(forResource: effect.rawValue, withExtension: "m4a") else {
-                continue
-            }
+            guard let url = Bundle.main.url(forResource: effect.rawValue, withExtension: "m4a") else { continue }
             let player = try? AVAudioPlayer(contentsOf: url)
             player?.prepareToPlay()
-            players[effect] = player
+            loaded.effects[effect] = player
         }
-
         if let url = Bundle.main.url(forResource: "backgroundMusic", withExtension: "mp3") {
-            musicPlayer = try? AVAudioPlayer(contentsOf: url)
-            musicPlayer?.numberOfLoops = -1  // 무한 반복 — 끝나면 처음부터 다시 재생
-            musicPlayer?.prepareToPlay()
+            let music = try? AVAudioPlayer(contentsOf: url)
+            music?.numberOfLoops = -1  // 무한 반복 — 끝나면 처음부터 다시 재생
+            music?.prepareToPlay()
+            loaded.music = music
         }
+        return loaded
     }
 
     /// 효과음 재생 — 설정에서 효과음이 꺼져 있으면 아무 동작 안 함
@@ -67,6 +92,7 @@ final class SoundService {
 
     /// 배경음악 재생 시작 — 설정에서 배경음악이 꺼져 있으면 아무 동작 안 함 (이미 재생 중이면 그대로 이어짐)
     func startBackgroundMusic() {
+        wantsMusic = true  // 아직 불러오는 중이면 다 불러온 뒤 이어서 재생
         guard SettingsService.shared.musicEnabled else { return }
         #if os(iOS)
         // 사용자가 다른 앱 음악을 듣고 있으면 배경음악은 겹치지 않게 생략 (효과음은 그대로 재생)
@@ -77,11 +103,13 @@ final class SoundService {
 
     /// 배경음악 일시정지 — 앱이 백그라운드로 갈 때 사용 (위치를 유지해 돌아오면 이어서 재생)
     func pauseBackgroundMusic() {
+        wantsMusic = false
         musicPlayer?.pause()
     }
 
     /// 배경음악 정지 — 다음에 다시 켜면 처음부터 재생되도록 위치 초기화
     func stopBackgroundMusic() {
+        wantsMusic = false
         musicPlayer?.stop()
         musicPlayer?.currentTime = 0
     }

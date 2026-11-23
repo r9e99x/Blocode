@@ -38,35 +38,34 @@ struct OnboardingView: View {
     private static let mockCardBackground = Color.dynamic(light: (1.0, 1.0, 1.0), dark: (0.0, 0.0, 0.0))
 
     // MARK: - 슬라이드 데이터
-    private var pages: [OnboardingPage] {
-        [
-            OnboardingPage(
-                illustration: .welcome,
-                title: "Blocode에\n오신 걸 환영해요.",
-                description: "블럭으로 코드를 짜고\n캐릭터를 움직여보세요."
-            ),
-            OnboardingPage(
-                illustration: .block,
-                title: "블럭을 탭해\n코드를 만드세요",
-                description: "팔레트에서 블럭을 탭하면 추가되고,\n드래그해서 순서를 바꿀 수 있어요."
-            ),
-            OnboardingPage(
-                illustration: .run,
-                title: "실행 버튼으로\n캐릭터를 움직여요",
-                description: "블럭 순서대로 캐릭터가 움직여요.\n목표 지점에 도달하면 클리어!"
-            ),
-            OnboardingPage(
-                illustration: .gimmick,
-                title: "챕터 6부터는\n특별한 칸도 만나요",
-                description: "보석을 모으고, 스위치로 문을 열고,\n포탈로 순간이동도 해보세요."
-            ),
-            OnboardingPage(
-                illustration: .star,
-                title: "별을 모아\n스테이지를 클리어해요",
-                description: "적은 블럭으로 클리어할수록\n더 많은 별을 얻을 수 있어요."
-            ),
-        ]
-    }
+    /// 슬라이드 5장 — 바뀌지 않는 값이라 한 번만 만들어 둠 (예전엔 읽을 때마다 배열을 새로 만들었음)
+    private static let pages: [OnboardingPage] = [
+        OnboardingPage(
+            illustration: .welcome,
+            title: "Blocode에\n오신 걸 환영해요.",
+            description: "블럭으로 코드를 짜고\n캐릭터를 움직여보세요."
+        ),
+        OnboardingPage(
+            illustration: .block,
+            title: "블럭을 탭해\n코드를 만드세요",
+            description: "팔레트에서 블럭을 탭하면 추가되고,\n드래그해서 순서를 바꿀 수 있어요."
+        ),
+        OnboardingPage(
+            illustration: .run,
+            title: "실행 버튼으로\n캐릭터를 움직여요",
+            description: "블럭 순서대로 캐릭터가 움직여요.\n목표 지점에 도달하면 클리어!"
+        ),
+        OnboardingPage(
+            illustration: .gimmick,
+            title: "챕터 6부터는\n특별한 칸도 만나요",
+            description: "보석을 모으고, 스위치로 문을 열고,\n포탈로 순간이동도 해보세요."
+        ),
+        OnboardingPage(
+            illustration: .star,
+            title: "별을 모아\n스테이지를 클리어해요",
+            description: "적은 블럭으로 클리어할수록\n더 많은 별을 얻을 수 있어요."
+        ),
+    ]
 
     // MARK: - 본문
 
@@ -88,34 +87,18 @@ struct OnboardingView: View {
                 // MARK: 슬라이드 콘텐츠
                 #if os(iOS)
                 if isPadIdiom {
-                    // 아이패드: 기존처럼 스와이프 가능한 슬라이드 형식 유지 — 다만 TabView(.page)가
-                    // 컨테이너 크기를 명시적으로 안 주면 옆 페이지가 살짝 보이는 버그가 있어서
-                    // GeometryReader로 각 페이지 크기를 화면에 정확히 맞춰 그 버그만 고침
+                    // 아이패드: 스와이프 슬라이드 — 다만 TabView(.page)가 컨테이너 크기를 명시적으로 안 주면
+                    // 옆 페이지가 살짝 보이는 버그가 있어서 GeometryReader로 각 페이지 크기를 화면에 정확히 맞춤
                     GeometryReader { geo in
-                        TabView(selection: $currentPage) {
-                            ForEach(pages.indices, id: \.self) { i in
-                                pageContent(pages[i])
-                                    .frame(width: geo.size.width, height: geo.size.height)
-                                    .tag(i)
-                            }
-                        }
-                        .tabViewStyle(.page(indexDisplayMode: .never))
-                        .animation(.easeInOut(duration: 0.3), value: currentPage)
+                        pageTabView(pageSize: geo.size)
                     }
                 } else {
-                    // 아이폰: 페이지 스타일 탭뷰로 스와이프 전환 (기존과 완전히 동일, 무변경)
-                    TabView(selection: $currentPage) {
-                        ForEach(pages.indices, id: \.self) { i in
-                            pageContent(pages[i])
-                                .tag(i)
-                        }
-                    }
-                    .tabViewStyle(.page(indexDisplayMode: .never))
-                    .animation(.easeInOut(duration: 0.3), value: currentPage)
+                    // 아이폰: 페이지 스타일 탭뷰로 스와이프 전환 (크기 지정 없음)
+                    pageTabView(pageSize: nil)
                 }
                 #else
                 // macOS: 페이지 스타일 TabView 미지원 — 현재 페이지만 표시하고 "다음" 버튼으로 전환
-                pageContent(pages[currentPage])
+                pageContent(Self.pages[currentPage])
                     .id(currentPage)                  // 페이지 전환 시 뷰 교체로 페이드 효과 적용
                     .transition(.opacity)
                     .animation(.easeInOut(duration: 0.3), value: currentPage)
@@ -139,6 +122,22 @@ struct OnboardingView: View {
 
     // MARK: - 상단 바
 
+    #if os(iOS)
+    /// 페이지를 넘기는 탭 뷰 — 아이패드는 각 페이지를 pageSize로 맞추고, 아이폰은 크기를 지정하지 않음
+    /// (예전엔 아이패드·아이폰용으로 같은 TabView를 두 번 썼음)
+    private func pageTabView(pageSize: CGSize?) -> some View {
+        TabView(selection: $currentPage) {
+            ForEach(Self.pages.indices, id: \.self) { i in
+                pageContent(Self.pages[i])
+                    .frame(width: pageSize?.width, height: pageSize?.height)
+                    .tag(i)
+            }
+        }
+        .tabViewStyle(.page(indexDisplayMode: .never))
+        .animation(.easeInOut(duration: 0.3), value: currentPage)
+    }
+    #endif
+
     private var topBar: some View {
         HStack {
             Spacer()
@@ -153,7 +152,7 @@ struct OnboardingView: View {
                     .foregroundStyle(.secondary)
             }
             .buttonStyle(.plain)
-            .opacity(currentPage < pages.count - 1 ? 1 : 0)  // 마지막 슬라이드에서는 숨김
+            .opacity(currentPage < Self.pages.count - 1 ? 1 : 0)  // 마지막 슬라이드에서는 숨김
         }
         .padding(.horizontal, 24)
         .padding(.top, 16)
@@ -219,7 +218,7 @@ struct OnboardingView: View {
 
             // 점 인디케이터
             HStack(spacing: 6) {
-                ForEach(pages.indices, id: \.self) { i in
+                ForEach(Self.pages.indices, id: \.self) { i in
                     RoundedRectangle(cornerRadius: 3)
                         .fill(i == currentPage ? Color.primary : Color.primary.opacity(0.2))
                         .frame(width: i == currentPage ? 18 : 6, height: 6)
@@ -243,7 +242,7 @@ struct OnboardingView: View {
         let botD:    CGFloat = isCompactHeight ? 1.8 : 2.5
         let cr:      CGFloat = isCompactHeight ? 14 : 18
         let fontSize: CGFloat = isCompactHeight ? 14 : 17
-        let isLast   = currentPage == pages.count - 1
+        let isLast   = currentPage == Self.pages.count - 1
         let label    = isLast ? "시작하기" : "다음  ›"
 
         return Button {

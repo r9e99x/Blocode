@@ -15,15 +15,25 @@ enum LearningCatalog {
 
     static let all: [LearningCard] = blockCards + beginnerCodingCards + beginnerCSCards + intermediateCards + advancedCards
 
-    /// 탭별 카드
+    /// 탭별 카드 (카탈로그 순서)
     static func cards(in category: LearningCategory) -> [LearningCard] {
-        all.filter { $0.category == category }
+        cardsByCategory[category] ?? []
     }
 
     /// 그 블럭 자신을 설명하는 카드 — 블럭이 처음 등장할 때 띄우는 설명이 이 카드
     static func card(for block: BlockType) -> LearningCard? {
-        all.first { $0.category == .block && $0.id == "block.\(block.rawValue)" }
+        blockCardByType[block]
     }
+
+    /// 탭별 카드 표 — 처음 쓸 때 한 번만 나눠 둠 (예전엔 탭 목록·수집 개수를 그릴 때마다 전체를 걸렀음)
+    /// Dictionary(grouping:)은 묶음 안의 순서를 그대로 지켜서 카탈로그 순서가 유지됨
+    private static let cardsByCategory = Dictionary(grouping: all, by: \.category)
+
+    /// 블럭 → 그 블럭 설명 카드 표 (예전엔 부를 때마다 id 글자를 만들어 전체를 훑었음)
+    private static let blockCardByType: [BlockType: LearningCard] = Dictionary(uniqueKeysWithValues:
+        BlockType.allCases.compactMap { block in
+            all.first { $0.category == .block && $0.id == "block.\(block.rawValue)" }.map { (block, $0) }
+        })
 
     // MARK: - 블럭 개념
 
