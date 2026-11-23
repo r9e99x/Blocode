@@ -73,7 +73,9 @@ struct BlocodeApp: App {
                 Task { await ReminderService.shared.refresh() }
                 switch phase {
                 case .background: SoundService.shared.pauseBackgroundMusic()
-                case .active:     SoundService.shared.startBackgroundMusic()
+                case .active:
+                    SoundService.shared.startBackgroundMusic()
+                    ProgressService.shared.refreshStreak()  // 자정을 여러 번 넘겨 돌아왔으면 끊긴 연속 일수를 바로 반영
                 default:          break
                 }
             }

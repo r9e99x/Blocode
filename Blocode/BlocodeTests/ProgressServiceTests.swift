@@ -188,6 +188,19 @@ struct ProgressServiceTests {
         #expect(ProgressService.makeForTesting(defaults: defaults).streak == 0)
     }
 
+    @Test("켜 둔 채 날짜가 지나 다시 화면에 오면 끊긴 연속 일수가 0으로 바뀜")
+    func streak_refreshedWhenReturning() {
+        let defaults = isolatedDefaults()
+        defaults.set(4, forKey: streakKey)
+        defaults.set(startOfDay(daysAgo: 1), forKey: lastClearDateKey)
+        let progress = ProgressService.makeForTesting(defaults: defaults)
+        #expect(progress.streak == 4)
+        // 백그라운드에 있는 동안 하루가 더 지난 것과 같은 상태
+        defaults.set(startOfDay(daysAgo: 2), forKey: lastClearDateKey)
+        progress.refreshStreak()
+        #expect(progress.streak == 0)
+    }
+
     @Test("앱을 켤 때 오늘이나 어제 클리어했으면 연속 일수 유지")
     func streak_keptOnLaunchWhenRecent() {
         for daysAgo in [0, 1] {

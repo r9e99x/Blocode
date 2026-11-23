@@ -92,7 +92,13 @@ final class ProgressService {
 
         // SwiftData → 메모리 미러 채우기
         reloadMirror()
-        // streak는 UserDefaults에서 로드 — 끊긴 기록은 다음 클리어 전까지 0으로 표시 (저장값은 클리어 때 갱신)
+        refreshStreak()
+    }
+
+    /// 화면에 보일 연속 일수를 오늘 날짜 기준으로 다시 계산 — 앱을 켤 때와 다시 화면에 올라올 때 부름
+    /// (앱을 끄지 않고 이틀 넘게 백그라운드에 두면 켤 때 계산한 값이 남아 끊긴 기록이 그대로 보였음)
+    /// 끊긴 기록은 다음 클리어 전까지 0으로 표시 — 저장값은 클리어 때만 갱신
+    func refreshStreak() {
         streak = isStreakBroken ? 0 : defaults.integer(forKey: streakKey)
     }
 
