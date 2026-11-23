@@ -105,15 +105,34 @@ class GameScene: SKScene, GameBoardRendering {
 
     // MARK: - 라이프사이클
 
-    /// 씬이 뷰에 표시될 때 호출 — 초기 맵 설정
+    /// 씬이 뷰에 표시될 때 호출 — 초기 맵 설정 (크기 변경 때 이미 같은 크기로 만들었으면 다시 만들지 않음)
     override func didMove(to view: SKView) {
-        setupMap()
+        if builtLayout == nil || builtSize != size { setupMap() }
     }
 
-    /// 씬 크기가 변경될 때 호출 — 유효한 크기일 때만 맵 재설정
+    /// 씬 크기가 변경될 때 호출
+    /// 이미 만든 맵은 묶음 노드의 배율만 맞춰 바로 보여 주고, 크기 변화가 멈추면 한 번만 다시 그림
+    /// (예전엔 바뀔 때마다 노드 수백 개를 전부 다시 만들었음 — 패널 접기·펼치기 애니메이션, 아이패드 창 크기 조절 중 반복)
     override func didChangeSize(_ oldSize: CGSize) {
         guard size.width > 0, size.height > 0 else { return }
-        setupMap()
+        guard let built = builtLayout else {
+            setupMap()  // 처음 크기가 정해지면 바로 만듦
+            return
+        }
+        wakeRendering()
+        if size == builtSize {
+            // 원래 크기로 돌아왔으면 배율만 되돌리고 다시 그리기 예약 취소
+            mapLayer.setScale(1)
+            mapLayer.position = .zero
+            rebuildCountdown = nil
+            return
+        }
+        let scale = layoutMetrics().cellSize / built.cellSize
+        mapLayer.setScale(scale)
+        // 맵은 늘 씬 가운데 정렬이라, 만들 때의 씬 가운데를 새 씬 가운데로 옮김
+        mapLayer.position = CGPoint(x: size.width / 2 - builtSize.width / 2 * scale,
+                                    y: size.height / 2 - builtSize.height / 2 * scale)
+        rebuildCountdown = framesBeforeRebuild
     }
 
     /// 매 프레임 씬 크기를 지금 표시 중인 뷰에 맞춤
@@ -122,8 +141,25 @@ class GameScene: SKScene, GameBoardRendering {
         if let viewSize = view?.bounds.size, viewSize.width > 0, viewSize.height > 0, size != viewSize {
             size = viewSize
         }
+        // 크기 변화가 멈추고 몇 프레임 지나면 새 크기로 한 번 다시 그림 (배율로 늘인 모양을 정확한 모양으로 바꿈)
+        if let countdown = rebuildCountdown {
+            if countdown <= 0 { setupMap() } else { rebuildCountdown = countdown - 1 }
+        }
         pauseRenderingWhenIdle()
     }
+
+    // MARK: - 크기 변경 (배율 먼저, 다시 그리기는 한 번)
+
+    /// 맵 노드를 모두 담는 묶음 — 크기가 바뀌면 이 묶음만 늘이거나 줄여 바로 보여 줌
+    private let mapLayer = SKNode()
+    /// 노드를 만들 때 쓴 배치 — 캐릭터 이동·문 교체 같은 좌표 계산은 늘 이 기준 (묶음이 늘어나 있어도 안쪽 좌표는 그대로)
+    private var builtLayout: MapLayout?
+    /// 노드를 만들 때의 씬 크기
+    private var builtSize: CGSize = .zero
+    /// 크기 변화가 멈춘 뒤 다시 그리기까지 남은 프레임 (nil이면 예약 없음)
+    private var rebuildCountdown: Int?
+    /// 크기 변화가 이만큼(60fps 기준 약 0.1초) 멈추면 다시 그림
+    private let framesBeforeRebuild = 6
 
     // MARK: - 그리기 멈춤 (배터리)
     // 맵이 멈춰 있어도 SpriteKit은 매 프레임 다시 그림 — 움직이는 것이 없으면 뷰를 멈추고, 바뀔 때 다시 켬
@@ -136,6 +172,7 @@ class GameScene: SKScene, GameBoardRendering {
     /// 진행 중인 애니메이션(캐릭터 이동·순간이동, 보석 사라짐)이 없으면 잠시 뒤 그리기를 멈춤
     private func pauseRenderingWhenIdle() {
         let isAnimating = characterNode?.hasActions() == true || itemNodes.values.contains { $0.hasActions() }
+            || rebuildCountdown != nil  // 다시 그리기를 기다리는 동안에도 멈추지 않음
         idleFrames = isAnimating ? 0 : idleFrames + 1
         if idleFrames >= idleFramesBeforePause { view?.isPaused = true }
     }
@@ -191,8 +228,13 @@ class GameScene: SKScene, GameBoardRendering {
     /// 모든 자식 노드를 제거하고 맵, 목표 지점, 캐릭터를 새로 렌더링
     func setupMap() {
         wakeRendering()
-        // 기존 노드 전체 제거
-        removeAllChildren()
+        // 기존 노드 전체 제거 — 맵 노드는 모두 묶음(mapLayer) 안에 있음, 배율도 원래대로
+        if mapLayer.parent == nil { addChild(mapLayer) }
+        mapLayer.removeAllChildren()
+        mapLayer.setScale(1)
+        mapLayer.position = .zero
+        rebuildCountdown = nil
+        builtLayout = nil
         itemNodes = [:]  // 노드 자체는 removeAllChildren으로 이미 제거됨 — 참조만 비움
         gateNodes = [:]
         guard size.width > 0, size.height > 0 else { return }
@@ -202,6 +244,8 @@ class GameScene: SKScene, GameBoardRendering {
 
         // 타일 레이아웃 수치 (캐릭터 배치와 동일한 값을 쓰도록 단일화)
         let layout = layoutMetrics()
+        builtLayout = layout
+        builtSize = size
         let tileSize = layout.tileSize
         let cellSize = layout.cellSize
         let originX  = layout.originX
@@ -229,14 +273,14 @@ class GameScene: SKScene, GameBoardRendering {
                     radius: cornerRadius,
                     isFloor: isFloor
                 )
-                addChild(tile)
+                mapLayer.addChild(tile)
 
                 // 문 표시 마커 — 닫힘: 벽 위에 진한 링 / 열림: 바닥 위에 옅은 링(잔상)
                 if isGateTile {
                     let marker = makeGateMarkerNode(size: tileSize, isOpen: isOpenGate)
                     marker.position = CGPoint(x: x, y: y)
                     marker.zPosition = 1
-                    addChild(marker)
+                    mapLayer.addChild(marker)
                     gateNodes[pos] = (tile, marker, isOpenGate)
                 }
 
@@ -245,7 +289,7 @@ class GameScene: SKScene, GameBoardRendering {
                     let switchNode = makeSwitchNode(size: tileSize)
                     switchNode.position = CGPoint(x: x, y: y)
                     switchNode.zPosition = 1
-                    addChild(switchNode)
+                    mapLayer.addChild(switchNode)
                 }
 
                 // 보석 — 이미 수집한 위치는 숨긴 채로 만듦(재구성해도 숨김 유지, 리셋 때 다시 보임)
@@ -254,7 +298,7 @@ class GameScene: SKScene, GameBoardRendering {
                     itemNode.position = CGPoint(x: x, y: y)
                     itemNode.zPosition = 1
                     itemNode.isHidden = board.collectedItems.contains(pos)
-                    addChild(itemNode)
+                    mapLayer.addChild(itemNode)
                     itemNodes[pos] = itemNode
                 }
 
@@ -263,7 +307,7 @@ class GameScene: SKScene, GameBoardRendering {
                     let portalNode = makePortalNode(size: tileSize)
                     portalNode.position = CGPoint(x: x, y: y)
                     portalNode.zPosition = 1
-                    addChild(portalNode)
+                    mapLayer.addChild(portalNode)
                 }
             }
         }
@@ -272,12 +316,12 @@ class GameScene: SKScene, GameBoardRendering {
         let goalX = originX + CGFloat(mapData.goal.x) * cellSize + tileSize / 2
         let goalY = originY + CGFloat(rows - 1 - mapData.goal.y) * cellSize + tileSize / 2
         let goal  = makeGoalNode(at: CGPoint(x: goalX, y: goalY), tileSize: tileSize)
-        addChild(goal)
+        mapLayer.addChild(goal)
 
         // MARK: 캐릭터 렌더링
         let character = makeCharacterNode(tileSize: tileSize, cornerRadius: cornerRadius)
         characterNode = character  // 이동/회전 애니메이션을 위한 참조 저장
-        addChild(character)
+        mapLayer.addChild(character)
 
         // 캐릭터를 현재 위치에 배치 (애니메이션 없음)
         placeCharacter(originX: originX, originY: originY,
@@ -511,11 +555,9 @@ class GameScene: SKScene, GameBoardRendering {
     /// 현재 characterPosition과 characterDirection에 맞게 캐릭터 노드 위치/각도 업데이트
     /// - Parameter animated: true이면 부드러운 이동 애니메이션 적용
     private func updateCharacterTransform(animated: Bool) {
-        guard size.width > 0, size.height > 0 else { return }
-
-        // setupMap과 동일한 타일 레이아웃 수치 사용 (layoutMetrics로 단일화)
+        // 노드를 만들 때의 배치 기준 (크기가 바뀌는 중이면 묶음 배율이 화면 크기를 맞춰 줌)
+        guard let layout = builtLayout else { return }
         let rows = mapData.height
-        let layout = layoutMetrics()
 
         placeCharacter(originX: layout.originX, originY: layout.originY,
                        rows: rows, cellSize: layout.cellSize,
@@ -610,8 +652,7 @@ class GameScene: SKScene, GameBoardRendering {
     /// 열림 상태가 바뀐 문 칸만 타일·링을 새로 만들어 교체
     /// 벽의 3D 아래면이 아래 칸에 살짝 걸치므로, 원래 노드가 있던 순서 자리에 넣어 겹침 순서를 그대로 유지
     private func refreshGates() {
-        guard size.width > 0, size.height > 0 else { return }
-        let layout = layoutMetrics()
+        guard let layout = builtLayout else { return }  // 노드를 만들 때의 배치 기준
         let cornerRadius = layout.tileSize * MapElementMetrics.tileCorner
         for (position, old) in gateNodes {
             let isOpen = board.openedGates.contains(position)
@@ -629,17 +670,16 @@ class GameScene: SKScene, GameBoardRendering {
 
     /// 노드를 같은 순서 자리의 새 노드로 바꿈
     private func replace(_ old: SKNode, with new: SKNode) {
-        let index = children.firstIndex(of: old) ?? children.count
+        let index = mapLayer.children.firstIndex(of: old) ?? mapLayer.children.count
         old.removeFromParent()
-        insertChild(new, at: index)
+        mapLayer.insertChild(new, at: index)
     }
 
     /// 포탈 이동 — 캐릭터를 현재 칸으로 즉시 재배치 (짧은 페이드 효과로 순간이동 느낌)
     private func teleportCharacter() {
-        guard let character = characterNode else { return }
+        guard let character = characterNode, let layout = builtLayout else { return }
 
         let rows = mapData.height
-        let layout = layoutMetrics()
         let x = layout.originX + CGFloat(board.position.x) * layout.cellSize + layout.tileSize / 2
         let y = layout.originY + CGFloat(rows - 1 - board.position.y) * layout.cellSize + layout.tileSize / 2
 
