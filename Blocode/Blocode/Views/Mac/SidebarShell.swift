@@ -225,9 +225,9 @@ struct SidebarShell: View {
                 chapterMapContent
             case .chapter(let number):
                 // 스테이지 목록|미리보기 — 챕터가 바뀌면 뷰를 새로 만들어 ViewModel·선택 스테이지 초기화
-                ChapterBrowsePane(chapterNumber: number) { ch, num in
-                    navPath.append(AppRoute.stage(chapter: ch, number: num))
-                }
+                ChapterBrowsePane(chapterNumber: number,
+                                  onStart: { ch, num in navPath.append(AppRoute.stage(chapter: ch, number: num)) },
+                                  onSelectChapter: { select(.chapter($0)) })
                 .id(number)
             case .myMaps:
                 CustomMapListView(
