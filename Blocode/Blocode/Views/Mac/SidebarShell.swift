@@ -12,36 +12,22 @@
 import SwiftUI
 
 // MARK: - SidebarShell
-/// 좌측 고정 사이드바(홈/챕터/설정) + 우측 콘텐츠 전환 구조
-/// 챕터를 브라우징 중일 때는 사이드바 자리를 챕터 목록이 대신 차지한다(3단 컬럼)
-/// 게임 화면(StageView) 진입 시에는 이 셸을 벗어나 전체 화면으로 전환하고,
-/// 뒤로가기 시 셸로 복귀한다 (StageView의 onReturnToChapterList로 연결)
+/// 맥 기본 사이드바(NavigationSplitView) + 우측 콘텐츠 구조
+/// 사이드바: 홈·챕터·나만의 맵·개념 카드 — 챕터를 보는 동안 "챕터" 아래에 1~15장이 펼쳐짐 (설정은 ⌘, 설정 창)
+/// 챕터를 고르면 사이드바는 그대로 두고 오른쪽에 스테이지 목록|미리보기 2칸 (예전엔 챕터 목록이 사이드바를 통째로 대체했음)
+/// 게임·에디터 화면은 오른쪽 스택에 올리고, 그동안 사이드바를 접어 창 전체를 씀 (뒤로 오면 다시 펼침)
 struct SidebarShell: View {
 
-    /// 사이드바 항목 크기
-    private struct ItemMetrics {
-        let spacing: CGFloat        // 아이콘-글자 간격
-        let iconFontSize: CGFloat   // 아이콘 크기
-        let iconWidth: CGFloat      // 아이콘 칸 폭
-        let titleFontSize: CGFloat  // 글자 크기
-        let verticalPadding: CGFloat
-        let cornerRadius: CGFloat
-
-        static let current = ItemMetrics(spacing: 10, iconFontSize: 14, iconWidth: 18, titleFontSize: 14, verticalPadding: 10, cornerRadius: 10)
+    /// 사이드바에서 고를 수 있는 항목
+    private enum SidebarItem: Hashable {
+        case home, chapterMap, myMaps, library
+        case chapter(Int)
     }
 
-    private let item = ItemMetrics.current
-
-    /// 사이드바 최상위 섹션
-    private enum Section: Hashable {
-        case home, chapters, myMaps, library, settings
-    }
-
-    @State private var section: Section = .home
-    /// 챕터 섹션 내부 상태 — nil이면 지그재그 지도, 값이 있으면 해당 챕터의 3단 브라우저
-    /// (값이 있을 때는 메인 사이드바 대신 챕터 목록이 그 자리를 대체함)
-    @State private var browsingChapter: Int? = nil
-    /// 게임 화면(StageView) 진입/복귀 전용 스택 — 사이드바 셸과는 별개의 스택
+    @State private var selection: SidebarItem = .home
+    /// 사이드바 펼침 상태 — 게임 화면에선 접어서 창 전체를 씀
+    @State private var columnVisibility: NavigationSplitViewVisibility = .all
+    /// 게임·에디터 화면 진입/복귀 스택 — 오른쪽 칸 안에서만 쌓임
     @State private var navPath = NavigationPath()
 
     @State private var homeVM = HomeViewModel()
@@ -51,37 +37,33 @@ struct SidebarShell: View {
     private let settings = SettingsService.shared  // @Observable — 테마를 읽기만 해도 바뀔 때 다시 그려짐
 
     var body: some View {
-        NavigationStack(path: $navPath) {
-            Group {
-                if section == .chapters, let chapter = browsingChapter {
-                    // 챕터 브라우징 중 — 메인 사이드바 대신 3단 컬럼(챕터목록|스테이지목록|미리보기)
-                    ChapterBrowsePane(
-                        chapterNumber: chapter,
-                        // 지도↔브라우저 이동과 챕터끼리 전환 모두 전환 효과 없이 즉시 교체 (사용자 요청)
-                        onBackToMap: { browsingChapter = nil },
-                        onSelectChapter: { newChapter in browsingChapter = newChapter },
-                        onStart: { ch, num in navPath.append(AppRoute.stage(chapter: ch, number: num)) }
-                    )
-                    .id(chapter)  // 챕터 전환 시 뷰 정체성 갱신 → ViewModel/선택 스테이지 초기화
-                } else {
-                    HStack(spacing: 0) {
-                        sidebar
-                        Divider()
-                        contentPane
-                            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        NavigationSplitView(columnVisibility: $columnVisibility) {
+            sidebar
+                .navigationSplitViewColumnWidth(min: 220, ideal: 240, max: 300)
+        } detail: {
+            NavigationStack(path: $navPath) {
+                contentPane
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                    .background(Color.appBackground.ignoresSafeArea())
+                    .navigationTitle(windowTitle)
+                    // 게임·에디터 화면 — 아이폰 홈과 같은 연결 코드를 함께 씀 (맥 툴바 뒤로가기도 그 안에서 처리)
+                    .navigationDestination(for: AppRoute.self) { route in
+                        GameRouteDestination(route: route, navPath: $navPath) {
+                            // "챕터 목록으로" 복귀 — 그 스테이지의 챕터를 사이드바에서 고른 상태로
+                            navPath.pop()
+                            if case .stage(let chapter, _) = route {
+                                selection = .chapter(chapter)
+                            } else {
+                                selection = .chapterMap
+                            }
+                        }
                     }
-                }
             }
-            .background(Color.appBackground.ignoresSafeArea())
-            .navigationTitle(windowTitle)
-            // 게임·에디터 화면 — 아이폰 홈과 같은 연결 코드를 함께 씀 (맥 툴바 뒤로가기도 그 안에서 처리)
-            .navigationDestination(for: AppRoute.self) { route in
-                GameRouteDestination(route: route, navPath: $navPath) {
-                    // "챕터 목록으로" 복귀 — 사이드바 셸의 챕터 브라우저로 이동
-                    navPath.pop()
-                    section = .chapters
-                }
-            }
+        }
+        // 게임 화면에선 사이드바를 접고 접기 버튼도 숨겨 창 전체를 씀 (예전 전체 화면 전환과 같은 느낌)
+        .toolbar(removing: navPath.isEmpty ? nil : .sidebarToggle)
+        .onChange(of: navPath.isEmpty) { _, isEmpty in
+            columnVisibility = isEmpty ? .all : .detailOnly
         }
         // 복습 알림을 눌렀으면 오늘의 퍼즐로 (앱이 꺼진 채 눌렀을 때는 화면이 준비된 뒤 onAppear에서 처리)
         .onAppear { openPendingDailyPuzzle() }
@@ -90,120 +72,122 @@ struct SidebarShell: View {
         .preferredColorScheme(settings.theme.colorScheme)
     }
 
-    /// 열려 있으면 해당 화면으로 이동, 잠겨 있으면 해금 조건 팝업 (잠금 사운드 포함)
-    private func openIfUnlocked(_ feature: UnlockableFeature, _ route: AppRoute) {
-        if homeVM.isUnlocked(feature) {
-            navPath.append(route)
-        } else {
-            $lockInfo.present(homeVM.lockHint(for: feature))
-        }
-    }
-
     /// 대기 중인 알림 이동 요청이 있으면 홈에서 오늘의 퍼즐만 열린 상태로 이동 — 뒤로가면 홈
     private func openPendingDailyPuzzle() {
         guard let route = homeVM.takePendingDailyPuzzleRoute() else { return }
-        section = .home
-        browsingChapter = nil
+        selection = .home
         navPath = NavigationPath([route])
     }
 
-    /// 윈도우 타이틀 바 텍스트 — 현재 섹션/챕터 반영 (맥 전용)
+    /// 윈도우 타이틀 바 텍스트 — 현재 항목/챕터 반영 (맥 전용)
     private var windowTitle: String {
-        switch section {
+        switch selection {
         case .home: return "Blocode"
-        case .chapters:
-            if let ch = browsingChapter, let info = ChapterCatalog.chapter(ch) {
-                return "Blocode — \(info.title)"
-            }
-            return "Blocode — 챕터"
+        case .chapterMap: return "Blocode — 챕터"
+        case .chapter(let ch): return "Blocode — \(ChapterCatalog.chapter(ch)?.title ?? "챕터")"
         case .myMaps: return "Blocode — 나만의 맵"
         case .library: return "Blocode — 개념 카드"
-        case .settings: return "Blocode — 설정"
         }
     }
 
     // MARK: - 사이드바
 
-    private var sidebar: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            // 로고
-            HStack(spacing: 10) {
-                miniLogoIcon
-                Text("Blocode")
-                    .font(.system(size: 18, weight: .bold, design: .rounded))
-                    .foregroundStyle(.primary)
-            }
-            .padding(.horizontal, 16)
-            .padding(.top, 20)
-            .padding(.bottom, 24)
-
-            sidebarItem(icon: "house", title: "홈", isSelected: section == .home) {
-                withAnimation(.easeInOut(duration: 0.2)) { section = .home }
-            }
-            sidebarItem(icon: "square.grid.2x2", title: "챕터", isSelected: section == .chapters) {
-                withAnimation(.easeInOut(duration: 0.2)) { section = .chapters }
-            }
-            sidebarItem(icon: homeVM.isUnlocked(.customMaps) ? "pencil.and.ruler" : "lock.fill",
-                        title: "나만의 맵", isSelected: section == .myMaps) {
-                if homeVM.isUnlocked(.customMaps) {
-                    withAnimation(.easeInOut(duration: 0.2)) { section = .myMaps }
-                } else {
-                    $lockInfo.present(homeVM.lockHint(for: .customMaps))
+    /// 사이드바 항목을 눌렀을 때 — 잠긴 항목은 고르지 않고 해금 조건 팝업만 띄움
+    private func select(_ item: SidebarItem) {
+        guard item != selection else { return }
+        switch item {
+        case .myMaps where !homeVM.isUnlocked(.customMaps):
+            $lockInfo.present(homeVM.lockHint(for: .customMaps))
+        case .chapter(let number):
+            guard let chapter = ChapterCatalog.chapter(number) else { return }
+            if chapterSelectVM.isUnlocked(chapter) {
+                SoundService.shared.play(.buttonTap)
+                selection = item
+            } else {
+                SoundService.shared.play(.lockButton)
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    lockInfo = LockInfo(message: chapterSelectVM.lockMessage(for: chapter), accentColor: chapter.color)
                 }
             }
-            sidebarItem(icon: "books.vertical", title: "개념 카드", isSelected: section == .library) {
-                withAnimation(.easeInOut(duration: 0.2)) { section = .library }
-            }
-            sidebarItem(icon: "gearshape", title: "설정", isSelected: section == .settings) {
-                withAnimation(.easeInOut(duration: 0.2)) { section = .settings }
-            }
-
-            Spacer()
-
-            // 하단 통계 요약 (홈 통계와 동일한 데이터 소스)
-            statsFooter
-                .padding(16)
-        }
-        .frame(width: 240)
-        .background(Color.cardBackground)
-    }
-
-    private func sidebarItem(icon: String, title: String, isSelected: Bool, action: @escaping () -> Void) -> some View {
-        Button {
+        default:
             SoundService.shared.play(.buttonTap)  // iOS 버튼들과 동일하게 탭 효과음
-            action()
-        } label: {
-            HStack(spacing: item.spacing) {
-                Image(systemName: icon)
-                    .font(.system(size: item.iconFontSize, weight: .semibold))
-                    .frame(width: item.iconWidth)
-                Text(title)
-                    .font(.system(size: item.titleFontSize, weight: .semibold))
-                Spacer()
-            }
-            // 행 전체 폭을 채워야 Spacer가 여백을 차지하고, 그 여백도 탭 가능해짐
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .contentShape(Rectangle())
-            .foregroundStyle(isSelected ? .white : Color.primary)
-            .padding(.horizontal, 12)
-            .padding(.vertical, item.verticalPadding)
-            // 선택 항목 — 라이트: 다크 잉크 / 다크: 슬레이트 (고정 darkInk는 다크 배경에 묻혔음)
-            .background(isSelected ? Color.slateButtonFace : Color.clear)
-            .clipShape(RoundedRectangle(cornerRadius: item.cornerRadius))
+            selection = item
         }
-        .buttonStyle(.plain)
-        .padding(.horizontal, 12)
     }
 
-    /// 사이드바 로고 아이콘 — 홈 화면 미니 아이콘과 동일한 다이나믹 컬러 사용
-    private var miniLogoIcon: some View {
-        ZStack {
-            RoundedRectangle(cornerRadius: 8).fill(Color.characterBody)
-            Image(systemName: "arrow.up")
-                .font(.system(size: 12, weight: .bold))
-                .foregroundStyle(Color.characterArrow)
+    /// 챕터 지도나 챕터 하나를 보고 있는지 — 이때만 "챕터" 아래에 1~15장을 펼침
+    private var isInChapters: Bool {
+        switch selection {
+        case .chapterMap, .chapter: return true
+        default: return false
         }
-        .frame(width: 28, height: 28)
+    }
+
+    /// 사이드바 — 줄을 직접 그려서 선택 색을 앱 색(라이트: 진한 잉크 / 다크: 슬레이트)으로 유지
+    /// (List 기본 선택은 .tint가 먹지 않아 시스템 파랑으로 나왔음)
+    private var sidebar: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 2) {
+                SidebarRow(isSelected: selection == .home, action: { select(.home) }) {
+                    Label("홈", systemImage: "house")
+                }
+                // 챕터 지도 — 챕터 하나를 고르면 강조는 그 챕터 줄로 옮겨 감 (진한 줄이 두 개 겹치지 않게)
+                SidebarRow(isSelected: selection == .chapterMap, action: { select(.chapterMap) }) {
+                    Label("챕터", systemImage: "map")
+                }
+                if isInChapters {
+                    ForEach(chapterSelectVM.chapters) { chapter in
+                        SidebarRow(isSelected: selection == .chapter(chapter.number), isNested: true,
+                                   action: { select(.chapter(chapter.number)) }) {
+                            chapterRow(chapter)
+                        }
+                    }
+                }
+                SidebarRow(isSelected: selection == .myMaps, action: { select(.myMaps) }) {
+                    Label("나만의 맵", systemImage: homeVM.isUnlocked(.customMaps) ? "pencil.and.ruler" : "lock.fill")
+                }
+                SidebarRow(isSelected: selection == .library, action: { select(.library) }) {
+                    Label("개념 카드", systemImage: "books.vertical")
+                }
+            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 8)
+            .animation(.easeInOut(duration: 0.2), value: isInChapters)
+        }
+        // 사이드바 배경은 예전 색 그대로 (시스템 반투명 재질 대신)
+        .background(Color.cardBackground)
+        // 하단 통계 요약 — 목록이 길어도 항상 아래에 고정
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            statsFooter
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(12)
+        }
+    }
+
+    /// 사이드바 챕터 한 줄 — 챕터 색 번호 배지(잠기면 자물쇠) + 이름 + 별 수
+    private func chapterRow(_ chapter: ChapterInfo) -> some View {
+        let unlocked = chapterSelectVM.isUnlocked(chapter)
+        return HStack(spacing: 8) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 5)
+                    .fill(unlocked ? chapter.color : Color.lockedBackground)
+                if unlocked {
+                    Text("\(chapter.number)").font(.system(size: 10, weight: .bold)).foregroundStyle(.white)
+                } else {
+                    Image(systemName: "lock.fill").font(.system(size: 8)).foregroundStyle(.secondary)
+                }
+            }
+            .frame(width: 20, height: 20)
+            Text(chapter.title)
+                .opacity(unlocked ? 1 : 0.6)
+            Spacer(minLength: 4)
+            if unlocked {
+                Text("\(chapterSelectVM.chapterStars(chapter))/\(chapter.maxStars)")
+                    .font(.system(size: 11).monospacedDigit())
+                    .opacity(0.6)
+            }
+        }
+        .accessibilityIdentifier("sidebarChapter-\(chapter.number)")
     }
 
     /// 하단 통계 카드 — 별/연속을 각각 아이콘+굵은값+레이블 한 줄로 표시
@@ -231,12 +215,20 @@ struct SidebarShell: View {
 
     private var contentPane: some View {
         Group {
-            switch section {
+            switch selection {
             case .home:
-                homeContent
-            case .chapters:
-                // browsingChapter가 nil일 때만 이 분기로 오므로 항상 지도
+                // 대시보드 홈 — 버튼·카드는 아이폰·아이패드와 같은 공용 부품
+                MacHomeView(vm: homeVM, chapterSelectVM: chapterSelectVM, lockInfo: $lockInfo,
+                            onOpen: { navPath.append($0) },
+                            onShowChapter: { selection = $0.map { .chapter($0) } ?? .chapterMap })
+            case .chapterMap:
                 chapterMapContent
+            case .chapter(let number):
+                // 스테이지 목록|미리보기 — 챕터가 바뀌면 뷰를 새로 만들어 ViewModel·선택 스테이지 초기화
+                ChapterBrowsePane(chapterNumber: number) { ch, num in
+                    navPath.append(AppRoute.stage(chapter: ch, number: num))
+                }
+                .id(number)
             case .myMaps:
                 CustomMapListView(
                     onNew: { navPath.append(AppRoute.mapEditor(nil)) },
@@ -245,63 +237,10 @@ struct SidebarShell: View {
                 )
             case .library:
                 LearningLibraryView()
-            case .settings:
-                SettingsView(isEmbedded: true)
             }
         }
         .transition(.opacity)
-        .animation(.easeInOut(duration: 0.18), value: section)
-    }
-
-    // MARK: - 홈 콘텐츠
-
-    /// 상단(인용구+통계)은 창 크기에 맞춰 유연하게 리플로우되고,
-    /// 버튼은 항상 화면 맨 아래 중앙에 고정
-    private var homeContent: some View {
-        VStack(spacing: 0) {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 0) {
-                    Text("오늘의 한 줄").font(.system(size: 13)).foregroundStyle(.secondary)
-                    Text(homeVM.dailyQuote.joined)  // 매일 바뀌는 문구
-                        .font(.system(size: 34, weight: .bold, design: .serif))
-                        .italic()
-                    Text(homeVM.dynamicSubtitle)
-                        .font(.system(size: 14)).foregroundStyle(.secondary)
-                        .padding(.top, 6)
-
-                    HomeStatsRow(vm: homeVM, spacing: 12)  // 아이폰 홈과 같은 통계 3장
-                    .padding(.top, 32)
-
-                    // 오늘의 퍼즐 카드 — 누르면 일일 퍼즐, 주사위는 랜덤 퍼즐
-                    DailyPuzzleCard(info: homeVM.dailyPuzzle,
-                                    isLocked: !homeVM.isUnlocked(.dailyPuzzle),
-                                    onDaily: { openIfUnlocked(.dailyPuzzle, AppRoute.dailyPuzzle(homeVM.dailyPuzzle.key)) },
-                                    onRandom: { openIfUnlocked(.dailyPuzzle, AppRoute.newRandomPuzzle()) })
-                        .padding(.top, 14)
-                }
-                .padding(48)
-                .frame(maxWidth: 640, alignment: .leading)
-                .frame(maxWidth: .infinity, alignment: .leading)
-            }
-
-            // 버튼 영역 — 스크롤 밖, 화면 맨 아래 중앙에 고정
-            VStack(spacing: 12) {
-                // 홈 버튼 2개 — 아이폰 홈과 공용 부품 (모두 완료면 챕터 지도로)
-                HomeContinueButton(next: homeVM.nextStage, isFirstTime: homeVM.isFirstTime) {
-                    if let next = homeVM.nextStage {
-                        navPath.append(AppRoute.stage(chapter: next.chapter, number: next.stage))
-                    } else {
-                        section = .chapters
-                    }
-                }
-                HomeBrowseButton { section = .chapters }
-            }
-            .frame(maxWidth: 480)
-            .frame(maxWidth: .infinity)
-            .padding(.horizontal, 48)
-            .padding(.top, 8)
-            .padding(.bottom, 40)
-        }
+        .animation(.easeInOut(duration: 0.18), value: selection)
     }
 
     // MARK: - 챕터 지도 (지그재그 + 3D + 눌림 + 잠금 팝업)
@@ -324,10 +263,42 @@ struct SidebarShell: View {
                 // 지그재그 챕터 지도 (아이폰 챕터 선택과 공용 부품)
                 ChapterMapView(vm: chapterSelectVM,
                                metrics: .init(cardSize: 100, rowSpacing: 172, cornerRadius: 24, numberFontSize: 40, lockFontSize: 24),
-                               lockInfo: $lockInfo) { browsingChapter = $0 }
+                               lockInfo: $lockInfo) { selection = .chapter($0) }
                     .padding(.horizontal, 40)
             }
         }
+    }
+}
+
+// MARK: - SidebarRow
+/// 사이드바 한 줄 — 선택: 앱의 진한 버튼 색 + 흰 글자 / 마우스를 올리면 옅은 배경 (맥 사이드바처럼)
+private struct SidebarRow<Content: View>: View {
+    let isSelected: Bool
+    var isNested = false  // 챕터 1~15장처럼 한 단계 들여 쓴 줄
+    let action: () -> Void
+    @ViewBuilder let content: Content
+
+    @State private var isHovering = false
+
+    var body: some View {
+        Button(action: action) {
+            content
+                .font(.system(size: isNested ? 13 : 14, weight: isNested ? .medium : .semibold))
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.leading, isNested ? 26 : 10)
+                .padding(.trailing, 10)
+                .padding(.vertical, isNested ? 6 : 8)
+                // 행 전체 폭을 채워야 여백까지 눌림
+                .contentShape(Rectangle())
+                .foregroundStyle(isSelected ? .white : Color.primary)
+                .background(
+                    RoundedRectangle(cornerRadius: 8)
+                        .fill(isSelected ? Color.slateButtonFace
+                              : isHovering ? Color.statCardBackground : Color.clear)
+                )
+        }
+        .buttonStyle(.plain)
+        .onHover { isHovering = $0 }
     }
 }
 

@@ -10,23 +10,15 @@
 import SwiftUI
 
 // MARK: - ChapterBrowsePane
-/// 챕터 브라우징 중 메인 사이드바 자리를 대체하는 3단 컬럼
-/// 좌: 챕터 목록(메인 사이드바 폭·배경과 동일) / 중: 스테이지 목록(챕터색 헤더 포함) / 우: 스테이지 미리보기
+/// 사이드바에서 챕터를 골랐을 때 오른쪽에 뜨는 2칸
+/// 좌: 스테이지 목록(챕터색 헤더 포함) / 우: 스테이지 미리보기 (챕터 목록은 셸의 사이드바가 맡음)
 /// 크기 숫자는 전부 Metrics에 모음
 struct ChapterBrowsePane: View {
 
     /// 크기 수치
     private struct Metrics {
         let stageColumnWidth: CGFloat      // 2열(스테이지 목록) 폭
-        let backFontSize: CGFloat          // "‹ CHAPTERS" 글자
-        let chapterRowSpacing: CGFloat     // 챕터 행 아이콘-글자 간격
-        let chapterBadgeSize: CGFloat      // 챕터 번호 배지 한 변
-        let chapterBadgeRadius: CGFloat    // 챕터 번호 배지 모서리
-        let chapterNumberFontSize: CGFloat // 배지 안 번호
-        let chapterLockFontSize: CGFloat   // 배지 안 자물쇠
-        let chapterTitleFontSize: CGFloat  // 챕터 이름
-        let chapterStarsFontSize: CGFloat  // "N / M stars"
-        let rowVerticalPadding: CGFloat    // 챕터·스테이지 행 세로 여백
+        let rowVerticalPadding: CGFloat    // 스테이지 행 세로 여백
         let stageIcon: StageIcon3D.Metrics // 스테이지 아이콘
         let stageNameFontSize: CGFloat     // 스테이지 이름
         let stageStarSize: CGFloat         // 스테이지 행 별
@@ -35,9 +27,7 @@ struct ChapterBrowsePane: View {
         let startButtonRadius: CGFloat     // 시작 버튼 모서리
 
         static let current = Metrics(
-            stageColumnWidth: 340, backFontSize: 11, chapterRowSpacing: 10,
-            chapterBadgeSize: 28, chapterBadgeRadius: 8, chapterNumberFontSize: 13, chapterLockFontSize: 10,
-            chapterTitleFontSize: 13, chapterStarsFontSize: 10, rowVerticalPadding: 8,
+            stageColumnWidth: 340, rowVerticalPadding: 8,
             stageIcon: .init(size: 36, cornerRadius: 12, lockFontSize: 13, checkFontSize: 14, numberFontSize: 16),
             stageNameFontSize: 14, stageStarSize: 11, previewMapMaxWidth: 360,
             startButtonHeight: 54, startButtonRadius: 16)
@@ -46,20 +36,14 @@ struct ChapterBrowsePane: View {
     private let m = Metrics.current
 
     let chapterNumber: Int
-    let onBackToMap: () -> Void
-    let onSelectChapter: (Int) -> Void
     let onStart: (Int, Int) -> Void
 
     @State private var vm: ChapterViewModel
-    @State private var chapterSelectVM = ChapterSelectViewModel()
     @State private var selectedStage: Int?
     @State private var lockInfo: LockInfo? = nil
 
-    init(chapterNumber: Int, onBackToMap: @escaping () -> Void,
-         onSelectChapter: @escaping (Int) -> Void, onStart: @escaping (Int, Int) -> Void) {
+    init(chapterNumber: Int, onStart: @escaping (Int, Int) -> Void) {
         self.chapterNumber = chapterNumber
-        self.onBackToMap = onBackToMap
-        self.onSelectChapter = onSelectChapter
         self.onStart = onStart
         _vm = State(initialValue: ChapterViewModel(chapter: chapterNumber))
     }
@@ -69,12 +53,8 @@ struct ChapterBrowsePane: View {
     }
 
     var body: some View {
-        // 맥 창은 최소 폭이 1080이라 세 칸이 늘 들어감 (예전 좁은 화면 분기는 작은 아이패드 세로용이었음)
+        // 맥 창은 최소 폭이 1080이라 사이드바 옆에 두 칸이 늘 들어감
         HStack(spacing: 0) {
-            chapterListColumn
-                .frame(width: 240)
-                .background(Color.cardBackground)
-            Divider()
             stageListColumn
                 .frame(width: m.stageColumnWidth)
             Divider()
@@ -90,84 +70,7 @@ struct ChapterBrowsePane: View {
         }
     }
 
-    // MARK: 1열 — 챕터 목록 (메인 사이드바 자리를 대체 → 폭·배경을 사이드바와 통일)
-
-    private var chapterListColumn: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            Button {
-                SoundService.shared.play(.buttonTap)  // iOS ChapterView 뒤로가기와 동일하게 탭 효과음
-                onBackToMap()
-            } label: {
-                HStack(spacing: 4) {
-                    Image(systemName: "chevron.left")
-                    Text("CHAPTERS").tracking(1)
-                }
-                .font(.system(size: m.backFontSize, weight: .bold))
-                .foregroundStyle(.secondary)
-            }
-            .buttonStyle(.plain)
-            .padding(16)
-
-            // 챕터가 많아 작은 화면에서 넘치므로 목록만 스크롤 — 뒤로가기는 위에 고정
-            ScrollViewReader { proxy in
-                ScrollView {
-                    VStack(spacing: 0) {
-                        ForEach(chapterSelectVM.chapters) { chapter in
-                            chapterRow(chapter)
-                                .id(chapter.number)
-                        }
-                    }
-                }
-                // 지금 보는 챕터가 목록 밖에 가려지지 않도록 가운데로 이동
-                .onAppear { proxy.scrollTo(chapterNumber, anchor: .center) }
-            }
-        }
-    }
-
-    private func chapterRow(_ chapter: ChapterInfo) -> some View {
-        let unlocked = chapterSelectVM.isUnlocked(chapter)
-        return Button {
-            guard unlocked else {
-                SoundService.shared.play(.lockButton)
-                withAnimation(.easeInOut(duration: 0.2)) {
-                    lockInfo = LockInfo(message: chapterSelectVM.lockMessage(for: chapter),
-                                        accentColor: chapter.color)
-                }
-                return
-            }
-            guard chapter.number != chapterNumber else { return }
-            SoundService.shared.play(.buttonTap)
-            onSelectChapter(chapter.number)
-        } label: {
-            HStack(spacing: m.chapterRowSpacing) {
-                ZStack {
-                    RoundedRectangle(cornerRadius: m.chapterBadgeRadius)
-                        .fill(unlocked ? chapter.color : Color.lockedBackground)
-                        .frame(width: m.chapterBadgeSize, height: m.chapterBadgeSize)
-                    if unlocked {
-                        Text("\(chapter.number)").font(.system(size: m.chapterNumberFontSize, weight: .bold)).foregroundStyle(.white)
-                    } else {
-                        Image(systemName: "lock.fill").font(.system(size: m.chapterLockFontSize)).foregroundStyle(.secondary)
-                    }
-                }
-                VStack(alignment: .leading, spacing: 1) {
-                    Text(chapter.title).font(.system(size: m.chapterTitleFontSize, weight: .semibold))
-                    if unlocked {
-                        Text("\(chapterSelectVM.chapterStars(chapter)) / \(chapter.maxStars) stars")
-                            .font(.system(size: m.chapterStarsFontSize)).foregroundStyle(.secondary)
-                    }
-                }
-                Spacer()
-            }
-            .padding(.horizontal, 16)
-            .padding(.vertical, m.rowVerticalPadding)
-            .contentShape(Rectangle())  // 글자·아이콘뿐 아니라 행 전체가 눌리도록
-        }
-        .buttonStyle(.plain)
-        .background(chapter.number == chapterNumber ? Color.appBackground : Color.clear)
-    }
-
-    // MARK: 2열 — 스테이지 목록 (챕터색 헤더 포함)
+    // MARK: 1열 — 스테이지 목록 (챕터색 헤더 포함)
 
     private var stageListColumn: some View {
         ScrollView {
@@ -215,7 +118,7 @@ struct ChapterBrowsePane: View {
         }
     }
 
-    // MARK: 3열 — 스테이지 미리보기
+    // MARK: 2열 — 스테이지 미리보기
 
     @ViewBuilder
     private func stagePreview(padding: CGFloat) -> some View {
@@ -296,7 +199,7 @@ struct ChapterBrowsePane: View {
 // MARK: - Preview
 
 #Preview("챕터 2 브라우저") {
-    ChapterBrowsePane(chapterNumber: 2, onBackToMap: {}, onSelectChapter: { _ in }, onStart: { _, _ in })
+    ChapterBrowsePane(chapterNumber: 2) { _, _ in }
         .frame(width: 1280, height: 860)
 }
 #endif
