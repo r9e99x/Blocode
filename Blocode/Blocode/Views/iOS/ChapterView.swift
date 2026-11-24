@@ -5,7 +5,7 @@
 //  Created by 조준희 on 5/10/26.
 //
 
-// 아이폰 스테이지 목록 — iOS 전용 (맥은 SidebarShell과 상단바 컨트롤을 사용하므로 컴파일에서 제외)
+// 아이폰 전용 챕터 화면(스테이지 목록) (아이패드는 PadChapterView, 맥은 ChapterBrowsePane을 사용)
 #if os(iOS)
 import SwiftUI
 

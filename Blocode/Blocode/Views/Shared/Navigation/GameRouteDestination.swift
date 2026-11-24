@@ -8,7 +8,7 @@
 import SwiftUI
 
 // MARK: - GameRouteDestination
-/// 게임·에디터 화면으로 가는 경로의 목적지 — 아이폰 홈(ContentView)과 아이패드·맥 셸(SidebarShell)이 함께 씀
+/// 게임·에디터 화면으로 가는 경로의 목적지 — 아이폰 홈(ContentView)·아이패드 셸(PadShell)·맥 셸(SidebarShell)이 함께 씀
 /// (예전엔 두 화면에 같은 연결 코드가 따로 있어서 한쪽만 고치면 어긋났음)
 /// 목록·보관함처럼 셸마다 모양이 다른 화면은 각 셸이 직접 처리하므로 여기서는 빈 화면
 struct GameRouteDestination: View {
