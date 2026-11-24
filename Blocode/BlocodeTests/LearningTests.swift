@@ -42,14 +42,14 @@ struct LearningTests {
         }
     }
 
-    @Test("초급 21장(코딩 11 + CS 10), 중급 15장, 고급 15장이고 처음부터 열려 있음")
+    @Test("초급 29장(코딩 15 + CS 14), 중급 23장, 고급 23장이고 처음부터 열려 있음")
     func levelCards() {
         let beginner = LearningCatalog.cards(in: .beginner)
-        #expect(beginner.count == 21)
-        #expect(beginner.filter { $0.topic == .coding }.count == 11)
-        #expect(beginner.filter { $0.topic == .cs }.count == 10)
-        #expect(LearningCatalog.cards(in: .intermediate).count == 15)
-        #expect(LearningCatalog.cards(in: .advanced).count == 15)
+        #expect(beginner.count == 29)
+        #expect(beginner.filter { $0.topic == .coding }.count == 15)
+        #expect(beginner.filter { $0.topic == .cs }.count == 14)
+        #expect(LearningCatalog.cards(in: .intermediate).count == 23)
+        #expect(LearningCatalog.cards(in: .advanced).count == 23)
         let service = LearningService(defaults: isolatedDefaults())
         for category in [LearningCategory.beginner, .intermediate, .advanced] {
             for card in LearningCatalog.cards(in: category) {
@@ -226,7 +226,7 @@ struct LearningLibraryViewModelTests {
         let (vm, learning) = makeVM()
         #expect(vm.cards(in: .block).count == 12)
         #expect(vm.progress(in: .block).unlocked == 0)
-        #expect(vm.progress(in: .beginner) == (21, 21))  // 초급은 처음부터 열려 있음
+        #expect(vm.progress(in: .beginner) == (29, 29))  // 초급은 처음부터 열려 있음
 
         let repeatCard = try #require(LearningCatalog.card(for: .repeatBlock))
         #expect(!vm.isUnlocked(repeatCard))
@@ -240,7 +240,7 @@ struct LearningLibraryViewModelTests {
         let (vm, _) = makeVM()
         let beginner = vm.sections(in: .beginner)
         #expect(beginner.map(\.topic) == [.coding, .cs])
-        #expect(beginner.map(\.cards.count) == [11, 10])
+        #expect(beginner.map(\.cards.count) == [15, 14])
         let block = vm.sections(in: .block)
         #expect(block.count == 1 && block[0].topic == nil && block[0].cards.count == 12)
         #expect(vm.sections(in: .advanced).map(\.topic) == [.coding, .cs])

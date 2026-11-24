@@ -8,8 +8,8 @@
 import Foundation
 
 // MARK: - 중급 카드 (처음부터 열려 있음)
-/// 초급을 마친 뒤 만나는 개념 15장 — 코딩 8장, CS 7장
-/// 코드 예시는 `code(swift:python:c:cpp:java:)`로 다섯 언어를 모두 채움 (C에 없는 기능은 주석으로 이유를 적음)
+/// 초급을 마친 뒤 만나는 개념 23장 — 코딩 12장, CS 11장 (카드를 더할 땐 갈래에 맞는 자리 끝에 이어 붙이면 됨)
+/// 코드 예시는 `code(swift:python:c:cpp:java:)`로 다섯 언어를 모두 채움 (C에 없는 기능이나 표준 라이브러리에 없는 기능은 주석으로 이유를 적음)
 extension LearningCatalog {
 
     static let intermediateCards: [LearningCard] = [
@@ -373,6 +373,245 @@ extension LearningCatalog {
             unlock: .alwaysOpen,
             example: nil),
 
+        LearningCard(
+            id: "intermediate.inheritance", category: .intermediate, topic: .coding, title: "상속과 다형성",
+            summary: "공통 부분은 물려받고, 같은 이름의 동작은 종류마다 다르게 해요.",
+            body: "상속은 부모 클래스의 데이터와 동작을 자식 클래스가 그대로 물려받는 거예요. 다형성은 같은 이름의 동작이 객체의 종류에 따라 다르게 실행되는 성질이에요. 모든 동물이 speak()를 갖지만 강아지는 '멍', 고양이는 '야옹'이라고 하는 식이에요.",
+            tip: "상속은 '~는 ~의 한 종류다'일 때만 쓰고, 기능만 빌려 쓰고 싶으면 '~를 가지고 있다'로 구성하는 편이 안전해요.",
+            unlock: .alwaysOpen,
+            example: code(
+                swift: #"""
+                class Animal {
+                    func speak() { print("...") }
+                }
+                class Dog: Animal {
+                    override func speak() { print("멍!") }
+                }
+                class Cat: Animal {
+                    override func speak() { print("야옹!") }
+                }
+
+                let animals: [Animal] = [Dog(), Cat()]
+                for animal in animals { animal.speak() }   // 멍! 야옹!
+                """#,
+                python: #"""
+                class Animal:
+                    def speak(self):
+                        print("...")
+
+                class Dog(Animal):
+                    def speak(self):
+                        print("멍!")
+
+                class Cat(Animal):
+                    def speak(self):
+                        print("야옹!")
+
+                for animal in [Dog(), Cat()]:
+                    animal.speak()   # 멍! 야옹!
+                """#,
+                c: #"""
+                // C에는 상속이 없어서, 구조체에 함수 포인터를 담아 비슷하게 흉내 내요.
+                typedef struct { void (*speak)(void); } Animal;
+
+                void dog_speak(void) { printf("멍!\n"); }
+                void cat_speak(void) { printf("야옹!\n"); }
+
+                Animal animals[] = { {dog_speak}, {cat_speak} };
+                for (int i = 0; i < 2; i++) animals[i].speak();   // 멍! 야옹!
+                """#,
+                cpp: #"""
+                class Animal {
+                public:
+                    virtual void speak() { std::cout << "...\n"; }
+                    virtual ~Animal() = default;
+                };
+                class Dog : public Animal {
+                public:
+                    void speak() override { std::cout << "멍!\n"; }
+                };
+                class Cat : public Animal {
+                public:
+                    void speak() override { std::cout << "야옹!\n"; }
+                };
+
+                Dog dog;
+                Cat cat;
+                Animal *animals[] = { &dog, &cat };
+                for (Animal *animal : animals) animal->speak();   // 멍! 야옹!
+                """#,
+                java: #"""
+                class Animal {
+                    void speak() { System.out.println("..."); }
+                }
+                class Dog extends Animal {
+                    @Override void speak() { System.out.println("멍!"); }
+                }
+                class Cat extends Animal {
+                    @Override void speak() { System.out.println("야옹!"); }
+                }
+
+                Animal[] animals = { new Dog(), new Cat() };
+                for (Animal animal : animals) animal.speak();   // 멍! 야옹!
+                """#)),
+
+        LearningCard(
+            id: "intermediate.enum", category: .intermediate, topic: .coding, title: "열거형(enum)",
+            summary: "정해진 선택지 중 하나만 고르는 타입이에요.",
+            body: "방향이 위, 아래, 왼쪽, 오른쪽 넷뿐이라면 숫자나 글자로 나타내는 대신 열거형으로 선택지를 정해 둬요. 오타를 내면 컴파일러가 알려 주고, switch로 모든 경우를 빠뜨리지 않았는지 확인할 수 있어요.",
+            tip: "상태(대기, 실행 중, 완료)나 종류처럼 값의 가짓수가 정해져 있으면 열거형이 잘 어울려요.",
+            unlock: .alwaysOpen,
+            example: code(
+                swift: #"""
+                enum Direction { case up, down, left, right }
+
+                func name(of direction: Direction) -> String {
+                    switch direction {
+                    case .up: "위"
+                    case .down: "아래"
+                    case .left: "왼쪽"
+                    case .right: "오른쪽"
+                    }
+                }
+                print(name(of: .left))   // 왼쪽
+                """#,
+                python: #"""
+                from enum import Enum
+
+                class Direction(Enum):
+                    UP = "위"
+                    DOWN = "아래"
+                    LEFT = "왼쪽"
+                    RIGHT = "오른쪽"
+
+                print(Direction.LEFT.value)   # 왼쪽
+                """#,
+                c: #"""
+                enum Direction { UP, DOWN, LEFT, RIGHT };
+
+                enum Direction d = LEFT;
+                switch (d) {
+                    case UP:    printf("위\n"); break;
+                    case DOWN:  printf("아래\n"); break;
+                    case LEFT:  printf("왼쪽\n"); break;
+                    case RIGHT: printf("오른쪽\n"); break;
+                }   // 왼쪽
+                """#,
+                cpp: #"""
+                enum class Direction { Up, Down, Left, Right };
+
+                Direction d = Direction::Left;
+                switch (d) {
+                    case Direction::Up:    std::cout << "위\n"; break;
+                    case Direction::Down:  std::cout << "아래\n"; break;
+                    case Direction::Left:  std::cout << "왼쪽\n"; break;
+                    case Direction::Right: std::cout << "오른쪽\n"; break;
+                }   // 왼쪽
+                """#,
+                java: #"""
+                enum Direction { UP, DOWN, LEFT, RIGHT }
+
+                Direction d = Direction.LEFT;
+                switch (d) {
+                    case UP -> System.out.println("위");
+                    case DOWN -> System.out.println("아래");
+                    case LEFT -> System.out.println("왼쪽");
+                    case RIGHT -> System.out.println("오른쪽");
+                }   // 왼쪽
+                """#)),
+
+        LearningCard(
+            id: "intermediate.sort", category: .intermediate, topic: .coding, title: "정렬과 비교 기준",
+            summary: "무엇을 기준으로 줄 세울지 함수로 알려 줘요.",
+            body: "숫자는 크기 순으로 정렬하면 되지만, 학생 목록이라면 점수순인지 이름순인지 정해야 해요. 정렬 함수에 '두 개를 비교하는 기준'을 함수나 클로저로 넘기면 같은 데이터를 원하는 기준대로 줄 세울 수 있어요.",
+            tip: "정렬 방법은 직접 만들지 말고 언어가 주는 정렬 함수를 쓰세요. 내가 정할 것은 비교 기준이에요.",
+            unlock: .alwaysOpen,
+            example: code(
+                swift: #"""
+                let scores = [("지민", 80), ("서준", 95), ("하늘", 70)]
+                let ranked = scores.sorted { $0.1 > $1.1 }   // 점수가 높은 순
+                print(ranked.map { $0.0 })                   // ["서준", "지민", "하늘"]
+                """#,
+                python: #"""
+                scores = [("지민", 80), ("서준", 95), ("하늘", 70)]
+                ranked = sorted(scores, key=lambda s: s[1], reverse=True)   # 점수가 높은 순
+                print([name for name, _ in ranked])                         # ['서준', '지민', '하늘']
+                """#,
+                c: #"""
+                typedef struct { const char *name; int score; } Student;
+
+                int by_score_desc(const void *a, const void *b) {
+                    return ((const Student *)b)->score - ((const Student *)a)->score;   // 점수가 높은 순
+                }
+
+                Student students[] = { {"지민", 80}, {"서준", 95}, {"하늘", 70} };
+                qsort(students, 3, sizeof(Student), by_score_desc);   // 서준, 지민, 하늘 순
+                """#,
+                cpp: #"""
+                struct Student { std::string name; int score; };
+
+                std::vector<Student> students = { {"지민", 80}, {"서준", 95}, {"하늘", 70} };
+                std::sort(students.begin(), students.end(),
+                          [](const Student &a, const Student &b) { return a.score > b.score; });   // 서준, 지민, 하늘 순
+                """#,
+                java: #"""
+                record Student(String name, int score) {}
+
+                List<Student> students = new ArrayList<>(List.of(
+                    new Student("지민", 80), new Student("서준", 95), new Student("하늘", 70)));
+                students.sort((a, b) -> b.score() - a.score());   // 점수가 높은 순: 서준, 지민, 하늘
+                """#)),
+
+        LearningCard(
+            id: "intermediate.json", category: .intermediate, topic: .coding, title: "JSON",
+            summary: "데이터를 글자로 주고받는 가장 흔한 형식이에요.",
+            body: "JSON은 {\"name\": \"지민\", \"score\": 80}처럼 이름과 값의 짝을 글자로 적은 형식이에요. 사람이 읽기 쉽고 거의 모든 언어가 읽고 쓸 수 있어서, 서버와 앱이 데이터를 주고받을 때 가장 많이 써요. 글자를 프로그램 안의 데이터로 바꾸는 것을 파싱(디코딩), 반대를 인코딩이라고 해요.",
+            tip: "서버에서 온 JSON은 항목이 빠졌거나 타입이 다를 수 있어서, 읽을 때 실패했을 경우를 꼭 처리해야 해요.",
+            unlock: .alwaysOpen,
+            example: code(
+                swift: #"""
+                import Foundation
+
+                struct Player: Codable {
+                    let name: String
+                    let score: Int
+                }
+
+                let text = #"{"name": "지민", "score": 80}"#
+                let player = try JSONDecoder().decode(Player.self, from: Data(text.utf8))
+                print(player.name, player.score)   // 지민 80
+                """#,
+                python: #"""
+                import json
+
+                text = '{"name": "지민", "score": 80}'
+                player = json.loads(text)
+                print(player["name"], player["score"])   # 지민 80
+                """#,
+                c: #"""
+                // C 표준 라이브러리에는 JSON 기능이 없어서 cJSON 같은 외부 라이브러리를 써요.
+                #include <cjson/cJSON.h>
+
+                cJSON *player = cJSON_Parse("{\"name\": \"지민\", \"score\": 80}");
+                printf("%s %d\n", cJSON_GetObjectItem(player, "name")->valuestring,
+                                  cJSON_GetObjectItem(player, "score")->valueint);   // 지민 80
+                cJSON_Delete(player);
+                """#,
+                cpp: #"""
+                // C++ 표준 라이브러리에는 JSON 기능이 없어서 nlohmann/json 같은 외부 라이브러리를 써요.
+                #include <nlohmann/json.hpp>
+
+                auto player = nlohmann::json::parse(R"({"name": "지민", "score": 80})");
+                std::cout << player["name"].get<std::string>() << " "
+                          << player["score"].get<int>() << "\n";   // 지민 80
+                """#,
+                java: #"""
+                // Java 표준 라이브러리에는 JSON 기능이 없어서 Jackson 같은 외부 라이브러리를 써요.
+                ObjectMapper mapper = new ObjectMapper();
+                JsonNode player = mapper.readTree("{\"name\": \"지민\", \"score\": 80}");   // 읽기에 실패하면 예외가 나요
+                System.out.println(player.get("name").asText() + " " + player.get("score").asInt());   // 지민 80
+                """#)),
+
         // MARK: CS
 
         LearningCard(
@@ -489,6 +728,38 @@ extension LearningCatalog {
             summary: "데이터를 표 형태로 오래 저장하고, 질문으로 꺼내 써요.",
             body: "관계형 데이터베이스는 데이터를 행과 열이 있는 표로 저장해요. SQL로 조회(SELECT), 추가(INSERT), 수정(UPDATE), 삭제(DELETE)를 해요. 표들을 서로 연결해서 '이 학생이 듣는 수업' 같은 것도 한 번에 찾을 수 있어요.",
             tip: "인덱스를 만들어 두면 조회가 빨라지는 대신 저장이 조금 느려져요.",
+            unlock: .alwaysOpen,
+            example: nil),
+
+        LearningCard(
+            id: "intermediate.cache", category: .intermediate, topic: .cs, title: "캐시",
+            summary: "자주 쓰는 데이터를 가까운 곳에 복사해 두는 지름길이에요.",
+            body: "서버나 저장 장치처럼 먼 곳에서 데이터를 가져오는 건 느려요. 한 번 가져온 데이터를 가까운 메모리에 저장해 두고 다음에는 거기서 꺼내 쓰는 것이 캐시예요. 자주 쓰는 데이터일수록 효과가 커요. 다만 원본이 바뀌었는데 캐시가 그대로면 옛날 데이터를 보여 주게 돼요.",
+            tip: "CPU 안, 앱 메모리, 브라우저, 서버 어디서나 캐시를 써요. '캐시를 지운다'는 저장해 둔 복사본을 버린다는 뜻이에요.",
+            unlock: .alwaysOpen,
+            example: nil),
+
+        LearningCard(
+            id: "intermediate.heap", category: .intermediate, topic: .cs, title: "힙과 우선순위 큐",
+            summary: "가장 중요한 것을 빨리 꺼낼 수 있는 자료구조예요.",
+            body: "일반 큐는 먼저 들어온 것이 먼저 나가지만, 우선순위 큐는 우선순위가 가장 높은 것이 먼저 나와요. 응급실에서 먼저 온 사람보다 더 위급한 사람을 먼저 보는 것과 같아요. 보통 힙이라는 트리 모양으로 만들어서, 넣기와 꺼내기를 모두 빠르게(O(log n)) 해요.",
+            tip: "여기서 힙은 메모리의 힙과는 다른 말이에요. 가장 작은 값이나 큰 값을 계속 꺼내야 할 때 떠올리세요.",
+            unlock: .alwaysOpen,
+            example: nil),
+
+        LearningCard(
+            id: "intermediate.dbindex", category: .intermediate, topic: .cs, title: "데이터베이스 인덱스",
+            summary: "책의 색인처럼 원하는 데이터를 빨리 찾게 해 줘요.",
+            body: "인덱스가 없으면 데이터베이스는 원하는 줄을 찾으려고 처음부터 끝까지 읽어야 해요. 책 뒤의 색인처럼 특정 열(예: 이메일)을 정렬된 트리로 따로 만들어 두면 이진 탐색처럼 빠르게 찾을 수 있어요. 대신 저장 공간을 더 쓰고, 데이터를 넣고 고칠 때 인덱스도 같이 고쳐야 해서 쓰기는 조금 느려져요.",
+            tip: "자주 검색하거나 정렬하는 열에만 만드세요. 모든 열에 만들면 오히려 느려져요.",
+            unlock: .alwaysOpen,
+            example: nil),
+
+        LearningCard(
+            id: "intermediate.bitops", category: .intermediate, topic: .cs, title: "비트 연산",
+            summary: "숫자를 0과 1 한 칸씩 직접 다루는 연산이에요.",
+            body: "AND(&), OR(|), XOR(^), NOT(~), 이동(<<, >>)으로 숫자의 비트를 하나하나 다뤄요. 켜짐과 꺼짐 설정 여러 개를 숫자 하나에 담거나(플래그), 2를 곱하고 나누는 일을 빠르게 하는 데 써요. 예를 들어 1 << 3은 8이에요.",
+            tip: "x & 1이 1이면 x는 홀수예요. 가장 오른쪽 비트만 보면 홀짝을 알 수 있거든요.",
             unlock: .alwaysOpen,
             example: nil),
     ]

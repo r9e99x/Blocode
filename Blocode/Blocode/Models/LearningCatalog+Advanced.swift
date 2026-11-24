@@ -8,8 +8,8 @@
 import Foundation
 
 // MARK: - 고급 카드 (처음부터 열려 있음)
-/// 실무와 면접에서 자주 나오는 개념 15장 — 코딩 8장, CS 7장
-/// 코드 예시는 비교가 잘 되는 카드(인터페이스·제네릭·동적 계획법)에만 다섯 언어로 채움
+/// 실무와 면접에서 자주 나오는 개념 23장 — 코딩 12장, CS 11장 (카드를 더할 땐 갈래에 맞는 자리 끝에 이어 붙이면 됨)
+/// 코드 예시는 비교가 잘 되는 카드(인터페이스·제네릭·불변성·동적 계획법)에만 다섯 언어로 채움
 extension LearningCatalog {
 
     static let advancedCards: [LearningCard] = [
@@ -190,6 +190,65 @@ extension LearningCatalog {
             unlock: .alwaysOpen,
             example: nil),
 
+        LearningCard(
+            id: "advanced.solid", category: .advanced, topic: .coding, title: "SOLID 원칙",
+            summary: "유지보수하기 좋은 객체지향 설계의 다섯 가지 길잡이예요.",
+            body: "단일 책임(한 클래스는 한 가지 일만), 개방-폐쇄(확장에는 열려 있고 수정에는 닫혀 있게), 리스코프 치환(자식은 부모 자리에 들어가도 문제없게), 인터페이스 분리(쓰지 않는 기능을 강요하지 않기), 의존성 역전(구체적인 클래스 대신 추상에 의존하기)의 앞글자예요. 규칙이라기보다 코드가 커져도 고치기 쉽게 하려는 경험에서 나온 방향이에요.",
+            tip: "처음부터 전부 지키려 하지 말고, 한 클래스가 너무 많은 일을 하거나 수정이 여러 곳으로 번질 때 떠올리세요.",
+            unlock: .alwaysOpen,
+            example: nil),
+
+        LearningCard(
+            id: "advanced.immutable", category: .advanced, topic: .coding, title: "불변성과 함수형 프로그래밍",
+            summary: "값을 바꾸지 않고 새 값을 만들어서 버그를 줄여요.",
+            body: "불변 값은 한 번 만들면 바뀌지 않아요. 어디선가 몰래 값이 바뀌는 일이 없어서 예측하기 쉽고, 여러 스레드가 동시에 읽어도 안전해요. 함수형 프로그래밍은 같은 입력이면 항상 같은 출력을 내고 바깥 상태를 바꾸지 않는 순수한 함수를 조립해서 프로그램을 만드는 방식이에요.",
+            tip: "Swift의 let과 struct, map과 filter 같은 함수가 이런 생각에서 나왔어요.",
+            unlock: .alwaysOpen,
+            example: code(
+                swift: #"""
+                let original = [1, 2, 3]
+                let doubled = original.map { $0 * 2 }   // 새 배열을 만들어요
+                print(original, doubled)                // [1, 2, 3] [2, 4, 6]
+                """#,
+                python: #"""
+                original = [1, 2, 3]
+                doubled = [n * 2 for n in original]   # 새 리스트를 만들어요
+                print(original, doubled)              # [1, 2, 3] [2, 4, 6]
+                """#,
+                c: #"""
+                const int original[] = {1, 2, 3};
+                int doubled[3];
+                for (int i = 0; i < 3; i++) doubled[i] = original[i] * 2;   // 원본은 그대로 두고 새 배열을 채워요
+                // original 은 {1, 2, 3}, doubled 는 {2, 4, 6}
+                """#,
+                cpp: #"""
+                const std::vector<int> original = {1, 2, 3};
+                std::vector<int> doubled;
+                for (int n : original) doubled.push_back(n * 2);   // 원본은 그대로 두고 새 벡터를 만들어요
+                // original 은 {1, 2, 3}, doubled 는 {2, 4, 6}
+                """#,
+                java: #"""
+                List<Integer> original = List.of(1, 2, 3);   // 바꿀 수 없는 리스트
+                List<Integer> doubled = original.stream().map(n -> n * 2).toList();
+                System.out.println(original + " " + doubled);   // [1, 2, 3] [2, 4, 6]
+                """#)),
+
+        LearningCard(
+            id: "advanced.tdd", category: .advanced, topic: .coding, title: "테스트 더블과 TDD",
+            summary: "테스트를 먼저 쓰고, 진짜 대신 가짜를 끼워서 빠르게 확인해요.",
+            body: "TDD는 실패하는 테스트를 먼저 쓰고, 통과할 만큼만 코드를 짜고, 코드를 정리하는 순서를 되풀이하는 개발 방식이에요. 네트워크나 데이터베이스처럼 느리고 불안정한 부분은 테스트에서 가짜(목, 스텁)로 바꿔 끼워서, 빠르고 항상 같은 결과가 나오게 만들어요.",
+            tip: "가짜를 끼우려면 의존성 주입이 필요해요. 그래서 테스트하기 쉬운 코드는 설계도 좋은 경우가 많아요.",
+            unlock: .alwaysOpen,
+            example: nil),
+
+        LearningCard(
+            id: "advanced.refactor", category: .advanced, topic: .coding, title: "리팩토링과 코드 스멜",
+            summary: "동작은 그대로 두고 코드의 구조만 깔끔하게 고쳐요.",
+            body: "리팩토링은 기능을 바꾸지 않고 읽기 쉽고 고치기 쉽게 정리하는 일이에요. 함수 하나가 너무 길거나, 같은 코드가 여러 곳에 복사돼 있거나, 이름이 뜻을 말해 주지 않는 것처럼 '뭔가 이상한 냄새'가 나는 신호를 코드 스멜이라고 불러요. 테스트가 있어야 고친 뒤에도 같은 동작인지 안심하고 확인할 수 있어요.",
+            tip: "정리하는 중에 새 기능을 섞지 마세요. 정리하고, 테스트하고, 그다음에 기능을 더하는 순서로 나누세요.",
+            unlock: .alwaysOpen,
+            example: nil),
+
         // MARK: CS
 
         LearningCard(
@@ -301,6 +360,38 @@ extension LearningCatalog {
             summary: "비밀번호를 지키고, 데이터가 바뀌지 않았는지 확인해요.",
             body: "해시는 어떤 데이터든 고정된 길이의 지문으로 바꾸는 한 방향 계산이라서 되돌릴 수 없어요. 그래서 서버는 비밀번호 자체가 아니라 그 해시를 저장해요. 암호화는 열쇠가 있으면 원래 데이터로 되돌릴 수 있는 방식이고, HTTPS가 통신 내용을 이렇게 지켜 줘요.",
             tip: "해시와 암호화 알고리즘은 직접 만들지 말고 검증된 라이브러리를 쓰세요.",
+            unlock: .alwaysOpen,
+            example: nil),
+
+        LearningCard(
+            id: "advanced.acid", category: .advanced, topic: .cs, title: "트랜잭션과 ACID",
+            summary: "여러 단계의 작업을 전부 성공하거나 전부 취소해요.",
+            body: "계좌 이체는 내 계좌에서 빼고 상대 계좌에 더하는 두 단계예요. 중간에 실패하면 돈이 사라지니, 둘을 하나로 묶어 전부 성공(커밋)하거나 전부 취소(롤백)해야 해요. 이 묶음이 트랜잭션이고, 원자성(전부 아니면 전무), 일관성(규칙 유지), 격리성(동시에 실행해도 서로 간섭하지 않음), 지속성(성공하면 장애가 나도 남음) 네 가지를 지켜요.",
+            tip: "격리성이 약하면 다른 사람이 아직 끝나지 않은 중간 상태를 보게 될 수 있어서, 성능과 안전 사이에서 수준을 고를 수 있어요.",
+            unlock: .alwaysOpen,
+            example: nil),
+
+        LearningCard(
+            id: "advanced.cap", category: .advanced, topic: .cs, title: "CAP 정리와 분산 시스템",
+            summary: "여러 서버에 나눠 저장하면 세 가지를 동시에 다 가질 수는 없어요.",
+            body: "분산 시스템에는 일관성(모든 서버가 같은 값을 보여 줌), 가용성(언제나 응답함), 분할 허용(서버 사이 연결이 끊겨도 동작함)이 있어요. 네트워크가 끊기는 순간에는 일관성과 가용성 중 하나만 고를 수 있다는 것이 CAP 정리예요. 은행처럼 정확해야 하면 일관성을, SNS 좋아요 수처럼 조금 늦어도 괜찮으면 가용성을 택해요.",
+            tip: "네트워크는 언제든 끊길 수 있다는 전제에서 시작해요. 그래서 현실에서는 일관성과 가용성 사이의 균형을 정하는 일이에요.",
+            unlock: .alwaysOpen,
+            example: nil),
+
+        LearningCard(
+            id: "advanced.scaling", category: .advanced, topic: .cs, title: "확장성과 로드 밸런싱",
+            summary: "사용자가 늘어도 버티도록 서버를 늘리고 일을 나눠요.",
+            body: "서버 한 대의 성능을 올리는 것을 스케일 업, 서버 대수를 늘리는 것을 스케일 아웃이라고 해요. 서버가 여러 대면 로드 밸런서가 들어오는 요청을 골고루 나눠 주고, 한 대가 고장 나도 나머지가 이어서 일해요. 스케일 아웃하려면 서버가 요청 사이의 정보를 자기 메모리에 쥐고 있지 않게(무상태) 만들어야 해요.",
+            tip: "서버를 무상태로 설계하는 것이 확장의 첫걸음이에요. 사용자 정보는 데이터베이스나 캐시에 두세요.",
+            unlock: .alwaysOpen,
+            example: nil),
+
+        LearningCard(
+            id: "advanced.auth", category: .advanced, topic: .cs, title: "인증과 인가",
+            summary: "'누구인지' 확인하고, 그 사람이 '무엇을 할 수 있는지' 정해요.",
+            body: "인증은 로그인처럼 사용자가 누구인지 확인하는 일이고, 인가는 확인된 사용자에게 어떤 기능과 데이터를 허용할지 정하는 일이에요. 로그인한 뒤에는 서버가 발급한 토큰(예: JWT)을 요청마다 함께 보내서, 매번 비밀번호를 보내지 않아도 돼요. OAuth는 'Apple로 로그인'처럼 비밀번호를 넘기지 않고 다른 서비스에 접근 권한만 주는 약속이에요.",
+            tip: "토큰은 비밀번호만큼 소중해요. iOS에서는 키체인 같은 안전한 저장소에 보관하세요.",
             unlock: .alwaysOpen,
             example: nil),
     ]
