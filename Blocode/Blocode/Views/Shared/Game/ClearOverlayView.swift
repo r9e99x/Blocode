@@ -63,10 +63,11 @@ struct ClearOverlayView: View {
                     lowStarLayout
                 }
             }
-            .padding(.top, 28)
+            // 별 3개는 맨 위 "CLEARED" 글자가 X버튼과 겹치지 않게 더 내려서 시작하고, 내용이 많아 카드를 조금 더 길게
+            .padding(.top, stars == 3 ? 44 : 28)
             .padding(.horizontal, 32)
             .frame(width: 520)
-            .frame(maxHeight: 640)
+            .frame(maxHeight: stars == 3 ? 720 : 640)
             .background(Color.appBackground)
             .clipShape(RoundedRectangle(cornerRadius: 28))
             // X버튼은 카드 오른쪽 위 (레이아웃 안의 X버튼은 맥에서 숨김)
@@ -139,12 +140,26 @@ struct ClearOverlayView: View {
     /// 아이패드는 화면이 길어 그 사이가 크게 비므로 48pt만 띄우고 전체를 화면 가운데에 모음
     @ViewBuilder
     private var contentButtonGap: some View {
+        #if os(macOS)
+        // 맥 카드 — 높이가 모자라도 기록 카드와 버튼 사이를 최소 28pt 띄움 (예전엔 0까지 줄어 붙어 보였음)
+        Spacer(minLength: 28)
+        #else
         if isPadIdiom {
             Color.clear.frame(height: 48)
         } else {
             Spacer(minLength: 0)
         }
+        #endif
     }
+
+    /// 별 3개 캐릭터·컨페티 영역 높이·위아래 여백 — 맥 카드는 세로가 짧아 조금 줄임 (아이폰·아이패드는 기존 150 / 20)
+    #if os(macOS)
+    private static let characterAreaHeight: CGFloat = 120
+    private static let characterAreaPadding: CGFloat = 8
+    #else
+    private static let characterAreaHeight: CGFloat = 150
+    private static let characterAreaPadding: CGFloat = 20
+    #endif
 
     // MARK: - 별 3개 레이아웃
 
@@ -187,8 +202,8 @@ struct ClearOverlayView: View {
                 confettiView   // 배경 컨페티 도트
                 characterIcon  // 캐릭터 아이콘
             }
-            .frame(height: 150)
-            .padding(.vertical, 20)
+            .frame(height: Self.characterAreaHeight)
+            .padding(.vertical, Self.characterAreaPadding)
             .opacity(contentVisible ? 1 : 0)
 
             // 별 3개 행 — 순차적으로 등장

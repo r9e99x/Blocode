@@ -24,38 +24,6 @@ struct LearningLibraryView: View {
     private var sections: [LearningLibraryViewModel.Section] { vm.sections(in: category) }
 
     var body: some View {
-        Group {
-            #if os(macOS)
-            // 맥 — 왼쪽: 탭·카드 목록 / 오른쪽: 고른 카드 내용 (예전엔 카드를 누를 때마다 시트가 떴음)
-            HStack(spacing: 0) {
-                listColumn
-                    .frame(width: 420)
-                Divider()
-                macDetail
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-            }
-            // 처음 열면 첫 번째 열린 카드를 보여 줌 (오른쪽 칸이 비어 있지 않게)
-            .onAppear {
-                if openedCard == nil {
-                    openedCard = sections.flatMap(\.cards).first { vm.isUnlocked($0) }
-                }
-            }
-            #else
-            listColumn
-            #endif
-        }
-        .background(Color.appBackground.ignoresSafeArea())
-        .lockInfoPopup($lockInfo)
-        #if !os(macOS)
-        .sheet(item: $openedCard) { LearningCardSheet(card: $0) }
-        #endif
-        .hideNavigationBar()
-        // 이미 진행한 사용자의 수집을 채움 (화면을 열 때마다 한 번 — 가벼운 계산)
-        .onAppear { vm.syncCollection() }
-    }
-
-    /// 머리글 + 탭 + 카드 목록 (아이폰·아이패드는 이것만, 맥은 왼쪽 칸)
-    private var listColumn: some View {
         VStack(spacing: 0) {
             header
             categoryTabs
@@ -65,27 +33,13 @@ struct LearningLibraryView: View {
                 list
             }
         }
+        .background(Color.appBackground.ignoresSafeArea())
+        .lockInfoPopup($lockInfo)
+        .sheet(item: $openedCard) { LearningCardSheet(card: $0) }
+        .hideNavigationBar()
+        // 이미 진행한 사용자의 수집을 채움 (화면을 열 때마다 한 번 — 가벼운 계산)
+        .onAppear { vm.syncCollection() }
     }
-
-    #if os(macOS)
-    /// 맥 오른쪽 칸 — 고른 카드 내용 (닫기 버튼 없이), 아직 안 골랐으면 안내
-    @ViewBuilder
-    private var macDetail: some View {
-        if let card = openedCard {
-            LearningCardSheet(card: card, showsCloseButton: false)
-                .id(card.id)
-        } else {
-            VStack(spacing: 8) {
-                Image(systemName: "book.closed")
-                    .font(.system(size: 32))
-                    .foregroundStyle(.secondary)
-                Text("왼쪽에서 카드를 골라 보세요")
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundStyle(.secondary)
-            }
-        }
-    }
-    #endif
 
     // MARK: - 머리글
 
@@ -155,11 +109,24 @@ struct LearningLibraryView: View {
 
     // MARK: - 목록
 
-    /// 내용 최대 폭 — 아이패드는 2열이라 넓게 (아이폰·맥은 기존 680 그대로)
-    private var contentMaxWidth: CGFloat { isPadIdiom ? 1100 : 680 }
+    /// 내용 최대 폭 — 아이패드·맥은 2열이라 넓게 (아이폰은 680)
+    private var contentMaxWidth: CGFloat {
+        #if os(macOS)
+        1100
+        #else
+        isPadIdiom ? 1100 : 680
+        #endif
+    }
 
     private var list: some View {
         ScrollView {
+            #if os(macOS)
+            macColumns
+                .frame(maxWidth: contentMaxWidth)
+                .frame(maxWidth: .infinity)
+                .padding(.horizontal, 24)
+                .padding(.bottom, 32)
+            #else
             VStack(spacing: 10) {
                 ForEach(sections) { section in
                     // 갈래(코딩·CS) 머리글 — 갈래가 없는 탭은 머리글 없이 카드만
@@ -190,8 +157,42 @@ struct LearningLibraryView: View {
             .frame(maxWidth: .infinity)
             .padding(.horizontal, 24)
             .padding(.bottom, 32)
+            #endif
         }
     }
+
+    #if os(macOS)
+    /// 맥 — 갈래가 둘(코딩·CS)인 초·중·고급은 왼쪽 코딩 / 오른쪽 CS 두 기둥, 블럭 개념은 카드를 2열로
+    @ViewBuilder
+    private var macColumns: some View {
+        if sections.count > 1 {
+            HStack(alignment: .top, spacing: 16) {
+                ForEach(sections) { section in
+                    VStack(spacing: 10) {
+                        if let topic = section.topic {
+                            Text(topic.title)
+                                .font(.system(size: 13, weight: .semibold))
+                                .foregroundStyle(.secondary)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .padding(.leading, 4)
+                        }
+                        ForEach(section.cards) { card in
+                            cardRow(card)
+                        }
+                    }
+                    .frame(maxWidth: .infinity, alignment: .top)
+                }
+            }
+        } else {
+            LazyVGrid(columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)],
+                      spacing: 10) {
+                ForEach(sections.flatMap(\.cards)) { card in
+                    cardRow(card)
+                }
+            }
+        }
+    }
+    #endif
 
     private func cardRow(_ card: LearningCard) -> some View {
         let unlocked = vm.isUnlocked(card)
@@ -231,13 +232,6 @@ struct LearningLibraryView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(Color.statCardBackground)
             .clipShape(RoundedRectangle(cornerRadius: 16))
-            #if os(macOS)
-            // 맥 — 오른쪽에 내용이 보이는 카드에 테두리
-            .overlay(
-                RoundedRectangle(cornerRadius: 16)
-                    .strokeBorder(openedCard?.id == card.id ? Color.slateButtonFace : Color.clear, lineWidth: 2)
-            )
-            #endif
             .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 2)
             .opacity(unlocked ? 1 : 0.55)
             .contentShape(Rectangle())
@@ -268,8 +262,6 @@ struct LearningLibraryView: View {
 struct LearningCardSheet: View {
 
     let card: LearningCard
-    /// 닫기 버튼 표시 — 맥 보관함 오른쪽 칸에 넣을 땐 숨김
-    var showsCloseButton = true
     /// 고른 코드 언어 — "코드로 보기"와 공유 (저장은 ViewModel이 담당)
     @State private var codeLanguage = CodeLanguageViewModel()
     @Environment(\.dismiss) private var dismiss
@@ -323,9 +315,7 @@ struct LearningCardSheet: View {
                     .font(.system(size: 22, weight: .bold))
             }
             Spacer()
-            if showsCloseButton {
-                SheetCloseButton { dismiss() }
-            }
+            SheetCloseButton { dismiss() }
         }
         .padding(.horizontal, 20)
         .padding(.top, 20)

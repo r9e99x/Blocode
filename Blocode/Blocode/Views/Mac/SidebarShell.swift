@@ -46,6 +46,7 @@ struct SidebarShell: View {
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
                     .background(Color.appBackground.ignoresSafeArea())
                     .navigationTitle(windowTitle)
+                    .appWindowToolbarBackground()
                     // 게임·에디터 화면 — 아이폰 홈과 같은 연결 코드를 함께 씀 (맥 툴바 뒤로가기도 그 안에서 처리)
                     .navigationDestination(for: AppRoute.self) { route in
                         GameRouteDestination(route: route, navPath: $navPath) {
@@ -57,6 +58,7 @@ struct SidebarShell: View {
                                 selection = .chapterMap
                             }
                         }
+                        .appWindowToolbarBackground()
                     }
             }
         }
@@ -279,6 +281,18 @@ struct SidebarShell: View {
                     .padding(.horizontal, 40)
             }
         }
+    }
+}
+
+// MARK: - 창 툴바 배경
+
+private extension View {
+    /// 창 위쪽 툴바 띠를 앱 배경색으로 고정 — 게임 화면에 들어가면 시스템 흰 배경이 나타나고,
+    /// 돌아와도 흰색으로 남던 문제 (화면마다 붙여야 스택의 어느 화면에서도 같은 색)
+    func appWindowToolbarBackground() -> some View {
+        self
+            .toolbarBackground(Color.appBackground, for: .windowToolbar)
+            .toolbarBackgroundVisibility(.visible, for: .windowToolbar)
     }
 }
 
