@@ -33,6 +33,9 @@ struct ControlBarView: View {
 
     // MARK: - 아이콘 버튼
 
+    /// 버튼 한 변(실행 버튼의 높이도 같음) — 아이패드는 손가락·화면에 맞춰 키움
+    private var iconSide: CGFloat { isPadIdiom ? 62 : 54 }
+
     /// 되돌리기·한 칸씩·설정에 쓰는 정사각 3D 아이콘 버튼 (예전엔 같은 설정을 세 번 복사해 썼음)
     /// 앞면: 다크에서 배경에 묻히지 않는 슬레이트 / 베벨: 다크에서만 강도 완화 (라이트는 기존 그대로)
     private func iconButton(icon: String, size: CGFloat, tint: Color = .secondary,
@@ -41,7 +44,7 @@ struct ControlBarView: View {
             SoundService.shared.play(.buttonTap)
             action()
         } label: { isPressed in
-            Bevel3DButtonLabel(color: Color.controlIconButtonFace, width: 54, height: 54, cornerRadius: 17,
+            Bevel3DButtonLabel(color: Color.controlIconButtonFace, width: iconSide, height: iconSide, cornerRadius: isPadIdiom ? 19 : 17,
                                topOverlayOpacity: colorScheme == .dark ? 0.12 : 0.28,
                                bottomOverlayOpacity: colorScheme == .dark ? 0.30 : 0.22,
                                isPressed: isPressed) {
@@ -69,7 +72,7 @@ struct ControlBarView: View {
                 SoundService.shared.play(.buttonTap)
                 viewModel.runOrContinue()  // 단계별 중에는 남은 블럭을 이어서 실행
             } label: { isPressed in
-                Bevel3DButtonLabel(color: runButtonColor, width: 152, height: 54, cornerRadius: 27,
+                Bevel3DButtonLabel(color: runButtonColor, width: isPadIdiom ? 200 : 152, height: iconSide, cornerRadius: iconSide / 2,
                                    isPressed: isPressed) {
                     HStack(spacing: 8) {
                         if viewModel.isRunningContinuously {

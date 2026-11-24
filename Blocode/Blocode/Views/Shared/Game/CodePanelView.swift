@@ -113,9 +113,8 @@ struct CodePanelView: View {
                 .opacity(viewModel.gameState == .running ? 0.4 : 1.0)
                 .padding(.top, 8)
 
-            // 컨트롤 바 — 아이패드는 가운데 600pt 안에 모음 (넓은 화면 양 끝으로 버튼이 흩어지지 않게)
+            // 컨트롤 바 — 아이패드 세로는 기둥 폭을 그대로 쓰고, 가로(왼쪽 패널)는 패널 폭 안에서 (버튼은 아이패드용으로 키움)
             ControlBarView(viewModel: viewModel)
-                .frame(maxWidth: isPadIdiom ? 600 : .infinity)
                 .padding(.top, 6)
                 .padding(.bottom, 24)
         }
@@ -209,13 +208,13 @@ struct CodePanelView: View {
         HStack {
             // "CODE" 레이블
             Text("CODE")
-                .font(.system(size: 11, weight: .bold))
+                .font(.system(size: isPadIdiom ? 13 : 11, weight: .bold))
                 .foregroundStyle(.secondary)
                 .tracking(1.2)
 
             // 현재 총 블럭 수 캡슐 뱃지
             Text("\(viewModel.totalBlockCount)")
-                .font(.system(size: 11, weight: .bold, design: .monospaced))
+                .font(.system(size: isPadIdiom ? 13 : 11, weight: .bold, design: .monospaced))
                 .foregroundStyle(.secondary)
                 .padding(.horizontal, 6)
                 .padding(.vertical, 2)
@@ -248,7 +247,7 @@ struct CodePanelView: View {
                     .font(.system(size: 9))
                     .foregroundStyle(Color.starGold)
                 Text("3 = \(viewModel.stage.starThresholds.threeStar) blocks")
-                    .font(.system(size: 11, weight: .medium))
+                    .font(.system(size: isPadIdiom ? 13 : 11, weight: .medium))
                     .foregroundStyle(.secondary)
             }
         }
@@ -288,10 +287,10 @@ struct CodePanelView: View {
                     } else {
                         VStack(spacing: 6) {
                             Image(systemName: "plus.square.dashed")
-                                .font(.system(size: 26))
+                                .font(.system(size: isPadIdiom ? 40 : 26))
                                 .foregroundStyle(Color.tertiaryLabelColor)
                             Text("아래 팔레트에서 블럭을 추가하세요")
-                                .font(.system(size: 13))
+                                .font(.system(size: isPadIdiom ? 17 : 13))
                                 .foregroundStyle(.tertiary)
                         }
                     }

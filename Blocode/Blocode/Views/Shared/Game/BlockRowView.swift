@@ -38,10 +38,10 @@ struct BlockRowView: View {
     private let botD:    CGFloat = 1.9
     private let cr:      CGFloat = 9
     #else
-    private let frontH:  CGFloat = 40  // 앞면 높이 (코드 영역 블럭 세로 크기 축소 — 기존 48)
+    private var frontH:  CGFloat { isPadIdiom ? 48 : 40 }  // 앞면 높이 (아이폰은 코드 영역 블럭 세로 크기 축소 — 기존 48)
     private let topD:    CGFloat = 1.6 // 위 뒷면 두께
     private let botD:    CGFloat = 2.4 // 아래 뒷면 두께
-    private let cr:      CGFloat = 12  // 모서리 반지름
+    private var cr:      CGFloat { isPadIdiom ? 14 : 12 }  // 모서리 반지름
     #endif
 
     // 아이콘/텍스트/스테퍼 크기 — iOS는 블럭 축소에 맞춰 함께 축소, 맥은 기존 값 그대로 유지
@@ -51,10 +51,10 @@ struct BlockRowView: View {
     private let stepperBtnSize: CGFloat = 30
     private let stepperFontSize: CGFloat = 13
     #else
-    private let rowIconSize:    CGFloat = 14
-    private let rowTextSize:    CGFloat = 13
-    private let stepperBtnSize: CGFloat = 26
-    private let stepperFontSize: CGFloat = 12
+    private var rowIconSize:    CGFloat { isPadIdiom ? 17 : 14 }
+    private var rowTextSize:    CGFloat { isPadIdiom ? 16 : 13 }
+    private var stepperBtnSize: CGFloat { isPadIdiom ? 32 : 26 }
+    private var stepperFontSize: CGFloat { isPadIdiom ? 14 : 12 }
     #endif
 
     var body: some View {

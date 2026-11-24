@@ -100,8 +100,8 @@ struct PaletteCardView: View {
     private let topDepth:  CGFloat = 1.3
     private let botDepth:  CGFloat = 2.1
     #else
-    private var btnSize:   CGFloat { isPadIdiom ? 56 : 46 }   // 버튼 크기 (아이폰은 팔레트 세로 크기 축소 — 기존 54)
-    private var radius:    CGFloat { isPadIdiom ? 17 : 14 }   // 모서리 반지름
+    private var btnSize:   CGFloat { isPadIdiom ? 60 : 46 }   // 버튼 크기 (아이폰은 팔레트 세로 크기 축소 — 기존 54)
+    private var radius:    CGFloat { isPadIdiom ? 18 : 14 }   // 모서리 반지름
     private var topDepth:  CGFloat { isPadIdiom ? 1.8 : 1.6 } // 위 뒷면 두께
     private var botDepth:  CGFloat { isPadIdiom ? 3.2 : 2.8 } // 아래 뒷면 두께
     #endif
@@ -110,7 +110,7 @@ struct PaletteCardView: View {
     #if os(macOS)
     private let iconSize: CGFloat = 18
     #else
-    private var iconSize: CGFloat { isPadIdiom ? 20 : 16 }
+    private var iconSize: CGFloat { isPadIdiom ? 22 : 16 }
     #endif
 
     var body: some View {

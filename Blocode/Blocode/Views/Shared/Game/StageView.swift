@@ -226,7 +226,7 @@ struct StageView: View {
         .onChange(of: colorScheme) { _, newScheme in
             scene?.updateColorScheme(isDark: newScheme == .dark)
         }
-        // 실행 시작 시 코드 패널을 자동으로 축소해 맵을 크게 보여줌(컴팩트 레이아웃 전용 —
+        // 실행 시작 시 코드 패널을 자동으로 축소해 맵을 크게 보여줌(아이폰·아이패드 세로 전용 —
         // 와이드/맥은 맵 크기가 isPanelExpanded와 무관해 실질적 영향 없음)
         .onChange(of: viewModel.gameState) { _, newState in
             if newState == .running {
@@ -346,7 +346,7 @@ struct StageView: View {
     /// 좌: 코드 패널(세로로 길게) / 우: 정사각 맵(남은 공간을 가득) — 맥 분할과 같은 구성에 아이패드 값
     /// (팔레트 블럭이 아이패드에서 커져서 코드 패널을 맥보다 넓게)
     private func padLandscapeGameLayout(totalWidth: CGFloat) -> some View {
-        let leftWidth = min(max(totalWidth * 0.40, 440), 560)
+        let leftWidth = min(max(totalWidth * 0.42, 460), 600)  // 팔레트 블럭 7개가 한 줄에 들어가는 폭
 
         return VStack(spacing: 0) {
             navigationBar
@@ -373,20 +373,26 @@ struct StageView: View {
     /// - Parameter totalHeight: 전체 화면 높이 — 코드 패널이 쓸 공간을 남기려고 맵을 55%까지로 제한
     ///   (예전 50%는 블럭이 적을 때 코드 칸이 넓게 비어서 맵을 조금 키움)
     private func padPortraitGameLayout(totalHeight: CGFloat) -> some View {
+        // 위 바·맵·코드 패널·팔레트·컨트롤 바를 전부 한 기둥(880pt)에 넣어 좌우 끝선을 맞춤
+        // (예전엔 맵은 가운데 좁게, 패널·팔레트는 화면 끝까지, 컨트롤 바는 따로 좁아서 줄마다 폭이 달랐음)
         VStack(spacing: 0) {
             navigationBar
 
             mapView
                 .aspectRatio(1.0, contentMode: .fit)
-                .frame(maxHeight: totalHeight * 0.55)
+                // 패널을 펼치면 맵을 줄여 코드 영역을 넓히고, 접으면 맵을 키움 (아이폰과 같은 방식 — 실행하면 자동으로 접힘)
+                .frame(maxHeight: totalHeight * (isPanelExpanded ? 0.30 : 0.55))
                 .padding(.horizontal, 16)
                 .padding(.vertical, 4)
                 // 코드 패널(늘어나는 목록)과 공간을 반씩 나눠 갖지 않고 맵이 먼저 크기를 가짐 — 맨 바깥에 둬야 VStack이 읽음
                 .layoutPriority(1)
 
-            // 세로로 공간이 넉넉해 아이패드 좌우 분할과 같이 확장/축소 토글 없이 항상 펼침
-            codePanel(alwaysExpanded: true)
+            // 위쪽 핸들(∨/∧)로 패널을 펼치고 접음 — 아이패드 가로·맥은 공간이 넉넉해 토글 없이 항상 펼침
+            codePanel()
         }
+        .animation(.spring(duration: 0.3), value: isPanelExpanded)
+        .frame(maxWidth: 880)
+        .frame(maxWidth: .infinity)
     }
 
     // MARK: - 코드 패널
@@ -422,12 +428,12 @@ struct StageView: View {
             VStack(alignment: .leading, spacing: 2) {
                 // "STAGE 1-3" 형식 서브타이틀
                 Text(stage.navCaption)
-                    .font(.system(size: 11, weight: .semibold))
+                    .font(.system(size: isPadIdiom ? 13 : 11, weight: .semibold))  // 아이패드는 글자를 키움 (13인치에서 아이폰 크기는 점처럼 작았음)
                     .foregroundStyle(.secondary)
                     .tracking(1.2)
                 // 스테이지 이름
                 Text(stage.name)
-                    .font(.system(size: 17, weight: .bold))
+                    .font(.system(size: isPadIdiom ? 24 : 17, weight: .bold))
                     .foregroundStyle(.primary)
             }
 
@@ -439,7 +445,7 @@ struct StageView: View {
                 Text("★★★ \(stage.starThresholds.threeStar)블럭 이하")
                 Text("★★☆ \(stage.starThresholds.twoStar)블럭 이하")
             }
-            .font(.system(size: 10))
+            .font(.system(size: isPadIdiom ? 13 : 10))
             .foregroundStyle(.secondary)
             .lineLimit(1)
 
@@ -449,7 +455,7 @@ struct StageView: View {
             }
 
             // 별점 표시 — 클리어 후 획득한 별 수 반영
-            StarRatingView(earned: viewModel.clearedStars, size: 13)
+            StarRatingView(earned: viewModel.clearedStars, size: isPadIdiom ? 18 : 13)
 
             #if os(macOS)
             // 맥 전용: 되돌리기/실행/설정을 별점 오른쪽에 압축 배치
@@ -732,10 +738,10 @@ private struct GemCounter: View {
     var body: some View {
         HStack(spacing: 3) {
             Image(systemName: "diamond.fill")
-                .font(.system(size: 10))
+                .font(.system(size: isPadIdiom ? 13 : 10))
                 .foregroundStyle(Color.accentMint)
             Text("\(viewModel.collectedItems.count)/\(total)")
-                .font(.system(size: 12, weight: .semibold, design: .monospaced))
+                .font(.system(size: isPadIdiom ? 16 : 12, weight: .semibold, design: .monospaced))
                 .foregroundStyle(.secondary)
         }
     }
