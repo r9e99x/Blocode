@@ -38,6 +38,67 @@ struct ClearOverlayView: View {
     // MARK: - Body
 
     var body: some View {
+        #if os(macOS)
+        macCardBody
+        #else
+        fullScreenBody
+        #endif
+    }
+
+    #if os(macOS)
+    /// 맥 — 게임 화면을 어둡게 덮고 가운데 카드로 결과를 보여 줌 (예전엔 창 전체를 덮었음)
+    /// Return: 앞으로 가기(다음 스테이지·챕터 목록·마무리) / Esc: 닫기
+    private var macCardBody: some View {
+        ZStack {
+            // 뒤 게임 화면을 흐리게 가리고, 카드 밖을 눌러도 아래 화면이 눌리지 않게 막음
+            Color.black.opacity(0.35)
+                .ignoresSafeArea()
+                .contentShape(Rectangle())
+                .onTapGesture {}
+
+            Group {
+                if stars == 3 {
+                    threeStarLayout
+                } else {
+                    lowStarLayout
+                }
+            }
+            .padding(.top, 28)
+            .padding(.horizontal, 32)
+            .frame(width: 520)
+            .frame(maxHeight: 640)
+            .background(Color.appBackground)
+            .clipShape(RoundedRectangle(cornerRadius: 28))
+            // X버튼은 카드 오른쪽 위 (레이아웃 안의 X버튼은 맥에서 숨김)
+            .overlay(alignment: .topTrailing) {
+                xButton.padding(16)
+            }
+            .shadow(color: .black.opacity(0.25), radius: 30, y: 10)
+            .padding(.vertical, 24)
+            .sheet(isPresented: $showCodeView) { CodeViewSheet(blocks: codeBlocks) }
+
+            // 키보드 단축키 — 보이지 않는 버튼에 붙임 (화면의 버튼 모양은 그대로 둠)
+            Group {
+                Button("앞으로") { forwardAction() }
+                    .keyboardShortcut(.defaultAction)
+                Button("닫기") { onClose() }
+                    .keyboardShortcut(.cancelAction)
+            }
+            .opacity(0)
+            .allowsHitTesting(false)
+            .accessibilityHidden(true)
+        }
+        .task { await animateIn() }  // 화면 등장 시 순차 애니메이션 시작 — 닫히면 남은 단계는 자동 취소
+    }
+
+    /// Return 동작 — 별 3개는 주 버튼(다음/챕터 목록), 별 1~2개는 "넘어가기"(마지막 스테이지면 마무리)와 같음
+    private func forwardAction() {
+        if stars == 3 || !isLastStage { onNext() } else { onFinish() }
+    }
+    #endif
+
+    /// 아이폰·아이패드 — 앱 배경으로 화면 전체를 덮음
+    private var fullScreenBody: some View {
         ZStack(alignment: .top) {
             // 앱 배경색으로 전체 덮기
             Color.appBackground.ignoresSafeArea()
@@ -55,19 +116,13 @@ struct ClearOverlayView: View {
             .frame(maxWidth: .infinity)
             .sheet(isPresented: $showCodeView) { CodeViewSheet(blocks: codeBlocks) }
 
-            #if os(macOS)
-            // 맥 전용: 콘텐츠가 창 가운데 560pt로 좁혀지므로, X버튼만 창 전체 기준 우상단에 별도 고정
-            // (레이아웃 내부의 X버튼은 숨김 처리해 중복 방지 — 세 곳 모두 공용 xButton 사용)
-            cornerXButton
-            #else
-            // 아이패드도 같은 이유로 화면 우상단에 고정 (아이폰은 레이아웃 안의 X버튼 그대로)
+            // 아이패드는 콘텐츠가 가운데 560pt로 좁혀지므로 X버튼만 화면 우상단에 고정 (아이폰은 레이아웃 안의 X버튼 그대로)
             if isPadIdiom { cornerXButton }
-            #endif
         }
         .task { await animateIn() }  // 화면 등장 시 순차 애니메이션 시작 — 닫히면 남은 단계는 자동 취소
     }
 
-    /// 화면 전체 기준 우상단 X버튼 (맥·아이패드)
+    /// 화면 전체 기준 우상단 X버튼 (아이패드)
     private var cornerXButton: some View {
         VStack {
             HStack {

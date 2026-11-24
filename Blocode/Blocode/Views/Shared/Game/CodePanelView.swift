@@ -122,11 +122,11 @@ struct CodePanelView: View {
     #endif
 
     #if os(macOS)
-    /// 맥 전용 배치 — 팔레트를 코드 영역 위에 배치하고, 확장/축소 토글 없이 코드 리스트가 남은 세로 공간을 전부 사용
+    /// 맥 전용 배치 — 팔레트를 코드 영역 왼쪽 세로 줄로 두고, 확장/축소 토글 없이 코드 리스트가 남은 공간을 전부 사용
     private var macOSBody: some View {
-        VStack(spacing: 10) {
+        HStack(spacing: 10) {
 
-            // ── 팔레트 (코드 영역 위) ──
+            // ── 팔레트 (코드 영역 왼쪽 세로 줄) ──
             paletteView
                 .allowsHitTesting(viewModel.gameState != .running)
                 .opacity(viewModel.gameState == .running ? 0.4 : 1.0)

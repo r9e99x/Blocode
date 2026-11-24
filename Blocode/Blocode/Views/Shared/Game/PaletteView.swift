@@ -36,6 +36,14 @@ struct PaletteView: View {
     #endif
 
     var body: some View {
+        #if os(macOS)
+        // 맥 — 코드 영역 왼쪽의 세로 줄 (위에서부터 쌓고, 넘치면 세로 스크롤) — 예전엔 코드 영역 위 가로 줄이었음
+        ScrollView(.vertical, showsIndicators: false) { cardsColumn }
+            .frame(maxHeight: .infinity, alignment: .top)
+            .background(Color.statCardBackground)
+            .clipShape(RoundedRectangle(cornerRadius: 20))
+            .shadow(color: Color.black.opacity(0.06), radius: 10, x: 0, y: 2)
+        #else
         Group {
             if isPadIdiom {
                 // 아이패드 — 폭이 넓어 블럭이 다 들어가면 스크롤 없이 가운데 정렬 (넘칠 때만 가로 스크롤)
@@ -54,6 +62,7 @@ struct PaletteView: View {
         .shadow(color: Color.black.opacity(0.06), radius: 10, x: 0, y: 2)
         .padding(.horizontal, 16)
         .padding(.bottom, 4)
+        #endif
     }
 }
 
@@ -75,6 +84,25 @@ extension PaletteView {
         .padding(.horizontal, 14)
         .padding(.vertical, verticalPadding)
     }
+
+    #if os(macOS)
+    /// 맥 세로 줄 — 블럭 카드를 위에서부터 한 줄로
+    private var cardsColumn: some View {
+        VStack(spacing: 12) {
+            ForEach(availableBlocks, id: \.self) { type in
+                PaletteCardView(
+                    type: type,
+                    onTap:        { onSelect(type) },
+                    onDragStart:  onDragStart  != nil ? { pt in onDragStart?(type, pt)  } : nil,
+                    onDragChange: onDragChange != nil ? { pt in onDragChange?(type, pt) } : nil,
+                    onDragEnd:    onDragEnd    != nil ? { pt in onDragEnd?(type, pt)    } : nil
+                )
+            }
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 14)
+    }
+    #endif
 }
 
 // MARK: - PaletteCardView (3D)

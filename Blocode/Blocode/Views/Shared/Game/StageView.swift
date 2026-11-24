@@ -316,13 +316,17 @@ struct StageView: View {
 
     #if os(macOS)
     // MARK: - 맥 게임 레이아웃
-    // 좌: 코드 패널(세로로 길게) / 우: 정사각 맵(남은 공간) — 아이패드 가로는 padLandscapeGameLayout
+    // 좌: 코드 패널(왼쪽 세로 팔레트 + 코드 리스트) / 우: 정사각 맵(남은 공간) — 아이패드 가로는 padLandscapeGameLayout
+    // 화면 스택에 올라온 게임(맥 툴바 뒤로가기가 있는 경우)은 제목·별 기준·실행 버튼을 창 툴바로 올려 위 바를 없앰
+    // 시트로 뜬 에디터 테스트 플레이는 툴바가 없으므로 예전처럼 화면 안 위 바를 씀
 
     private func splitGameLayout(totalWidth: CGFloat) -> some View {
-        let leftWidth = min(max(totalWidth * 0.36, 400), 480)  // 코드 패널 폭
+        let leftWidth = min(max(totalWidth * 0.38, 440), 540)  // 코드 패널 폭 (세로 팔레트 줄 포함)
 
         return VStack(spacing: 0) {
-            navigationBar
+            if showsOwnBackButton {
+                navigationBar
+            }
 
             HStack(spacing: 0) {
                 // 좌측 — 코드 패널 (좌우 분할로 공간이 넉넉해 확장/축소 토글 없이 항상 펼침)
@@ -335,12 +339,48 @@ struct StageView: View {
                     mapView
                         .aspectRatio(1.0, contentMode: .fit)
                         .padding(.horizontal, 16)
-                        .padding(.vertical, 4)
+                        .padding(.vertical, 12)
                     Spacer(minLength: 0)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         }
+        .navigationTitle(stage.name)
+        .navigationSubtitle(stage.navCaption)
+        .toolbar {
+            if !showsOwnBackButton {
+                // 별 기준·보석·획득 별 — 툴바 유리 배경 없이 글자만
+                ToolbarItem(placement: .primaryAction) {
+                    macStageStatus
+                }
+                .sharedBackgroundVisibility(.hidden)
+                // 되돌리기·실행·한 단계·설정 — 3D 버튼 모양 그대로 (유리 배경 없이)
+                ToolbarItem(placement: .primaryAction) {
+                    macControlsInline
+                }
+                .sharedBackgroundVisibility(.hidden)
+            }
+        }
+    }
+
+    /// 툴바용 스테이지 상태 — 별 기준 두 줄 + 보석 카운터 + 획득 별
+    private var macStageStatus: some View {
+        HStack(spacing: 12) {
+            VStack(alignment: .trailing, spacing: 1) {
+                Text("★★★ \(stage.starThresholds.threeStar)블럭 이하")
+                Text("★★☆ \(stage.starThresholds.twoStar)블럭 이하")
+            }
+            .font(.system(size: 10))
+            .foregroundStyle(.secondary)
+            .lineLimit(1)
+
+            if let items = stage.mapData.items, !items.isEmpty {
+                GemCounter(viewModel: viewModel, total: items.count)
+            }
+
+            StarRatingView(earned: viewModel.clearedStars, size: 13)
+        }
+        .padding(.trailing, 8)
     }
     #endif
 
@@ -483,6 +523,7 @@ struct StageView: View {
                 viewModel.resetOrClear()
             }
             .disabled(viewModel.isRunningContinuously)  // 단계별 실행 중에는 리셋으로 멈출 수 있음
+            .help(viewModel.characterMoved ? "처음 자리로" : "코드 비우기")
 
             macRunButton
 
@@ -491,12 +532,15 @@ struct StageView: View {
                 viewModel.step()
             }
             .disabled(!viewModel.canStep)
+            .keyboardShortcut("'", modifiers: .command)  // ⌘' 한 단계
+            .help("한 단계 실행 (⌘')")
             .opacity(viewModel.canStep ? 1 : 0.45)
 
             macIconButton(icon: "gearshape") {
                 showMacSettings = true
             }
             .disabled(viewModel.gameState == .running)
+            .help("설정")
             .sheet(isPresented: $showMacSettings) {
                 SettingsView()
                 .preferredColorScheme(SettingsService.shared.theme.colorScheme)
@@ -528,6 +572,7 @@ struct StageView: View {
         let color: Color = viewModel.isRunButtonActive ? Color.runButtonActiveMint : Color.runButtonInactiveGray
 
         return PressableButton {
+            guard viewModel.isRunButtonActive else { return }  // ⌘R은 터치 막기(allowsHitTesting)를 거치지 않으므로 여기서 한 번 더 막음
             SoundService.shared.play(.buttonTap)
             viewModel.runOrContinue()  // 단계별 중에는 남은 블럭을 이어서 실행
         } label: { isPressed in
@@ -547,6 +592,8 @@ struct StageView: View {
             }
         }
         .allowsHitTesting(viewModel.isRunButtonActive)
+        .keyboardShortcut("r", modifiers: .command)  // ⌘R 실행
+        .help("실행 (⌘R)")
     }
     #endif
 
