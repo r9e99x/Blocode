@@ -57,4 +57,18 @@ final class BlocodeUITests: XCTestCase {
             .matching(NSPredicate(format: "label CONTAINS %@", "첫 걸음")).firstMatch
         XCTAssertTrue(firstStage.waitForExistence(timeout: 5), "챕터 1 진입 후 첫 스테이지 이름이 안 보임")
     }
+
+    /// 메뉴 막대 "이동" 단축키 — ⌘4 개념 카드, ⌘2 챕터 지도 (둘 다 진행도와 상관없이 항상 열림)
+    @MainActor
+    func test_menuShortcuts_switchSections() throws {
+        let app = XCUIApplication()
+        app.launch()
+        XCTAssertTrue(app.buttons["챕터 둘러보기"].waitForExistence(timeout: 5))
+
+        app.typeKey("4", modifierFlags: .command)
+        XCTAssertTrue(app.staticTexts["library"].waitForExistence(timeout: 5), "⌘4로 개념 카드 화면이 안 열림")
+
+        app.typeKey("2", modifierFlags: .command)
+        XCTAssertTrue(app.staticTexts["chapter map"].waitForExistence(timeout: 5), "⌘2로 챕터 지도가 안 열림")
+    }
 }

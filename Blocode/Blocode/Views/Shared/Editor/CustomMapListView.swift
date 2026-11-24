@@ -125,6 +125,10 @@ struct CustomMapListView: View {
                         .clipShape(RoundedRectangle(cornerRadius: 12))
                 }
                 .buttonStyle(.plain)
+                #if os(macOS)
+                .keyboardShortcut("n", modifiers: .command)  // ⌘N 새 맵
+                .help("새 맵 (⌘N)")
+                #endif
             }
         }
         .frame(maxWidth: contentMaxWidth)
@@ -160,15 +164,24 @@ struct CustomMapListView: View {
 
     // MARK: - 목록
 
-    /// 내용 최대 폭 — 아이패드는 격자라 넓게 (아이폰·맥은 기존 680 그대로)
-    private var contentMaxWidth: CGFloat { isPadIdiom ? 1100 : 680 }
+    /// 썸네일 카드 격자를 쓰는지 — 아이패드·맥 (아이폰은 한 줄 목록)
+    private var usesGrid: Bool {
+        #if os(macOS)
+        true
+        #else
+        isPadIdiom
+        #endif
+    }
+
+    /// 내용 최대 폭 — 격자(아이패드·맥)는 넓게, 아이폰 목록은 680
+    private var contentMaxWidth: CGFloat { usesGrid ? 1100 : 680 }
 
     private var list: some View {
         ScrollView {
             Group {
-                if isPadIdiom {
-                    // 아이패드 — 큰 썸네일 카드 격자 (예전엔 맥과 같은 한 줄 목록이라 양옆이 넓게 비었음)
-                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 240), spacing: 16)], spacing: 16) {
+                if usesGrid {
+                    // 아이패드·맥 — 큰 썸네일 카드 격자 (예전엔 한 줄 목록이라 양옆이 넓게 비었음)
+                    LazyVGrid(columns: [GridItem(.adaptive(minimum: isPadIdiom ? 240 : 220), spacing: 16)], spacing: 16) {
                         ForEach(vm.rows) { row in
                             padCard(row)
                         }
@@ -226,7 +239,8 @@ struct CustomMapListView: View {
         .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 2)
     }
 
-    /// 아이패드 격자 카드 — 큰 썸네일 + 이름·정보, 오른쪽 아래 메뉴 (누르면 플레이 — 목록 줄과 같은 동작)
+    /// 격자 카드(아이패드·맥) — 큰 썸네일 + 이름·정보, 오른쪽 아래 메뉴 (누르면 플레이 — 목록 줄과 같은 동작)
+    /// 맥은 카드를 오른쪽 클릭해도 같은 메뉴가 뜸
     private func padCard(_ row: CustomMapListViewModel.Row) -> some View {
         VStack(alignment: .leading, spacing: 12) {
             Button {
@@ -263,16 +277,25 @@ struct CustomMapListView: View {
         .background(Color.statCardBackground)
         .clipShape(RoundedRectangle(cornerRadius: 20))
         .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 2)
+        #if os(macOS)
+        .contextMenu { menuItems(row) }
+        #endif
+    }
+
+    /// 플레이·수정·삭제 항목 — "…" 메뉴와 맥 오른쪽 클릭 메뉴가 함께 씀
+    @ViewBuilder
+    private func menuItems(_ row: CustomMapListViewModel.Row) -> some View {
+        if row.isPlayable {
+            Button { onPlay(row.id) } label: { Label("플레이", systemImage: "play.fill") }
+            Button { onEdit(row.id) } label: { Label("수정", systemImage: "pencil") }
+        }
+        Button(role: .destructive) { deleteTarget = row } label: { Label("삭제", systemImage: "trash") }
     }
 
     /// 플레이·수정·삭제 메뉴 (목록 줄·격자 카드 공용)
     private func rowMenu(_ row: CustomMapListViewModel.Row) -> some View {
         Menu {
-            if row.isPlayable {
-                Button { onPlay(row.id) } label: { Label("플레이", systemImage: "play.fill") }
-                Button { onEdit(row.id) } label: { Label("수정", systemImage: "pencil") }
-            }
-            Button(role: .destructive) { deleteTarget = row } label: { Label("삭제", systemImage: "trash") }
+            menuItems(row)
         } label: {
             Image(systemName: "ellipsis")
                 .font(.system(size: 16, weight: .semibold))

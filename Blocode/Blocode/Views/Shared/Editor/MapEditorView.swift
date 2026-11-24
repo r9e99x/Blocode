@@ -42,6 +42,9 @@ struct MapEditorView: View {
     var body: some View {
         GeometryReader { geo in
             Group {
+                #if os(macOS)
+                macLayout
+                #else
                 if geo.size.width > geo.size.height && geo.size.width >= LayoutBreakpoint.wide {
                     wideLayout
                 } else if isPadIdiom && geo.size.width >= LayoutBreakpoint.wide {
@@ -49,6 +52,7 @@ struct MapEditorView: View {
                 } else {
                     compactLayout
                 }
+                #endif
             }
             .padding(16)
         }
@@ -121,6 +125,114 @@ struct MapEditorView: View {
             MapEditorGridView(editor: editor)
         }
     }
+
+    #if os(macOS)
+    // MARK: - 맥 배치
+
+    /// 맥 — 왼쪽: 세로 도구 줄 / 가운데: 격자 + 안내 / 오른쪽: 맵 설정(크기·시작 방향·사용할 블럭)
+    /// 이름·되돌리기·확인·저장·테스트 플레이는 창 툴바로 (예전엔 왼쪽 320pt 칸에 전부 쌓여 있었음)
+    private var macLayout: some View {
+        HStack(spacing: 16) {
+            VStack(spacing: 0) {
+                MapEditorToolPicker(editor: editor, isVertical: true)
+                Spacer(minLength: 0)
+            }
+            .padding(8)
+            .frame(width: 76)
+            .background(Color.cardBackground)
+            .clipShape(RoundedRectangle(cornerRadius: 18))
+
+            VStack(spacing: 12) {
+                MapEditorGridView(editor: editor)
+                hintLine
+            }
+            .frame(maxWidth: .infinity)
+
+            ScrollView {
+                MapEditorSettingsView(editor: editor)
+                    .padding(16)
+            }
+            .frame(width: 300)
+            .background(Color.cardBackground)
+            .clipShape(RoundedRectangle(cornerRadius: 18))
+        }
+        .toolbar { macToolbar }
+        .toolbar(removing: .title)  // 가운데 이름 칸이 제목 역할
+    }
+
+    @ToolbarContentBuilder
+    private var macToolbar: some ToolbarContent {
+        // 뒤로 — 저장 안 한 내용이 있으면 확인 카드 (게임 화면 툴바 뒤로가기와 같은 모양)
+        ToolbarItem(placement: .navigation) {
+            Button {
+                SoundService.shared.play(.buttonTap)
+                requestClose()
+            } label: {
+                Image(systemName: "chevron.left")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(Color.secondary)
+                    .frame(width: 30, height: 30)
+                    .background(Color.panelBackground)
+                    .clipShape(RoundedRectangle(cornerRadius: 8))
+            }
+            .buttonStyle(.plain)
+            .keyboardShortcut("[", modifiers: .command)  // ⌘[ 뒤로 (저장 안 했으면 확인 카드)
+            .help("뒤로 (⌘[)")
+        }
+        .sharedBackgroundVisibility(.hidden)
+
+        // 맵 이름
+        ToolbarItem(placement: .principal) {
+            TextField("맵 이름", text: $editor.name)
+                .textFieldStyle(.plain)
+                .font(.system(size: 14, weight: .bold))
+                .padding(.horizontal, 10)
+                .frame(width: 260, height: 30)
+                .background(Color.statCardBackground)
+                .clipShape(RoundedRectangle(cornerRadius: 8))
+        }
+        .sharedBackgroundVisibility(.hidden)
+
+        // 되돌리기·다시 하기·확인·저장·테스트 플레이 — 버튼 모양은 그대로, 크기만 툴바에 맞춤
+        ToolbarItem(placement: .primaryAction) {
+            HStack(spacing: 8) {
+                EditorIconButton(icon: "arrow.uturn.backward", label: "되돌리기", isEnabled: editor.canUndo, side: 32) {
+                    editor.undo()
+                }
+                .help("되돌리기")
+                EditorIconButton(icon: "arrow.uturn.forward", label: "다시 하기", isEnabled: editor.canRedo, side: 32) {
+                    editor.redo()
+                }
+                .help("다시 하기")
+                EditorTextButton(title: "확인", icon: "checkmark", height: 32) {
+                    editor.validate()
+                }
+                .help("맵에 문제가 없는지 확인")
+                Button {
+                    SoundService.shared.play(.buttonTap)
+                    save()
+                } label: {
+                    Text("저장")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 14)
+                        .frame(height: 32)
+                        .background(Color.slateButtonFace)
+                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                }
+                .buttonStyle(.plain)
+                .keyboardShortcut("s", modifiers: .command)  // ⌘S 저장
+                .help("저장 (⌘S)")
+                EditorTextButton(title: "테스트 플레이", icon: "play.fill", face: .runButtonActiveMint, height: 32) {
+                    startTestPlay()
+                }
+                .keyboardShortcut("r", modifiers: .command)  // ⌘R 테스트 플레이 (게임 화면 실행과 같은 키)
+                .help("테스트 플레이 (⌘R)")
+            }
+        }
+        .sharedBackgroundVisibility(.hidden)
+    }
+    #endif
 
     // MARK: - 상단 바
 

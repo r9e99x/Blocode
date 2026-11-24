@@ -93,6 +93,8 @@ private extension View {
                             .clipShape(RoundedRectangle(cornerRadius: 8))
                     }
                     .buttonStyle(.plain)
+                    .keyboardShortcut("[", modifiers: .command)  // ⌘[ 뒤로
+                    .help("뒤로 (⌘[)")
                 }
             }
             .navigationBarBackButtonHidden(true)

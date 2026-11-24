@@ -70,6 +70,18 @@ struct SidebarShell: View {
         .onChange(of: homeVM.hasPendingDailyPuzzle) { _, _ in openPendingDailyPuzzle() }
         .lockInfoPopup($lockInfo)
         .preferredColorScheme(settings.theme.colorScheme)
+        // 메뉴 막대 "이동"(⌘1~4) — 게임·에디터 화면 중엔 넘기지 않아 메뉴가 꺼짐 (저장 안 한 에디터를 단축키로 떠나지 않게)
+        .focusedSceneValue(\.macShowSection, navPath.isEmpty ? { showSection($0) } : nil)
+    }
+
+    /// 메뉴 막대에서 고른 화면으로 — 사이드바를 누른 것과 같은 길(잠금 확인 포함)
+    private func showSection(_ section: MacSection) {
+        switch section {
+        case .home: select(.home)
+        case .chapters: select(.chapterMap)
+        case .myMaps: select(.myMaps)
+        case .library: select(.library)
+        }
     }
 
     /// 대기 중인 알림 이동 요청이 있으면 홈에서 오늘의 퍼즐만 열린 상태로 이동 — 뒤로가면 홈
@@ -267,6 +279,38 @@ struct SidebarShell: View {
                     .padding(.horizontal, 40)
             }
         }
+    }
+}
+
+// MARK: - 메뉴 막대 "이동"
+
+/// 메뉴 막대에서 고를 수 있는 화면 (사이드바 위쪽 4개 항목)
+enum MacSection {
+    case home, chapters, myMaps, library
+}
+
+extension FocusedValues {
+    /// 지금 앞에 있는 창의 셸이 화면을 바꾸는 함수 — 게임·에디터 화면 중엔 nil
+    @Entry var macShowSection: ((MacSection) -> Void)? = nil
+}
+
+/// "이동" 메뉴 — ⌘1 홈 / ⌘2 챕터 / ⌘3 나만의 맵 / ⌘4 개념 카드
+struct MacNavigationCommands: Commands {
+    @FocusedValue(\.macShowSection) private var showSection
+
+    var body: some Commands {
+        CommandMenu("이동") {
+            item("홈", .home, key: "1")
+            item("챕터", .chapters, key: "2")
+            item("나만의 맵", .myMaps, key: "3")
+            item("개념 카드", .library, key: "4")
+        }
+    }
+
+    private func item(_ title: String, _ section: MacSection, key: KeyEquivalent) -> some View {
+        Button(title) { showSection?(section) }
+            .keyboardShortcut(key, modifiers: .command)
+            .disabled(showSection == nil)
     }
 }
 

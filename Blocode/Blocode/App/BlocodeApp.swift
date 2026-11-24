@@ -95,6 +95,10 @@ struct BlocodeApp: App {
         .defaultSize(width: 1280, height: 860)
         // 창의 최소 크기를 내용의 최소 크기(위 frame)에 맞춤 — 아이패드 창 크기 조절에서도 지켜짐
         .windowResizability(.contentMinSize)
+        #if os(macOS)
+        // 메뉴 막대 "이동" (⌘1~4)
+        .commands { MacNavigationCommands() }
+        #endif
 
         #if os(macOS)
         // 맥 설정 창 — 앱 메뉴의 "설정…"(⌘,)로 열림 (예전엔 사이드바 항목이었음)
@@ -108,15 +112,29 @@ struct BlocodeApp: App {
 
 #if os(macOS)
 // MARK: - MacSettingsWindow
-/// 설정 창 내용 — 메인 창과 같은 설정 화면·배경·테마를 씀
+/// 설정 창 내용 — 맥 설정 창처럼 위쪽 탭(일반·소리와 알림·데이터)으로 나눔, 섹션 모양은 메인 창 설정과 같음
 private struct MacSettingsWindow: View {
     private let settings = SettingsService.shared  // @Observable — 테마가 바뀌면 이 창도 바로 바뀜
 
     var body: some View {
-        SettingsView(isEmbedded: true)
-            .frame(width: 560, height: 680)
+        TabView {
+            Tab("일반", systemImage: "gearshape") {
+                page(.general)
+            }
+            Tab("소리와 알림", systemImage: "speaker.wave.2") {
+                page(.soundAndAlerts)
+            }
+            Tab("데이터", systemImage: "externaldrive") {
+                page(.data)
+            }
+        }
+        .frame(width: 560, height: 560)
+        .preferredColorScheme(settings.theme.colorScheme)
+    }
+
+    private func page(_ page: SettingsView.MacPage) -> some View {
+        SettingsView(isEmbedded: true, macPage: page)
             .background(Color.appBackground)
-            .preferredColorScheme(settings.theme.colorScheme)
     }
 }
 #endif

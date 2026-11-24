@@ -66,14 +66,17 @@ extension MapEditorTool {
 }
 
 // MARK: - MapEditorToolPicker
-/// 도구 선택 — 아이폰 세로는 한 줄, 넓은 화면은 4열 격자
+/// 도구 선택 — 아이폰 세로는 한 줄, 넓은 화면은 4열 격자, 맥은 왼쪽 세로 줄
 struct MapEditorToolPicker: View {
 
     var editor: MapEditorViewModel
     var isGrid = false
+    var isVertical = false  // 맥 에디터 왼쪽 세로 도구 줄
 
     var body: some View {
-        if isGrid {
+        if isVertical {
+            VStack(spacing: 6) { buttons }
+        } else if isGrid {
             LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 6), count: 4), spacing: 6) {
                 buttons
             }
@@ -228,6 +231,7 @@ struct EditorIconButton: View {
     let icon: String
     let label: String
     var isEnabled = true
+    var side: CGFloat = 44  // 맥 툴바에선 작게
     let action: () -> Void
 
     var body: some View {
@@ -238,7 +242,7 @@ struct EditorIconButton: View {
             Image(systemName: icon)
                 .font(.system(size: 16, weight: .semibold))
                 .foregroundStyle(Color.primary.opacity(isEnabled ? 0.8 : 0.3))
-                .frame(width: 44, height: 44)
+                .frame(width: side, height: side)
                 .background(Color.statCardBackground)
                 .clipShape(RoundedRectangle(cornerRadius: 12))
         }
@@ -254,6 +258,7 @@ struct EditorTextButton: View {
     let title: String
     var icon: String?
     var face: Color = .slateButtonFace
+    var height: CGFloat = 44  // 맥 툴바에선 작게
     let action: () -> Void
 
     var body: some View {
@@ -261,12 +266,13 @@ struct EditorTextButton: View {
             SoundService.shared.play(.buttonTap)
             action()
         } label: { isPressed in
-            SolidThreeDButton(height: 44, cornerRadius: 14, face: face, isPressed: isPressed) {
+            SolidThreeDButton(height: height, cornerRadius: height * 14 / 44, face: face, isPressed: isPressed) {
                 HStack(spacing: 6) {
                     if let icon { Image(systemName: icon).font(.system(size: 12, weight: .bold)) }
                     Text(title).font(.system(size: 14, weight: .semibold))
                 }
                 .foregroundStyle(.white)
+                .padding(.horizontal, height < 44 ? 12 : 0)  // 작은 버튼(맥 툴바)은 글자 폭 + 좌우 여백
             }
         }
     }

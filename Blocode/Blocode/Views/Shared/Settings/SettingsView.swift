@@ -15,6 +15,10 @@ struct SettingsView: View {
     /// 기본값 false로 기존 iOS 호출부는 전부 동작 변화 없음. 맥 사이드바 셸에 내용만 삽입할 때만 true로 사용
     var isEmbedded: Bool = false
 
+    /// 맥 설정 창의 탭 — 값이 있으면 그 탭의 섹션만 보여 줌 (nil이면 전체 — 아이폰·아이패드·게임 중 설정)
+    enum MacPage { case general, soundAndAlerts, data }
+    var macPage: MacPage? = nil
+
     @State private var vm = SettingsViewModel()              // 설정 상태/로직
     @Environment(\.dismiss) private var dismiss                    // fullScreenCover 닫기
     @Environment(\.colorScheme) private var colorScheme            // 현재 색상 모드
@@ -84,7 +88,20 @@ struct SettingsView: View {
                         // 아이패드 탭 안에서는 다른 탭(나만의 맵·개념 카드)과 같은 머리글
                         if isEmbedded && isPadIdiom { padHeader }
 
-                        if usesTwoColumns {
+                        if let macPage {
+                            // 맥 설정 창 탭 — 일반(테마·실행 속도) / 소리·알림 / 데이터(초기화·개발자·버전)
+                            switch macPage {
+                            case .general:
+                                themeSection
+                                gameSection
+                            case .soundAndAlerts:
+                                feedbackSection
+                                if vm.dailyPuzzleUnlocked { reminderSection }
+                            case .data:
+                                dataSection
+                                developerSection
+                            }
+                        } else if usesTwoColumns {
                             // 아이패드 넓은 화면 — 왼쪽(화면·소리·알림) / 오른쪽(게임·데이터·개발자)
                             // (예전엔 가운데 560pt 한 줄만 써서 양옆이 넓게 비었음)
                             HStack(alignment: .top, spacing: 28) {
@@ -107,7 +124,9 @@ struct SettingsView: View {
                             dataSection       // 진행도 초기화 섹션
                             developerSection  // 챕터 강제 해금(테스트 편의) — 임시, 정식 배포 전 제거 예정
                         }
-                        footerView        // 버전 정보
+                        if macPage == nil || macPage == .data {
+                            footerView        // 버전 정보
+                        }
                     }
                     .padding(.horizontal, 20)
                     .padding(.top, 12)
