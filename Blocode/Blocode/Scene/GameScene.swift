@@ -201,8 +201,11 @@ class GameScene: SKScene, GameBoardRendering {
         let rows = mapData.height
 
         // 타일 간격과 패딩 설정
-        let gap: CGFloat = 8
-        let padding: CGFloat = 20
+        // 작은 미리보기(260pt 미만)에선 간격·여백도 같은 비율로 줄여서 큰 맵의 칸이 너무 작아지지 않게
+        // (132pt 미리보기에서 10×10 맵은 칸이 2pt밖에 안 됐음 — 260pt 이상인 게임 화면은 그대로)
+        let shrink = min(1, min(size.width, size.height) / 260)
+        let gap: CGFloat = 8 * shrink
+        let padding: CGFloat = 20 * shrink
         let availableWidth  = size.width  - padding * 2
         let availableHeight = size.height - padding * 2
         // 타일 크기는 항상 5×5 기준으로 계산 — 작은 맵도 타일이 너무 커지지 않음

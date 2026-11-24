@@ -20,6 +20,14 @@ struct ChapterView: View {
 
     @State private var retryConfirmInfo: RetryConfirmInfo? = nil  // 재도전 확인 팝업 (nil이면 숨김)
     @State private var lockInfo: LockInfo?         = nil  // 잠금 안내 팝업 (nil이면 숨김)
+    /// 가로 모드에서 고른 스테이지 번호 — 왼쪽 헤더 아래 미리보기에 표시 (nil이면 지금 진행 위치, 없으면 1번)
+    @State private var selectedStage: Int? = nil
+
+    /// 가로 모드 미리보기에 보여 줄 스테이지
+    private var previewStage: Stage? {
+        let number = selectedStage ?? vm.currentStageNumber ?? 1
+        return vm.stages.first { $0.stageNumber == number }
+    }
 
     init(navPath: Binding<NavigationPath>, chapter: Int) {
         self._navPath = navPath
@@ -74,19 +82,12 @@ struct ChapterView: View {
                                           earned: vm.totalStars(), maxStars: vm.maxStars)
                             .padding(.horizontal, 16)
 
-                        // 카드 아래 빈 공간의 정중앙에 챕터 한 줄 설명 배치
-                        // (양쪽에 Spacer를 둬서 남는 공간을 정확히 반씩 나눠 가운데 정렬)
-                        // 폰트는 홈 화면 인용구(ContentView.quoteSection)와 완전히 동일하게 맞춤 —
-                        // 한글은 .italic()이나 .design(.serif)가 안 먹혀서(한글 서체엔 진짜 이탤릭이
-                        // 없음), 인용구와 동일하게 Georgia-Italic 폰트 이름 + 수동 기울임 변환을 사용
-                        Spacer(minLength: 0)
-                        if let description = vm.chapterInfo?.description {
-                            Text(description)
-                                .font(.custom("Georgia-Italic", size: 22))
-                                .foregroundStyle(Color.primary.opacity(0.55))
-                                .multilineTextAlignment(.center)
-                                .transformEffect(CGAffineTransform(a: 1, b: 0, c: -0.12, d: 1, tx: 0, ty: 0))
-                                .padding(.horizontal, 32)
+                        // 카드 아래 — 오른쪽 목록에서 고른 스테이지의 맵 미리보기 + 이름·별 기준 + 시작 버튼
+                        // (예전엔 여기 챕터 한 줄 설명이 가운데에 있었고, 스테이지를 누르면 바로 게임으로 들어갔음)
+                        if let stage = previewStage {
+                            landscapePreview(stage, mapSide: min(200, max(132, geo.size.height - 190)))
+                                .padding(.horizontal, 16)
+                                .padding(.top, 14)
                         }
                         Spacer(minLength: 0)
                     }
@@ -95,7 +96,7 @@ struct ChapterView: View {
 
                     // 오른쪽 — 스테이지 목록 (중앙 640pt 제한)
                     ScrollView(showsIndicators: false) {
-                        stageList
+                        stageList(isWide: true)
                             .frame(maxWidth: 640)
                             .frame(maxWidth: .infinity)
                             .padding(.top, geo.safeAreaInsets.top + 16)
@@ -110,7 +111,7 @@ struct ChapterView: View {
 
                     // 스테이지 목록 스크롤
                     ScrollView(showsIndicators: false) {
-                        stageList
+                        stageList(isWide: false)
                             .padding(.top, 8)
                             .padding(.bottom, 48)
                     }
@@ -208,10 +209,11 @@ struct ChapterView: View {
     // MARK: - 스테이지 목록
 
     /// 모든 스테이지를 세로로 나열하는 리스트 (구분선 포함)
-    private var stageList: some View {
+    /// - Parameter isWide: 가로 모드면 행을 누를 때 게임으로 가지 않고 미리보기만 바꿈
+    private func stageList(isWide: Bool) -> some View {
         VStack(spacing: 0) {
             ForEach(vm.stages) { stage in
-                stageRow(stage)
+                stageRow(stage, isWide: isWide)
 
                 // 구분선 (마지막 스테이지 제외)
                 if stage.stageNumber < vm.stages.count {
@@ -226,7 +228,7 @@ struct ChapterView: View {
     // MARK: - 스테이지 행
 
     /// 스테이지 하나를 표시하는 행 (아이콘 + 텍스트 + 별점 or "지금 여기")
-    private func stageRow(_ stage: Stage) -> some View {
+    private func stageRow(_ stage: Stage, isWide: Bool) -> some View {
         let locked    = vm.isLocked(stage)
         let cleared   = vm.isCleared(stage)
         let earned    = vm.stars(stage)
@@ -242,6 +244,10 @@ struct ChapterView: View {
                         accentColor: chapterColor
                     )
                 }
+            } else if isWide {
+                // 가로: 미리보기에 고른 스테이지를 보여 줌 — 시작은 미리보기의 버튼으로 (클리어한 스테이지의 재도전 확인도 거기서 "다시 도전")
+                SoundService.shared.play(.buttonTap)
+                selectedStage = stage.stageNumber
             } else if cleared {
                 // 클리어했으면 재도전 확인 팝업 표시 — "다시 하기" 선택 시 스테이지로 이동 후 팝업 닫기
                 SoundService.shared.play(.buttonTap)
@@ -299,8 +305,52 @@ struct ChapterView: View {
             }
             .padding(.horizontal, 20)
             .padding(.vertical, 12)
+            // 가로에서 미리보기로 고른 행은 챕터 색 옅은 바탕으로 표시
+            .background(isWide && stage.stageNumber == previewStage?.stageNumber ? chapterColor.opacity(0.14) : Color.clear)
         }
         .opacity(locked ? 0.72 : 1.0)
+    }
+
+    // MARK: - 가로 미리보기
+
+    /// 가로 모드 왼쪽 헤더 아래 — 맵 미리보기(왼쪽) + 스테이지 이름·별 기준·시작 버튼(오른쪽)
+    /// - Parameter mapSide: 미리보기 맵 한 변 — 화면 높이에 맞춰 최대 200pt (큰 맵도 칸이 보이게)
+    private func landscapePreview(_ stage: Stage, mapSide: CGFloat) -> some View {
+        HStack(alignment: .top, spacing: 12) {
+            // 실제 게임과 같은 SpriteKit 맵 — 스테이지가 바뀌면 새로 그림
+            StagePreviewMapView(stage: stage)
+                .id(stage.id)
+                .frame(width: mapSide, height: mapSide)
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text("STAGE \(stage.chapter)-\(stage.stageNumber)")
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(.secondary)
+                    .tracking(1)
+                Text(stage.name)
+                    .font(.system(size: 17, weight: .bold))
+                    .lineLimit(1)
+                Text("★ 3 = \(stage.starThresholds.threeStar) blocks")
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(.secondary)
+                Spacer(minLength: 0)
+
+                PressableButton {
+                    SoundService.shared.play(.buttonTap)
+                    navPath.append(AppRoute.stage(chapter: stage.chapter, number: stage.stageNumber))
+                } label: { isPressed in
+                    SolidThreeDButton(height: 40, cornerRadius: 14, pressedOverlayOpacity: 0, isPressed: isPressed) {
+                        HStack(spacing: 6) {
+                            Image(systemName: "play.fill").font(.system(size: 12))
+                            Text(vm.isCleared(stage) ? "다시 도전" : "시작하기")
+                                .font(.system(size: 14, weight: .semibold))
+                        }
+                        .foregroundStyle(.white)
+                    }
+                }
+            }
+            .frame(height: mapSide)
+        }
     }
 }
 
