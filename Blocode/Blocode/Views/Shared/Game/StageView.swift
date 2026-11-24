@@ -47,6 +47,9 @@ struct StageView: View {
     /// 코드 패널 확장 여부 — 맵 크기 조절 및 하단 고정용 Spacer와 연동되므로 StageView에서 관리
     @State private var isPanelExpanded = false
 
+    /// 위 바 높이 — 아이패드 가로에서 맵 아래에도 같은 만큼 띄워 맵이 화면 위아래 가운데에 오게 함
+    @State private var navigationBarHeight: CGFloat = 0
+
     @Environment(\.colorScheme) private var colorScheme  // 다크/라이트 모드 감지
 
     /// 처음 만나는 블럭 설명 — 한 번에 하나씩 차례로 띄움 (순서와 수집 기록은 ViewModel이 담당)
@@ -350,6 +353,7 @@ struct StageView: View {
 
         return VStack(spacing: 0) {
             navigationBar
+                .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { navigationBarHeight = $0 }
 
             HStack(spacing: 0) {
                 // 좌측 — 코드 패널 (공간이 넉넉해 확장/축소 토글 없이 항상 펼침)
@@ -357,10 +361,12 @@ struct StageView: View {
                     .frame(width: leftWidth)
 
                 // 우측 — 정사각형 맵 (남은 공간을 가득 채우고 가운데 정렬)
+                // 아래에도 위 바 높이만큼 비워서 화면 위·아래 여백이 같게 (예전엔 위 바 아래 공간의 가운데라 맵이 아래로 치우쳐 보였음)
                 mapView
                     .aspectRatio(1.0, contentMode: .fit)
                     .padding(.horizontal, 24)
                     .padding(.vertical, 8)
+                    .padding(.bottom, navigationBarHeight)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         }
