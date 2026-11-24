@@ -88,6 +88,7 @@ struct PadHomeView: View {
         DailyPuzzleCard(info: vm.dailyPuzzle,
                         isLocked: !vm.isUnlocked(.dailyPuzzle),
                         isCompact: true,
+                        showsActionHint: true,  // 아이폰 홈처럼 오른쪽에 "도전 ›"·"시작 ›"
                         onDaily: { openIfUnlocked(.dailyPuzzle, .dailyPuzzle(vm.dailyPuzzle.key)) },
                         onRandom: { openIfUnlocked(.dailyPuzzle, AppRoute.newRandomPuzzle()) })
     }

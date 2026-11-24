@@ -226,6 +226,7 @@ struct ContentView: View {
         DailyPuzzleCard(info: vm.dailyPuzzle,
                         isLocked: !vm.isUnlocked(.dailyPuzzle),
                         isCompact: compact,
+                        showsActionHint: !compact,  // 세로 홈은 랜덤 퍼즐도 "시작 ›" (오늘의 퍼즐은 원래 "도전 ›")
                         onDaily: { openIfUnlocked(.dailyPuzzle, AppRoute.dailyPuzzle(vm.dailyPuzzle.key)) },
                         onRandom: { openIfUnlocked(.dailyPuzzle, AppRoute.newRandomPuzzle()) })
     }

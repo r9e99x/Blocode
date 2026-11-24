@@ -16,6 +16,7 @@ struct DailyPuzzleCard: View {
     let info: DailyPuzzleInfo
     var isLocked = false  // 잠금 상태 — 흐리게 + 자물쇠, 눌러도 호출부가 팝업을 띄움
     var isCompact = false  // 세로가 모자란 화면(아이폰 가로) — 두 카드를 반 크기로 한 줄에 나란히
+    var showsActionHint = false  // 오른쪽에 "도전 ›"·"시작 ›" 표시 — 한 줄 배치(아이패드 홈)와 랜덤 퍼즐의 "시작"(아이폰 세로 홈)에 사용
     let onDaily: () -> Void
     let onRandom: () -> Void
 
@@ -47,6 +48,20 @@ struct DailyPuzzleCard: View {
             .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 2)
     }
 
+    /// 오른쪽 안내 글자 ("도전"·"시작")
+    private func actionHint(_ title: String) -> some View {
+        Text(title)
+            .font(.system(size: 13, weight: .semibold))
+            .foregroundStyle(.secondary)
+    }
+
+    /// 오른쪽 화살표 (›)
+    private var chevron: some View {
+        Image(systemName: "chevron.right")
+            .font(.system(size: 12, weight: .semibold))
+            .foregroundStyle(.secondary)
+    }
+
     /// 오늘의 퍼즐 카드 — 카드 전체가 일일 퍼즐 버튼
     private var dailyCard: some View {
         Button {
@@ -71,17 +86,20 @@ struct DailyPuzzleCard: View {
                             .lineLimit(1)
                     }
                     Spacer(minLength: 0)
-                    if isCompact {
+                    if isCompact && showsActionHint {
+                        if info.isCleared {
+                            StarRatingView(earned: info.stars, size: 12)
+                        } else {
+                            actionHint("도전")
+                        }
+                        chevron
+                    } else if isCompact {
                         if info.isCleared { StarRatingView(earned: info.stars, size: 9) }
                     } else if info.isCleared {
                         StarRatingView(earned: info.stars, size: 12)
                     } else {
-                        Text("도전")
-                            .font(.system(size: 13, weight: .semibold))
-                            .foregroundStyle(.secondary)
-                        Image(systemName: "chevron.right")
-                            .font(.system(size: 12, weight: .semibold))
-                            .foregroundStyle(.secondary)
+                        actionHint("도전")
+                        chevron
                     }
                 }
                 .contentShape(Rectangle())
@@ -114,10 +132,11 @@ struct DailyPuzzleCard: View {
                             .lineLimit(1)
                     }
                     Spacer(minLength: 0)
-                    if !isCompact {
-                        Image(systemName: "chevron.right")
-                            .font(.system(size: 12, weight: .semibold))
-                            .foregroundStyle(.secondary)
+                    if showsActionHint {
+                        actionHint("시작")
+                        chevron
+                    } else if !isCompact {
+                        chevron
                     }
                 }
                 .contentShape(Rectangle())
