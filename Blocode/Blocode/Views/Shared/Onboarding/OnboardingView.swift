@@ -169,6 +169,9 @@ struct OnboardingView: View {
             // 그대로 나오면 위아래로 잘림. 폭이 아니라 "높이"로 판단해야 아이패드 가로모드
             // (높이 충분)와 정확히 구분되고, 다른 화면 전부 무변화로 유지됨
             let isCompactHeight = geo.size.height < 500
+            // 아이패드(세로 공간 넉넉)는 그림·글자를 키움 — 13인치에서 280pt 그림이 화면 가운데 작게 떠 보였음
+            let isLargePad = isPadIdiom && !isCompactHeight
+            let illustrationScale: CGFloat = isCompactHeight ? 0.62 : (isLargePad ? 1.5 : 1.0)
 
             VStack(spacing: 0) {
 
@@ -179,8 +182,8 @@ struct OnboardingView: View {
                 // 그 요소들이 밖으로 잘려나감 — 비율 그대로 축소해야 안전)
                 illustration(for: page.illustration)
                     .frame(width: 280, height: 280)
-                    .scaleEffect(isCompactHeight ? 0.62 : 1.0)
-                    .frame(height: isCompactHeight ? 174 : 280)
+                    .scaleEffect(illustrationScale)
+                    .frame(height: isCompactHeight ? 174 : 280 * illustrationScale)  // 아이폰 가로는 기존 값 그대로
 
                 Spacer(minLength: 0)
 
@@ -188,14 +191,14 @@ struct OnboardingView: View {
                 VStack(alignment: .leading, spacing: isCompactHeight ? 5 : 10) {
                     // 큰 제목 — Georgia Italic + 기울임 변환
                     Text(page.title)
-                        .font(.custom("Georgia-Italic", size: isCompactHeight ? 25 : 36))
+                        .font(.custom("Georgia-Italic", size: isCompactHeight ? 25 : (isLargePad ? 46 : 36)))
                         .foregroundStyle(.primary)
                         .transformEffect(CGAffineTransform(a: 1, b: 0, c: -0.10, d: 1, tx: 0, ty: 0))
                         .fixedSize(horizontal: false, vertical: true)
 
                     // 설명 텍스트
                     Text(page.description)
-                        .font(.system(size: isCompactHeight ? 13 : 15, weight: .regular))
+                        .font(.system(size: isCompactHeight ? 13 : (isLargePad ? 17 : 15), weight: .regular))
                         .foregroundStyle(.secondary)
                         .lineSpacing(isCompactHeight ? 2 : 4)
                         .fixedSize(horizontal: false, vertical: true)

@@ -58,18 +58,37 @@ struct ClearOverlayView: View {
             #if os(macOS)
             // 맥 전용: 콘텐츠가 창 가운데 560pt로 좁혀지므로, X버튼만 창 전체 기준 우상단에 별도 고정
             // (레이아웃 내부의 X버튼은 숨김 처리해 중복 방지 — 세 곳 모두 공용 xButton 사용)
-            VStack {
-                HStack {
-                    Spacer()
-                    xButton
-                }
-                Spacer()
-            }
-            .padding(.horizontal, 24)
-            .padding(.top, 20)
+            cornerXButton
+            #else
+            // 아이패드도 같은 이유로 화면 우상단에 고정 (아이폰은 레이아웃 안의 X버튼 그대로)
+            if isPadIdiom { cornerXButton }
             #endif
         }
         .task { await animateIn() }  // 화면 등장 시 순차 애니메이션 시작 — 닫히면 남은 단계는 자동 취소
+    }
+
+    /// 화면 전체 기준 우상단 X버튼 (맥·아이패드)
+    private var cornerXButton: some View {
+        VStack {
+            HStack {
+                Spacer()
+                xButton
+            }
+            Spacer()
+        }
+        .padding(.horizontal, 24)
+        .padding(.top, 20)
+    }
+
+    /// 결과 내용과 아래 버튼 사이 — 아이폰·맥은 버튼을 화면 맨 아래로 밀고,
+    /// 아이패드는 화면이 길어 그 사이가 크게 비므로 48pt만 띄우고 전체를 화면 가운데에 모음
+    @ViewBuilder
+    private var contentButtonGap: some View {
+        if isPadIdiom {
+            Color.clear.frame(height: 48)
+        } else {
+            Spacer(minLength: 0)
+        }
     }
 
     // MARK: - 별 3개 레이아웃
@@ -78,9 +97,11 @@ struct ClearOverlayView: View {
         VStack(spacing: 0) {
             // 닫기 버튼 (오른쪽 상단) — 맥은 창 우상단에 별도 고정되므로 여기선 숨김(중복 방지)
             #if !os(macOS)
-            HStack { Spacer(); xButton }
-                .padding(.horizontal, 24)
-                .padding(.top, 16)
+            if !isPadIdiom {  // 아이패드는 화면 우상단 X버튼을 따로 씀
+                HStack { Spacer(); xButton }
+                    .padding(.horizontal, 24)
+                    .padding(.top, 16)
+            }
             #endif
 
             Spacer(minLength: 0)
@@ -131,7 +152,7 @@ struct ClearOverlayView: View {
             .opacity(contentVisible ? 1 : 0)
             .offset(y: contentVisible ? 0 : 10)
 
-            Spacer(minLength: 0)
+            contentButtonGap
 
             // 하단 버튼 영역
             VStack(spacing: 14) {
@@ -167,6 +188,8 @@ struct ClearOverlayView: View {
             .padding(.bottom, 40)
             .opacity(buttonsVisible ? 1 : 0)
             .offset(y: buttonsVisible ? 0 : 8)  // 아래에서 올라오는 효과
+
+            if isPadIdiom { Spacer(minLength: 0) }  // 아이패드 — 위 Spacer와 짝을 이뤄 가운데 정렬
         }
     }
 
@@ -182,9 +205,9 @@ struct ClearOverlayView: View {
                     .foregroundStyle(.secondary)
                     .tracking(0.5)
                 Spacer()
-                // x 버튼으로 닫기 — 맥은 창 우상단에 별도 고정되므로 여기선 숨김(중복 방지)
+                // x 버튼으로 닫기 — 맥·아이패드는 화면 우상단에 별도 고정되므로 여기선 숨김(중복 방지)
                 #if !os(macOS)
-                xButton
+                if !isPadIdiom { xButton }
                 #endif
             }
             .padding(.horizontal, 24)
@@ -225,7 +248,7 @@ struct ClearOverlayView: View {
                 .opacity(contentVisible ? 1 : 0)
                 .offset(y: contentVisible ? 0 : 10)
 
-            Spacer(minLength: 0)
+            contentButtonGap
 
             // 하단 버튼 2개 (+ 코드로 보기)
             VStack(spacing: 14) {
@@ -271,6 +294,8 @@ struct ClearOverlayView: View {
             .padding(.bottom, 40)
             .opacity(buttonsVisible ? 1 : 0)
             .offset(y: buttonsVisible ? 0 : 8)
+
+            if isPadIdiom { Spacer(minLength: 0) }  // 아이패드 — 위 Spacer와 짝을 이뤄 가운데 정렬
         }
     }
 

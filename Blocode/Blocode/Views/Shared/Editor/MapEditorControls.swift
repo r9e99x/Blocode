@@ -114,6 +114,8 @@ struct MapEditorToolPicker: View {
 struct MapEditorSettingsView: View {
 
     var editor: MapEditorViewModel
+    /// 시작 방향을 이 안에 그릴지 — 아이패드 세로 에디터는 도구 아래(왼쪽 칸)에 따로 두므로 false
+    var includesStartDirection = true
 
     private let range = MapValidator.minSize...MapValidator.maxSize
 
@@ -138,25 +140,8 @@ struct MapEditorSettingsView: View {
                 .font(.system(size: 15, weight: .medium))
             }
 
-            section("시작 방향") {
-                HStack(spacing: 8) {
-                    ForEach([(Direction.up, "arrow.up", "위"), (.right, "arrow.right", "오른쪽"),
-                             (.down, "arrow.down", "아래"), (.left, "arrow.left", "왼쪽")], id: \.0) { direction, icon, label in
-                        let isSelected = editor.map.startDirection == direction
-                        Button {
-                            editor.setStartDirection(direction)
-                        } label: {
-                            Image(systemName: icon)
-                                .font(.system(size: 16, weight: .semibold))
-                                .foregroundStyle(isSelected ? .white : Color.secondary)
-                                .frame(maxWidth: .infinity, minHeight: 40)
-                                .background(isSelected ? Color.slateButtonFace : Color.statCardBackground)
-                                .clipShape(RoundedRectangle(cornerRadius: 10))
-                        }
-                        .buttonStyle(.plain)
-                        .accessibilityLabel("시작 방향 \(label)")
-                    }
-                }
+            if includesStartDirection {
+                MapEditorStartDirectionSection(editor: editor)
             }
 
             section("사용할 블럭") {
@@ -189,13 +174,49 @@ struct MapEditorSettingsView: View {
     }
 
     private func section<Content: View>(_ title: String, @ViewBuilder content: () -> Content) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(title)
-                .font(.system(size: 12, weight: .semibold))
-                .foregroundStyle(.secondary)
-                .tracking(0.5)
-            content()
+        editorSection(title, content: content)
+    }
+}
+
+// MARK: - 시작 방향
+
+/// 시작 방향 고르기 (위·오른쪽·아래·왼쪽) — 맵 설정 안에 들어가거나, 아이패드 세로에선 도구 아래에 따로 놓임
+struct MapEditorStartDirectionSection: View {
+
+    var editor: MapEditorViewModel
+
+    var body: some View {
+        editorSection("시작 방향") {
+            HStack(spacing: 8) {
+                ForEach([(Direction.up, "arrow.up", "위"), (.right, "arrow.right", "오른쪽"),
+                         (.down, "arrow.down", "아래"), (.left, "arrow.left", "왼쪽")], id: \.0) { direction, icon, label in
+                    let isSelected = editor.map.startDirection == direction
+                    Button {
+                        editor.setStartDirection(direction)
+                    } label: {
+                        Image(systemName: icon)
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundStyle(isSelected ? .white : Color.secondary)
+                            .frame(maxWidth: .infinity, minHeight: 40)
+                            .background(isSelected ? Color.slateButtonFace : Color.statCardBackground)
+                            .clipShape(RoundedRectangle(cornerRadius: 10))
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("시작 방향 \(label)")
+                }
+            }
         }
+    }
+}
+
+/// 맵 설정의 한 묶음 — 작은 회색 제목 + 내용 (맵 설정·시작 방향 공용)
+private func editorSection<Content: View>(_ title: String, @ViewBuilder content: () -> Content) -> some View {
+    VStack(alignment: .leading, spacing: 8) {
+        Text(title)
+            .font(.system(size: 12, weight: .semibold))
+            .foregroundStyle(.secondary)
+            .tracking(0.5)
+        content()
     }
 }
 

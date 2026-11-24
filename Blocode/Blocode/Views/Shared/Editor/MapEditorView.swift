@@ -44,6 +44,8 @@ struct MapEditorView: View {
             Group {
                 if geo.size.width > geo.size.height && geo.size.width >= LayoutBreakpoint.wide {
                     wideLayout
+                } else if isPadIdiom && geo.size.width >= LayoutBreakpoint.wide {
+                    padPortraitLayout
                 } else {
                     compactLayout
                 }
@@ -77,6 +79,27 @@ struct MapEditorView: View {
         }
         .frame(maxWidth: 640)          // 아이패드 세로에서 버튼이 너무 퍼지지 않게
         .frame(maxWidth: .infinity)
+    }
+
+    /// 아이패드 세로 — 위: 상단 바 → 큰 격자 / 아래: 도구(왼쪽)·맵 설정(오른쪽) → 버튼
+    /// (예전엔 아이폰 배치를 가운데 640pt로 써서 격자 위아래와 양옆이 넓게 비었고, 맵 설정은 따로 시트를 열어야 했음)
+    private var padPortraitLayout: some View {
+        VStack(spacing: 14) {
+            topBar
+            MapEditorGridView(editor: editor)
+            hintLine
+            HStack(alignment: .top, spacing: 20) {
+                // 왼쪽 — 도구 + 시작 방향 (오른쪽 칸이 크기·사용할 블럭까지 길어서 시작 방향은 왼쪽 빈자리로)
+                VStack(alignment: .leading, spacing: 18) {
+                    MapEditorToolPicker(editor: editor, isGrid: true)
+                    MapEditorStartDirectionSection(editor: editor)
+                }
+                .frame(maxWidth: .infinity)
+                MapEditorSettingsView(editor: editor, includesStartDirection: false)
+                    .frame(maxWidth: .infinity)
+            }
+            actionBar(showsSettingsButton: false)  // 맵 설정이 화면에 있으니 설정 시트 버튼은 필요 없음
+        }
     }
 
     /// 왼쪽: 상단 바·도구·설정·안내·버튼 / 오른쪽: 격자
