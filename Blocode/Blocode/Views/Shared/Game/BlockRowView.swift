@@ -541,11 +541,33 @@ private struct NestedBlockArea: View {
         var paletteHorizontal: CGFloat, paletteVertical: CGFloat, paletteLeading: CGFloat, paletteBottom: CGFloat
 
         static func forDepth(_ depth: Int) -> Metrics {
-            switch depth {
+            let base: Metrics = switch depth {
             case 1: child
             case 2: grandchild
             default: greatGrandchild
             }
+            // 아이패드는 바깥 블럭 줄을 한 단계 키웠으니(높이 40→48, 글자 13→16) 안쪽 줄도 같은 비율로 키움
+            // (안 키우면 반복·만약에·함수 안의 블럭이 바깥 줄보다 눈에 띄게 작아 보였음 — 아이폰·맥은 그대로)
+            return isPadIdiom ? base.scaled(by: 1.2, captionSize: 12 * 1.2 - CGFloat(depth - 1)) : base
+        }
+
+        /// 크기 값만 같은 비율로 키운 표 — 들여쓰기·선 위치(areaLeading·numberColumnWidth·lineSpacing)는
+        /// 바깥 줄 번호 칸에 맞춘 값이라 그대로 둠
+        /// - Parameter captionSize: 빈 안내·추가 버튼 글자 크기 (원래 .caption 계열이라 크기를 직접 지정)
+        private func scaled(by k: CGFloat, captionSize: CGFloat) -> Metrics {
+            var m = self
+            m.emptyFont = .system(size: captionSize)
+            m.addFont = .system(size: captionSize, weight: .bold)
+            m.emptyPadding *= k; m.addPadding *= k
+            m.endSize *= k
+            m.rowSpacing *= k; m.cardSpacing *= k; m.iconSize *= k; m.textSize *= k
+            m.cardHorizontal *= k; m.cardVertical *= k; m.cardRadius *= k
+            m.deleteSize *= k
+            m.stepperIconSize *= k; m.stepperButtonSize *= k; m.stepperTextSize *= k; m.stepperTextMinWidth *= k
+            m.toggleTextSize *= k; m.toggleArrowSize *= k; m.toggleHorizontal *= k; m.toggleVertical *= k
+            m.paletteSpacing *= k; m.paletteIconSpacing *= k; m.paletteFontSize *= k
+            m.paletteHorizontal *= k; m.paletteVertical *= k
+            return m
         }
 
         static let child = Metrics(
