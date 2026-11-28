@@ -10,7 +10,7 @@
 import SwiftUI
 
 // MARK: - ContentView (아이폰 탭 셸)
-/// 아래 탭 막대(홈·챕터·내 맵·카드)로 화면을 나눔 — 어디서든 한 번에 이동
+/// 아래 탭 막대(홈·챕터·내 맵·개념)로 화면을 나눔 — 어디서든 한 번에 이동
 /// (예전엔 홈 하나에서 챕터·내 맵·개념 카드로 들어갔다 뒤로 나오는 구조였음)
 /// 탭마다 자기 내비게이션 스택을 가지며, 게임·에디터 화면에 들어가면 탭 막대를 숨김
 struct ContentView: View {
@@ -66,7 +66,7 @@ struct ContentView: View {
                 }
             }
 
-            Tab("카드", systemImage: "books.vertical", value: PhoneTab.library) {
+            Tab("개념", systemImage: "books.vertical", value: PhoneTab.library) {
                 LearningLibraryView()
             }
         }

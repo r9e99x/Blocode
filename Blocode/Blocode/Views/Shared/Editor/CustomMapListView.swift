@@ -164,34 +164,34 @@ struct CustomMapListView: View {
 
     // MARK: - 목록
 
-    /// 썸네일 카드 격자를 쓰는지 — 아이패드·맥 (아이폰은 한 줄 목록)
-    private var usesGrid: Bool {
+    /// 내용 최대 폭 — 썸네일 카드 격자라 넓게
+    private let contentMaxWidth: CGFloat = 1100
+
+    /// 격자 칸 최소 폭 — 아이폰은 세로에서 2열(가로면 더 많이), 아이패드 240, 맥 220
+    private var cardMinWidth: CGFloat {
         #if os(macOS)
-        true
+        220
         #else
-        isPadIdiom
+        isPadIdiom ? 240 : 150
         #endif
     }
 
-    /// 내용 최대 폭 — 격자(아이패드·맥)는 넓게, 아이폰 목록은 680
-    private var contentMaxWidth: CGFloat { usesGrid ? 1100 : 680 }
+    /// 카드 사이 간격 — 아이폰만 조금 좁게 (아이패드·맥은 예전 16 그대로)
+    private var gridSpacing: CGFloat {
+        #if os(macOS)
+        16
+        #else
+        isPadIdiom ? 16 : 12
+        #endif
+    }
 
     private var list: some View {
         ScrollView {
-            Group {
-                if usesGrid {
-                    // 아이패드·맥 — 큰 썸네일 카드 격자 (예전엔 한 줄 목록이라 양옆이 넓게 비었음)
-                    LazyVGrid(columns: [GridItem(.adaptive(minimum: isPadIdiom ? 240 : 220), spacing: 16)], spacing: 16) {
-                        ForEach(vm.rows) { row in
-                            padCard(row)
-                        }
-                    }
-                } else {
-                    LazyVStack(spacing: 10) {
-                        ForEach(vm.rows) { row in
-                            rowView(row)
-                        }
-                    }
+            // 큰 썸네일 카드 격자 (예전엔 아이폰이 한 줄 목록이었음)
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: cardMinWidth), spacing: gridSpacing)],
+                      spacing: gridSpacing) {
+                ForEach(vm.rows) { row in
+                    padCard(row)
                 }
             }
             .frame(maxWidth: contentMaxWidth)
@@ -201,45 +201,7 @@ struct CustomMapListView: View {
         }
     }
 
-    private func rowView(_ row: CustomMapListViewModel.Row) -> some View {
-        HStack(spacing: 12) {
-            Button {
-                guard row.isPlayable else { return }
-                SoundService.shared.play(.buttonTap)
-                onPlay(row.id)
-            } label: {
-                HStack(spacing: 12) {
-                    CustomMapThumbnail(map: row.map)
-                        .frame(width: 64, height: 64)
-                    VStack(alignment: .leading, spacing: 3) {
-                        Text(row.name)
-                            .font(.system(size: 16, weight: .bold))
-                            .foregroundStyle(.primary)
-                            .lineLimit(1)
-                        Text("\(row.sizeText) · \(row.elementsText)")
-                            .font(.system(size: 12))
-                            .foregroundStyle(.secondary)
-                            .lineLimit(1)
-                        Text(row.starText)
-                            .font(.system(size: 12))
-                            .foregroundStyle(.secondary)
-                    }
-                    Spacer(minLength: 0)
-                }
-                .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel("\(row.name) 플레이")
-
-            rowMenu(row)
-        }
-        .padding(12)
-        .background(Color.statCardBackground)
-        .clipShape(RoundedRectangle(cornerRadius: 16))
-        .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 2)
-    }
-
-    /// 격자 카드(아이패드·맥) — 큰 썸네일 + 이름·정보, 오른쪽 아래 메뉴 (누르면 플레이 — 목록 줄과 같은 동작)
+    /// 격자 카드 — 큰 썸네일 + 이름·정보, 오른쪽 아래 메뉴 (누르면 플레이 — 목록 줄과 같은 동작)
     /// 맥은 카드를 오른쪽 클릭해도 같은 메뉴가 뜸
     private func padCard(_ row: CustomMapListViewModel.Row) -> some View {
         VStack(alignment: .leading, spacing: 12) {

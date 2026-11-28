@@ -11,7 +11,7 @@
 import SwiftUI
 
 // MARK: - PhoneHomeView
-/// 세로: 로고·설정 → 오늘의 한 줄 → "이어서 하기" 카드(맵 미리보기 포함) → 오늘의·랜덤 퍼즐 반 칸씩 → 별·연속·챕터 한 줄 요약
+/// 세로: 로고·설정 → 오늘의 한 줄 → 별·연속·챕터 한 줄 요약 → "이어서 하기" 카드(맵 미리보기 포함) → 오늘의·랜덤 퍼즐 반 칸씩
 /// 가로: 왼쪽 로고·한 줄·요약 / 오른쪽 이어서 하기 카드·퍼즐
 /// (예전엔 통계 카드 3장 아래 버튼 3개가 화면 맨 아래에 고정돼 있었음 — 챕터·내 맵·개념 카드는 이제 아래 탭으로 감)
 struct PhoneHomeView: View {
@@ -51,12 +51,13 @@ struct PhoneHomeView: View {
             header
             quoteSection
                 .padding(.top, 24)
+            // 별·연속·챕터 요약은 한 줄 문구 바로 아래 (진행 상황 문구와 함께 읽히게)
+            statsLine
+                .padding(.top, 12)
             continueCard
-                .padding(.top, 22)
+                .padding(.top, 20)
             puzzleRow
                 .padding(.top, 12)
-            statsLine
-                .padding(.top, 14)
         }
         .padding(.horizontal, 24)
         .padding(.top, 20)

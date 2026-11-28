@@ -78,7 +78,8 @@ struct MapEditorView: View {
             topBar
             MapEditorGridView(editor: editor)
             hintLine
-            MapEditorToolPicker(editor: editor)
+            // 아이폰은 도구 8개를 4×2 격자로 — 한 줄이면 칸이 좁아 글자가 작아졌음 (아이패드 좁은 창은 예전 한 줄 그대로)
+            MapEditorToolPicker(editor: editor, isGrid: !isPadIdiom)
             actionBar(showsSettingsButton: true)
         }
         .frame(maxWidth: 640)          // 아이패드 세로에서 버튼이 너무 퍼지지 않게

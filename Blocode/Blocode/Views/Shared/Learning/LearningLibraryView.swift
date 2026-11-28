@@ -114,7 +114,7 @@ struct LearningLibraryView: View {
         #if os(macOS)
         1100
         #else
-        isPadIdiom ? 1100 : 680
+        isPadIdiom ? 1100 : 680  // 아이폰은 2열이어도 폭이 좁아 680 그대로
         #endif
     }
 
@@ -138,15 +138,10 @@ struct LearningLibraryView: View {
                             .padding(.top, section.id == sections.first?.id ? 0 : 10)
                             .padding(.leading, 4)
                     }
-                    if isPadIdiom {
-                        // 아이패드 — 카드를 2열로 (예전엔 가운데 한 줄만 써서 양옆이 넓게 비었음)
-                        LazyVGrid(columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)],
-                                  spacing: 10) {
-                            ForEach(section.cards) { card in
-                                cardRow(card)
-                            }
-                        }
-                    } else {
+                    // 아이폰·아이패드 — 카드를 2열로 (예전엔 한 줄 목록이라 아이패드는 양옆이 비고 아이폰은 길게 늘어졌음)
+                    LazyVGrid(columns: [GridItem(.flexible(), spacing: isPadIdiom ? 12 : 10),
+                                        GridItem(.flexible(), spacing: isPadIdiom ? 12 : 10)],
+                              spacing: 10) {
                         ForEach(section.cards) { card in
                             cardRow(card)
                         }
@@ -194,6 +189,36 @@ struct LearningLibraryView: View {
     }
     #endif
 
+    /// 아이폰은 2열 칸이 좁아 카드 안을 세로로 쌓음 (아이패드·맥은 가로 한 줄 그대로)
+    private var usesStackedCard: Bool {
+        #if os(iOS)
+        !isPadIdiom
+        #else
+        false
+        #endif
+    }
+
+    /// 카드 아이콘 — 열린 카드는 금색 책, 잠긴 카드는 자물쇠
+    private func cardIcon(_ unlocked: Bool) -> some View {
+        Image(systemName: unlocked ? "book.closed.fill" : "lock.fill")
+            .font(.system(size: 18, weight: .semibold))
+            .foregroundStyle(unlocked ? Color.starGold : Color.secondary)
+    }
+
+    /// 카드 제목 + 요약(잠긴 카드는 "???" + 해금 조건)
+    private func cardTexts(_ card: LearningCard, unlocked: Bool) -> some View {
+        VStack(alignment: .leading, spacing: 3) {
+            Text(unlocked ? card.title : "???")
+                .font(.system(size: 16, weight: .bold))
+                .foregroundStyle(.primary)
+            Text(unlocked ? card.summary : vm.unlockHint(for: card))
+                .font(.system(size: 12))
+                .foregroundStyle(.secondary)
+                .lineLimit(2)
+                .multilineTextAlignment(.leading)
+        }
+    }
+
     private func cardRow(_ card: LearningCard) -> some View {
         let unlocked = vm.isUnlocked(card)
         return Button {
@@ -205,26 +230,27 @@ struct LearningLibraryView: View {
                 $lockInfo.present(vm.lockHint(for: card))
             }
         } label: {
-            HStack(spacing: 12) {
-                Image(systemName: unlocked ? "book.closed.fill" : "lock.fill")
-                    .font(.system(size: 18, weight: .semibold))
-                    .foregroundStyle(unlocked ? Color.starGold : Color.secondary)
-                    .frame(width: 28)
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(unlocked ? card.title : "???")
-                        .font(.system(size: 16, weight: .bold))
-                        .foregroundStyle(.primary)
-                    Text(unlocked ? card.summary : vm.unlockHint(for: card))
-                        .font(.system(size: 12))
-                        .foregroundStyle(.secondary)
-                        .lineLimit(2)
-                        .multilineTextAlignment(.leading)
-                }
-                Spacer(minLength: 0)
-                if unlocked {
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 12, weight: .semibold))
-                        .foregroundStyle(.secondary)
+            Group {
+                if usesStackedCard {
+                    // 아이폰 2열 — 칸이 좁아 아이콘 위, 제목·요약 아래로 쌓음 (칸마다 높이를 맞춤)
+                    VStack(alignment: .leading, spacing: 8) {
+                        cardIcon(unlocked)
+                        cardTexts(card, unlocked: unlocked)
+                        Spacer(minLength: 0)
+                    }
+                    .frame(minHeight: 112, alignment: .topLeading)
+                } else {
+                    HStack(spacing: 12) {
+                        cardIcon(unlocked)
+                            .frame(width: 28)
+                        cardTexts(card, unlocked: unlocked)
+                        Spacer(minLength: 0)
+                        if unlocked {
+                            Image(systemName: "chevron.right")
+                                .font(.system(size: 12, weight: .semibold))
+                                .foregroundStyle(.secondary)
+                        }
+                    }
                 }
             }
             .padding(.horizontal, 14)
