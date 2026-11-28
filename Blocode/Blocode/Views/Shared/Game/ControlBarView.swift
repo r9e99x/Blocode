@@ -22,6 +22,9 @@ struct ControlBarView: View {
     /// 설정 시트 표시 여부
     @State private var showSettings = false
 
+    /// 컨트롤 바 전체 폭 — 아이폰 실행 버튼을 남은 폭만큼 넓히는 데 씀
+    @State private var barWidth: CGFloat = 0
+
     // MARK: - 실행 버튼 색상
 
     /// 실행 버튼 색상 — 비활성/실행 중: 따뜻한 회색(모드 무관 기존 값 유지) / 활성: 민트 그린(다크에서만 톤 다운)
@@ -35,6 +38,13 @@ struct ControlBarView: View {
 
     /// 버튼 한 변(실행 버튼의 높이도 같음) — 아이패드는 손가락·화면에 맞춰 키움
     private var iconSide: CGFloat { isPadIdiom ? 62 : 54 }
+
+    /// 실행 버튼 폭 — 아이패드는 200 그대로, 아이폰은 아이콘 3개와 사이 간격(12pt씩)을 뺀 남은 폭을 다 씀 (최소 152)
+    /// (엄지가 가장 쉽게 닿는 가운데를 넓게 — 예전엔 152 고정이라 양옆이 비어 보였음)
+    private var runWidth: CGFloat {
+        if isPadIdiom { return 200 }
+        return max(152, barWidth - 40 - iconSide * 3 - 12 * 3)
+    }
 
     /// 되돌리기·한 칸씩·설정에 쓰는 정사각 3D 아이콘 버튼 (예전엔 같은 설정을 세 번 복사해 썼음)
     /// 앞면: 다크에서 배경에 묻히지 않는 슬레이트 / 베벨: 다크에서만 강도 완화 (라이트는 기존 그대로)
@@ -72,7 +82,7 @@ struct ControlBarView: View {
                 SoundService.shared.play(.buttonTap)
                 viewModel.runOrContinue()  // 단계별 중에는 남은 블럭을 이어서 실행
             } label: { isPressed in
-                Bevel3DButtonLabel(color: runButtonColor, width: isPadIdiom ? 200 : 152, height: iconSide, cornerRadius: iconSide / 2,
+                Bevel3DButtonLabel(color: runButtonColor, width: runWidth, height: iconSide, cornerRadius: iconSide / 2,
                                    isPressed: isPressed) {
                     HStack(spacing: 8) {
                         if viewModel.isRunningContinuously {
@@ -116,6 +126,7 @@ struct ControlBarView: View {
             }
         }
         .padding(.horizontal, 20)
+        .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { barWidth = $0 }
     }
 
     // 참고: 3D 버튼 렌더링은 공용 컴포넌트 Bevel3DButtonLabel(Views/Components)이 담당

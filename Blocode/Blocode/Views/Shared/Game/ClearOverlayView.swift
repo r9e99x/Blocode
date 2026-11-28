@@ -41,9 +41,47 @@ struct ClearOverlayView: View {
         #if os(macOS)
         macCardBody
         #else
-        fullScreenBody
+        if isPadIdiom {
+            fullScreenBody
+        } else {
+            phoneSheetBody
+        }
         #endif
     }
+
+    #if os(iOS)
+    /// 아이폰 — 게임 화면을 어둡게 덮고 아래에서 올라온 시트로 결과를 보여 줌 (뒤로 맵이 비침)
+    /// 높이는 내용만큼 — 별 3개는 높게, 별 1~2개는 낮게 (예전엔 화면 전체를 덮었음)
+    private var phoneSheetBody: some View {
+        ZStack(alignment: .bottom) {
+            // 뒤 게임 화면을 흐리게 가리고, 시트 밖을 눌러도 아래 화면이 눌리지 않게 막음
+            Color.black.opacity(0.35)
+                .ignoresSafeArea()
+                .contentShape(Rectangle())
+                .onTapGesture {}
+
+            Group {
+                if stars == 3 {
+                    threeStarLayout
+                } else {
+                    lowStarLayout
+                }
+            }
+            .padding(.top, 8)
+            // 늘어나는 빈칸(Spacer)을 최소 크기로 — 시트 높이가 내용만큼
+            .fixedSize(horizontal: false, vertical: true)
+            .frame(maxWidth: .infinity)
+            .background(
+                UnevenRoundedRectangle(topLeadingRadius: 28, topTrailingRadius: 28)
+                    .fill(Color.appBackground)
+                    .ignoresSafeArea(edges: .bottom)  // 홈 표시줄 아래까지 시트 색으로
+            )
+            .shadow(color: .black.opacity(0.2), radius: 20, y: -4)
+            .sheet(isPresented: $showCodeView) { CodeViewSheet(blocks: codeBlocks) }
+        }
+        .task { await animateIn() }  // 화면 등장 시 순차 애니메이션 시작 — 닫히면 남은 단계는 자동 취소
+    }
+    #endif
 
     #if os(macOS)
     /// 맥 — 게임 화면을 어둡게 덮고 가운데 카드로 결과를 보여 줌 (예전엔 창 전체를 덮었음)
@@ -136,7 +174,7 @@ struct ClearOverlayView: View {
         .padding(.top, 20)
     }
 
-    /// 결과 내용과 아래 버튼 사이 — 아이폰·맥은 버튼을 화면 맨 아래로 밀고,
+    /// 결과 내용과 아래 버튼 사이 — 아이폰 시트·맥 카드는 최소 28pt(남는 높이가 있으면 늘어남),
     /// 아이패드는 화면이 길어 그 사이가 크게 비므로 48pt만 띄우고 전체를 화면 가운데에 모음
     @ViewBuilder
     private var contentButtonGap: some View {
@@ -147,7 +185,8 @@ struct ClearOverlayView: View {
         if isPadIdiom {
             Color.clear.frame(height: 48)
         } else {
-            Spacer(minLength: 0)
+            // 아이폰 시트 — 높이를 내용에 맞추므로 빈칸이 최소로 줄어듦, 결과와 버튼 사이 28pt
+            Spacer(minLength: 28)
         }
         #endif
     }

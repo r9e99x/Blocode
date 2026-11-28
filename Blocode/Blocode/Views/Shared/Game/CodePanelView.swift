@@ -184,7 +184,40 @@ struct CodePanelView: View {
     #if os(iOS)
     // MARK: - 드래그 핸들 (확장/최소화 토글)
 
+    @ViewBuilder
     private var dragHandle: some View {
+        if isPadIdiom {
+            chevronHandle
+        } else {
+            grabberHandle
+        }
+    }
+
+    /// 아이폰 — 시트 손잡이 모양: 위로 끌면 펼치고 아래로 끌면 접음, 눌러도 바뀜
+    private var grabberHandle: some View {
+        Capsule()
+            .fill(Color.primary.opacity(0.22))
+            .frame(width: 40, height: 5)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 9)
+            .contentShape(Rectangle())
+            .onTapGesture {
+                withAnimation(.spring(duration: 0.3)) { isPanelExpanded.toggle() }
+            }
+            .gesture(
+                DragGesture(minimumDistance: 12)
+                    .onEnded { value in
+                        let dy = value.translation.height
+                        guard abs(dy) > 24 else { return }
+                        withAnimation(.spring(duration: 0.3)) { isPanelExpanded = dy < 0 }
+                    }
+            )
+            .accessibilityLabel(isPanelExpanded ? "코드 칸 접기" : "코드 칸 펼치기")
+            .accessibilityAddTraits(.isButton)
+    }
+
+    /// 아이패드 세로 — 예전 그대로 화살표 버튼
+    private var chevronHandle: some View {
         Button {
             withAnimation(.spring(duration: 0.3)) {
                 isPanelExpanded.toggle()
