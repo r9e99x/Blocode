@@ -70,12 +70,13 @@ struct ClearOverlayView: View {
                 ScrollView(showsIndicators: false) { phoneSheetContent }
             }
             .frame(maxWidth: .infinity)
+            // 그림자는 시트 바탕 모양에만 — 내용 전체에 걸면 SwiftUI가 글자·카드마다 그림자를 그려 뿌옇게 번졌음
             .background(
                 UnevenRoundedRectangle(topLeadingRadius: 28, topTrailingRadius: 28)
                     .fill(Color.appBackground)
+                    .shadow(color: .black.opacity(0.12), radius: 16, y: -2)
                     .ignoresSafeArea(edges: .bottom)  // 홈 표시줄 아래까지 시트 색으로
             )
-            .shadow(color: .black.opacity(0.2), radius: 20, y: -4)
             .sheet(isPresented: $showCodeView) { CodeViewSheet(blocks: codeBlocks) }
         }
         .task { await animateIn() }  // 화면 등장 시 순차 애니메이션 시작 — 닫히면 남은 단계는 자동 취소
@@ -120,13 +121,17 @@ struct ClearOverlayView: View {
             .padding(.horizontal, 32)
             .frame(width: 520)
             .frame(maxHeight: stars == 3 ? 720 : 640)
-            .background(Color.appBackground)
             .clipShape(RoundedRectangle(cornerRadius: 28))
+            // 그림자는 카드 바탕 모양에만 — 내용 전체에 걸면 글자·카드마다 그림자가 번짐
+            .background(
+                RoundedRectangle(cornerRadius: 28)
+                    .fill(Color.appBackground)
+                    .shadow(color: .black.opacity(0.18), radius: 24, y: 8)
+            )
             // X버튼은 카드 오른쪽 위 (레이아웃 안의 X버튼은 맥에서 숨김)
             .overlay(alignment: .topTrailing) {
                 xButton.padding(16)
             }
-            .shadow(color: .black.opacity(0.25), radius: 30, y: 10)
             .padding(.vertical, 24)
             .sheet(isPresented: $showCodeView) { CodeViewSheet(blocks: codeBlocks) }
 
@@ -316,20 +321,17 @@ struct ClearOverlayView: View {
     /// 다음 스테이지(챕터 목록) / 다시 도전하기 / 코드로 보기
     private var threeStarButtons: some View {
         VStack(spacing: 14) {
-            // 다음 스테이지 / 챕터 목록 버튼
-            Button {
+            // 다음 스테이지 / 챕터 목록 버튼 — 슬레이트 3D 버튼 (챕터 시트의 시작 버튼과 같은 부품·눌림)
+            PressableButton {
                 SoundService.shared.play(.buttonTap)
                 onNext()
-            } label: {
-                Text(isLastStage ? lastStageButtonTitle : "다음 스테이지로")
-                    .font(.system(size: 17, weight: .bold))
-                    .foregroundStyle(.white)
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 56)
-                    .background(Color.slateButtonFace)  // 라이트: 기존 다크 브라운 / 다크: 슬레이트
-                    .clipShape(RoundedRectangle(cornerRadius: 28))
+            } label: { isPressed in
+                SolidThreeDButton(height: 52, cornerRadius: 18, pressedOverlayOpacity: 0, isPressed: isPressed) {
+                    Text(isLastStage ? lastStageButtonTitle : "다음 스테이지로")
+                        .font(.system(size: 17, weight: .bold))
+                        .foregroundStyle(.white)
+                }
             }
-            .buttonStyle(.plain)
 
             // 다시 도전 버튼 (텍스트 버튼)
             Button {
@@ -430,40 +432,26 @@ struct ClearOverlayView: View {
     /// 다시(왼쪽) / 넘어가기·마무리(오른쪽)
     private var lowStarButtons: some View {
         HStack(spacing: 12) {
-            // 왼쪽 — 다시 (라이트: 기존 다크 브라운 / 다크: 슬레이트)
-            Button {
+            // 왼쪽 — 다시: 슬레이트 3D 버튼 (라이트: 다크 브라운 / 다크: 슬레이트)
+            PressableButton {
                 SoundService.shared.play(.buttonTap)
                 onRetry()
-            } label: {
-                HStack(spacing: 6) {
-                    Image(systemName: "arrow.counterclockwise")
-                        .font(.system(size: 14, weight: .semibold))
-                    Text("다시")
-                        .font(.system(size: 16, weight: .bold))
+            } label: { isPressed in
+                SolidThreeDButton(height: 52, cornerRadius: 18, pressedOverlayOpacity: 0, isPressed: isPressed) {
+                    HStack(spacing: 6) {
+                        Image(systemName: "arrow.counterclockwise")
+                            .font(.system(size: 14, weight: .semibold))
+                        Text("다시")
+                            .font(.system(size: 16, weight: .bold))
+                    }
+                    .foregroundStyle(.white)
                 }
-                .foregroundStyle(.white)
-                .frame(maxWidth: .infinity)
-                .frame(height: 54)
-                .background(Color.slateButtonFace)
-                .clipShape(RoundedRectangle(cornerRadius: 27))
             }
-            .buttonStyle(.plain)
 
-            // 오른쪽 — 넘어가기 / 마무리 (마지막 스테이지면 onFinish로 스테이지 목록 이동)
-            Button {
-                SoundService.shared.play(.buttonTap)
+            // 오른쪽 — 넘어가기 / 마무리: 홈 "챕터 둘러보기"와 같은 크림색 3D 버튼 (마지막 스테이지면 onFinish로 스테이지 목록 이동)
+            HomeBrowseButton(title: isLastStage ? "마무리" : "넘어가기") {
                 if isLastStage { onFinish() } else { onNext() }
-            } label: {
-                Text(isLastStage ? "마무리" : "넘어가기")
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundStyle(.primary)
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 54)
-                    .background(Color.statCardBackground)  // 라이트 #fbf6e8 / 다크 미드 남색 (기존 값과 동일)
-                    .clipShape(RoundedRectangle(cornerRadius: 27))
-                    .shadow(color: Color.black.opacity(0.06), radius: 8, x: 0, y: 2)
             }
-            .buttonStyle(.plain)
         }
     }
 
