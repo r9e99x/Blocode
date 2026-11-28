@@ -222,7 +222,7 @@ struct BlockRowView: View {
     /// repeat 블럭의 반복 횟수를 조절하는 스테퍼 컴포넌트
     private func repeatCountStepper(count: Int) -> some View {
         HStack(spacing: 0) {
-            // 횟수 감소 버튼 (최소 1회)
+            // 횟수 감소 버튼 (최소 1회) — 길게 누르면 계속 줄어듦
             Button {
                 actions.setRepeatCount(max(1, count - 1), [index])
             } label: {
@@ -231,6 +231,7 @@ struct BlockRowView: View {
                     .frame(width: stepperBtnSize, height: stepperBtnSize)
             }
             .buttonStyle(.borderless)
+            .buttonRepeatBehavior(.enabled)
 
             // 현재 횟수 표시 ("2×" 형식)
             Text("\(count)×")
@@ -238,15 +239,16 @@ struct BlockRowView: View {
                 .monospacedDigit()
                 .frame(minWidth: 24)
 
-            // 횟수 증가 버튼 (최대 10회)
+            // 횟수 증가 버튼 (최대 제한 없음) — 길게 누르면 계속 늘어남
             Button {
-                actions.setRepeatCount(min(10, count + 1), [index])
+                actions.setRepeatCount(count + 1, [index])
             } label: {
                 Image(systemName: "plus")
                     .font(.system(size: 11, weight: .bold))
                     .frame(width: stepperBtnSize, height: stepperBtnSize)
             }
             .buttonStyle(.borderless)
+            .buttonRepeatBehavior(.enabled)
         }
         .foregroundStyle(.white)
         .background(Color.white.opacity(0.18))  // 반투명 흰 배경
@@ -444,15 +446,17 @@ private struct NestedBlockArea: View {
                     .font(.system(size: metrics.stepperIconSize, weight: .bold))
                     .frame(width: metrics.stepperButtonSize, height: metrics.stepperButtonSize)
             }
+            .buttonRepeatBehavior(.enabled)  // 길게 누르면 계속 바뀜
             Text("\(count)×")
                 .font(.system(size: metrics.stepperTextSize, weight: .bold))
                 .monospacedDigit()
                 .frame(minWidth: metrics.stepperTextMinWidth)
-            Button { actions.setRepeatCount(min(10, count + 1), path) } label: {
+            Button { actions.setRepeatCount(count + 1, path) } label: {
                 Image(systemName: "plus")
                     .font(.system(size: metrics.stepperIconSize, weight: .bold))
                     .frame(width: metrics.stepperButtonSize, height: metrics.stepperButtonSize)
             }
+            .buttonRepeatBehavior(.enabled)
         }
         .foregroundStyle(BlockType.repeatBlock.blockColor)
         .background(BlockType.repeatBlock.lightColor)

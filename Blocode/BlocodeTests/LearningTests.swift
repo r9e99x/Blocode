@@ -27,9 +27,9 @@ struct LearningTests {
         }
     }
 
-    @Test("블럭 개념 카드는 12장")
+    @Test("블럭 개념 카드는 13장")
     func blockCardCount() {
-        #expect(LearningCatalog.cards(in: .block).count == 12)
+        #expect(LearningCatalog.cards(in: .block).count == 13)
     }
 
     @Test("블럭 카드의 코드 예시가 다섯 언어 모두로 만들어짐")
@@ -224,7 +224,7 @@ struct LearningLibraryViewModelTests {
     @Test("탭별 카드와 수집 수가 보관함 상태를 따름")
     func cardsAndProgress() throws {
         let (vm, learning) = makeVM()
-        #expect(vm.cards(in: .block).count == 12)
+        #expect(vm.cards(in: .block).count == 13)
         #expect(vm.progress(in: .block).unlocked == 0)
         #expect(vm.progress(in: .beginner) == (29, 29))  // 초급은 처음부터 열려 있음
 
@@ -242,7 +242,7 @@ struct LearningLibraryViewModelTests {
         #expect(beginner.map(\.topic) == [.coding, .cs])
         #expect(beginner.map(\.cards.count) == [15, 14])
         let block = vm.sections(in: .block)
-        #expect(block.count == 1 && block[0].topic == nil && block[0].cards.count == 12)
+        #expect(block.count == 1 && block[0].topic == nil && block[0].cards.count == 13)
         #expect(vm.sections(in: .advanced).map(\.topic) == [.coding, .cs])
     }
 

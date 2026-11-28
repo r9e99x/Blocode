@@ -141,7 +141,7 @@ struct BlockTreeTests {
 
     @Test("중첩 규칙 — 팔레트 안에서 function·동일 타입 제외, 증손자는 기본 동작만")
     func allowedChildTypes_followRules() {
-        let palette: [BlockType] = [.moveForward, .repeatBlock, .ifBlock, .functionBlock]
+        let palette: [BlockType] = [.moveForward, .repeatBlock, .ifBlock, .functionBlock, .callFunction]
         let tree = nestedTree()
         let expectedForFunction: [BlockType] = [.moveForward, .repeatBlock, .ifBlock]
         let expectedForRepeat: [BlockType] = [.moveForward, .ifBlock]
@@ -150,6 +150,9 @@ struct BlockTreeTests {
         #expect(tree.allowedChildTypes(at: [0, 0], palette: palette) == expectedForRepeat)
         #expect(tree.allowedChildTypes(at: [0, 0, 0], palette: palette) == expectedForDeepest)
         #expect(tree.allowedChildTypes(at: [0, 0, 0, 0], palette: palette).isEmpty)  // 기본 동작 블럭은 컨테이너 아님
+        // 함수 밖의 반복에는 함수 부르기를 넣을 수 있음 (함수 몸통 안에서는 위처럼 빠짐)
+        let loop = [Block(type: .repeatBlock)]
+        #expect(loop.allowedChildTypes(at: [0], palette: palette) == [.moveForward, .ifBlock, .callFunction])
     }
 
     @Test("자식 추가는 허용된 블럭만")
@@ -178,7 +181,9 @@ struct BlockTreeTests {
     func settings_applyToMatchingType() {
         var tree = nestedTree()
         tree.setRepeatCount(99, at: [0, 0])
-        #expect(tree.block(at: [0, 0])?.repeatCount == 10)
+        #expect(tree.block(at: [0, 0])?.repeatCount == 99)  // 위쪽 제한 없음
+        tree.setRepeatCount(0, at: [0, 0])
+        #expect(tree.block(at: [0, 0])?.repeatCount == 1)
         tree.setRepeatCount(5, at: [0])              // 함수 블럭 — 무시
         #expect(tree[0].repeatCount == nil)
 

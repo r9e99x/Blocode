@@ -87,8 +87,13 @@ nonisolated struct Stage: Codable, Identifiable {
 
     /// 팔레트에 실제로 표시할 블럭 목록
     /// availableBlocks가 nil이면 전체 블럭 (BlockType.allCases) 반환
+    /// 함수가 있는 팔레트에는 "함수 부르기"를 바로 뒤에 붙여 줌 (스테이지 JSON엔 "function"만 적음)
     var paletteBlocks: [BlockType] {
-        availableBlocks ?? BlockType.allCases
+        guard var blocks = availableBlocks else { return BlockType.allCases }
+        if let index = blocks.firstIndex(of: .functionBlock), !blocks.contains(.callFunction) {
+            blocks.insert(.callFunction, at: index + 1)
+        }
+        return blocks
     }
 
     /// 로딩 실패 시 타입 불변식(비옵셔널 Stage)을 유지하기 위한 안전 플레이스홀더

@@ -108,10 +108,10 @@ struct CodeRendererTests {
         """)
     }
 
-    @Test("함수 블럭은 이름 붙인 보조 함수로 위에 정의되고 그 자리에서 호출됨")
+    @Test("함수 블럭은 위에 정의만 되고, 함수 부르기 블럭 자리마다 호출됨")
     func functionBlock() {
         let blocks = [Block(type: .functionBlock, children: [Block(type: .moveForward), Block(type: .turnLeft)]),
-                      Block(type: .moveForward)]
+                      Block(type: .callFunction), Block(type: .moveForward), Block(type: .callFunction)]
         #expect(CodeRenderer.render(blocks, language: .python) == """
         def step1():
             move_forward()
@@ -119,30 +119,28 @@ struct CodeRendererTests {
 
         step1()
         move_forward()
+        step1()
         """)
     }
 
-    @Test("함수 안의 함수는 안쪽이 먼저 정의됨")
-    func nestedFunctions() {
-        let inner = Block(type: .functionBlock, children: [Block(type: .turnRight)])
-        let outer = Block(type: .functionBlock, children: [inner])
-        let text = CodeRenderer.render([outer], language: .swift)
-        #expect(text == """
-        func step2() {
+    @Test("반복 안의 함수 부르기는 반복 안에서 호출됨")
+    func callInsideLoop() {
+        let blocks = [Block(type: .functionBlock, children: [Block(type: .turnRight)]),
+                      Block(type: .repeatBlock, repeatCount: 3, children: [Block(type: .callFunction)])]
+        #expect(CodeRenderer.render(blocks, language: .swift) == """
+        func step1() {
             turnRight()
         }
 
-        func step1() {
-            step2()
+        for i in 0..<3 {
+            step1()
         }
-
-        step1()
         """)
     }
 
     @Test("자바는 함수 블럭이 클래스 안의 정적 메서드로 정의됨")
     func javaHelper() {
-        let blocks = [Block(type: .functionBlock, children: [Block(type: .moveForward)])]
+        let blocks = [Block(type: .functionBlock, children: [Block(type: .moveForward)]), Block(type: .callFunction)]
         #expect(CodeRenderer.render(blocks, language: .java) == """
         public class Main {
             static void step1() {
@@ -158,7 +156,7 @@ struct CodeRendererTests {
 
     @Test("C 함수 블럭은 main 위에 정의됨")
     func cHelper() {
-        let blocks = [Block(type: .functionBlock, children: [Block(type: .turnLeft)])]
+        let blocks = [Block(type: .functionBlock, children: [Block(type: .turnLeft)]), Block(type: .callFunction)]
         #expect(CodeRenderer.render(blocks, language: .c) == """
         #include <stdio.h>
 
@@ -192,7 +190,7 @@ struct CodeRendererTests {
 
     @Test("모든 언어에서 여는 중괄호와 닫는 중괄호 수가 같음")
     func bracesBalanced() {
-        let blocks = sample + [Block(type: .functionBlock, children: sample)]
+        let blocks = sample + [Block(type: .functionBlock, children: sample), Block(type: .callFunction)]
         for language in CodeLanguage.allCases where language != .python {
             let text = CodeRenderer.render(blocks, language: language)
             #expect(text.filter { $0 == "{" }.count == text.filter { $0 == "}" }.count)

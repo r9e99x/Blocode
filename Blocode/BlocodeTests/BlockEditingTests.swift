@@ -123,7 +123,7 @@ struct BlockEditingTests {
         #expect(vm.codeBlocks[0].children?.isEmpty == true)
     }
 
-    @Test("반복 횟수는 모든 깊이에서 1~10으로 보정")
+    @Test("반복 횟수는 모든 깊이에서 최소 1, 위쪽 제한 없음")
     func repeatCount_clampedAtEveryDepth() {
         let vm = makeViewModel()
         vm.addBlock(.repeatBlock)
@@ -133,7 +133,7 @@ struct BlockEditingTests {
         vm.addBlock(.functionBlock)
         vm.addChildBlock(.repeatBlock, at: [1])
         vm.setRepeatCount(99, at: [1, 0])
-        #expect(vm.codeBlocks[1].children?[0].repeatCount == 10)
+        #expect(vm.codeBlocks[1].children?[0].repeatCount == 99)
 
         vm.addChildBlock(.ifBlock, at: [1])
         vm.addChildBlock(.repeatBlock, at: [1, 1])
@@ -155,6 +155,25 @@ struct BlockEditingTests {
         vm.addChildBlock(.moveForward, at: [0, 0, 0])
         #expect(types(vm.block(at: [0, 0, 0])?.children) == [.moveForward])
         #expect(vm.allowedChildTypes(at: [0, 0, 0, 0]).isEmpty)  // 기본 동작 블럭은 컨테이너가 아님
+    }
+
+    @Test("함수는 하나만, 함수 몸통 안에는 부르기를 넣을 수 없음 (반복 안에는 가능)")
+    func functionRules() {
+        let vm = makeViewModel()
+        vm.addBlock(.functionBlock)
+        vm.addBlock(.functionBlock)                 // 두 번째 함수는 무시
+        vm.insertBlock(.functionBlock, at: 0)       // 끌어다 놓기도 무시
+        #expect(types(vm.codeBlocks) == [.functionBlock])
+
+        vm.addChildBlock(.callFunction, at: [0])    // 자기 자신을 부르면 끝나지 않음
+        vm.addChildBlock(.repeatBlock, at: [0])
+        vm.addChildBlock(.callFunction, at: [0, 0]) // 함수 몸통 안의 반복 속에서도 금지
+        #expect(types(vm.codeBlocks[0].children) == [.repeatBlock])
+        #expect(types(vm.codeBlocks[0].children?[0].children) == [])
+
+        vm.addBlock(.repeatBlock)
+        vm.addChildBlock(.callFunction, at: [1])    // 함수 밖 반복 안은 허용
+        #expect(types(vm.codeBlocks[1].children) == [.callFunction])
     }
 
     @Test("잘못된 경로는 아무 일도 하지 않음")

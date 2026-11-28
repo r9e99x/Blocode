@@ -88,11 +88,20 @@ enum LearningCatalog {
 
         LearningCard(
             id: "block.function", category: .block, title: "함수",
-            summary: "여러 블럭을 하나로 묶어 이름을 붙여요.",
-            body: "자주 쓰는 동작 묶음을 하나로 묶으면 코드가 읽기 쉬워져요. 코드로 보면 step1() 처럼 이름 붙인 함수가 위에 정의되고, 그 자리에서 불러 써요.",
-            tip: "코드로 보기에서 함수 블럭이 보조 함수가 되는 모습을 확인해 보세요.",
+            summary: "여러 번 쓸 동작 묶음을 미리 만들어 둬요.",
+            body: "함수 블럭 안에 넣은 동작은 그 자리에서 바로 실행되지 않아요. 만들어 두기만 하고, \"함수 부르기\" 블럭을 놓은 곳에서 실행돼요. 코드로 보면 step1() 이라는 이름의 함수가 위에 정의돼요.",
+            tip: "함수는 코드에 하나만 만들 수 있어요. 같은 모양이 떨어져서 여러 번 나오면 함수를 떠올려 보세요.",
             unlock: .block(.functionBlock),
             example: .blocks([Block(type: .functionBlock, children: [Block(type: .moveForward), Block(type: .turnRight)])])),
+
+        LearningCard(
+            id: "block.callFunction", category: .block, title: "함수 부르기",
+            summary: "만들어 둔 함수를 이 자리에서 실행해요.",
+            body: "부를 때마다 함수 안의 동작이 처음부터 끝까지 실행돼요. 함수 안 블럭은 한 번만 세고, 부르기는 한 번에 1블럭이라 여러 번 부를수록 블럭이 크게 줄어요. 코드에서는 step1() 처럼 함수 이름을 적는 호출이에요.",
+            tip: "반복은 붙어서 이어지는 동작을, 함수는 떨어져서 다시 나오는 동작을 줄여 줘요.",
+            unlock: .block(.callFunction),
+            example: .blocks([Block(type: .functionBlock, children: [Block(type: .moveForward), Block(type: .turnRight)]),
+                              Block(type: .callFunction), Block(type: .moveForward), Block(type: .callFunction)])),
 
         LearningCard(
             id: "block.collectItem", category: .block, title: "보석 획득",

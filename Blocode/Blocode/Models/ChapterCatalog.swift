@@ -27,7 +27,7 @@ nonisolated enum ChapterCatalog {  // nonisolated: 고정 데이터라 메인 �
         ChapterInfo(id: 3, title: "조건문", description: "if 조건으로 어떤 미로든 뚫어내요", stageCount: 8,
                     rgb: (red: 0.93, green: 0.62, blue: 0.42),
                     requiredStarsFromPrev: 16),      // 챕터 2 최대 24개 중 16개 (67%)
-        ChapterInfo(id: 4, title: "함수",   description: "함수로 코드를 깔끔하게 정리해요", stageCount: 7,
+        ChapterInfo(id: 4, title: "함수",   description: "같은 동작을 함수로 만들어 여러 번 불러요", stageCount: 7,
                     rgb: (red: 0.45, green: 0.78, blue: 0.62),
                     requiredStarsFromPrev: 16),      // 챕터 3 최대 24개 중 16개 (67%)
         ChapterInfo(id: 5, title: "심화",   description: "지금까지 배운 걸 한 단계 더 깊게", stageCount: 6,

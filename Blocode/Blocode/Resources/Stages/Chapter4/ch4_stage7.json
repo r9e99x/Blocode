@@ -5,18 +5,19 @@
   "name": "함수 종합",
   "mapData": {
     "grid": [
-      [0, 0, 0, 0, 1, 1, 1, 1, 1],
-      [0, 0, 0, 0, 1, 0, 0, 0, 1],
-      [1, 1, 1, 1, 1, 1, 1, 1, 1],
-      [1, 0, 0, 0, 1, 0, 0, 0, 0],
-      [1, 0, 1, 1, 1, 0, 0, 0, 0],
-      [1, 0, 0, 0, 1, 0, 0, 0, 0],
-      [1, 1, 1, 1, 1, 0, 0, 0, 0]
+      [0, 1, 1, 1, 1, 1, 0, 0, 0],
+      [0, 1, 0, 0, 0, 1, 1, 1, 1],
+      [0, 1, 0, 0, 0, 0, 0, 0, 1],
+      [1, 1, 0, 1, 1, 1, 1, 0, 1],
+      [1, 0, 0, 1, 0, 0, 0, 1, 1],
+      [1, 0, 0, 1, 0, 0, 0, 1, 0],
+      [1, 1, 1, 1, 0, 0, 0, 1, 0],
+      [0, 0, 0, 0, 1, 1, 1, 1, 0]
     ],
-    "start": {"x": 2, "y": 4},
+    "start": {"x": 4, "y": 7},
     "startDirection": "right",
-    "goal": {"x": 4, "y": 4}
+    "goal": {"x": 6, "y": 3}
   },
-  "availableBlocks": ["moveForward", "moveBackward", "turnLeft", "turnRight", "repeat", "if", "function"],
-  "starThresholds": {"threeStar": 4, "twoStar": 46}
+  "availableBlocks": ["moveForward", "turnLeft", "turnRight", "repeat", "function"],
+  "starThresholds": {"threeStar": 13, "twoStar": 21}
 }

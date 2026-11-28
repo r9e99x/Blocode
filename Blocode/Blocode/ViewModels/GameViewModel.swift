@@ -200,7 +200,7 @@ final class GameViewModel {
 
     /// 팔레트에서 블럭 추가 — idle 상태일 때만 허용
     func addBlock(_ type: BlockType) {
-        guard isAllowed(type), beginEdit() else { return }
+        guard isAllowed(type), codeBlocks.canAddTopLevel(type), beginEdit() else { return }
         let block = Block(type: type)
         codeBlocks.append(block)
         SoundService.shared.play(.blockAdd)
@@ -244,7 +244,7 @@ final class GameViewModel {
         codeBlocks.setIfCondition(condition, at: path)
     }
 
-    /// 경로의 repeat 블럭 반복 횟수 변경 (1~10회로 제한)
+    /// 경로의 repeat 블럭 반복 횟수 변경 (최소 1회, 최대 제한 없음)
     func setRepeatCount(_ count: Int, at path: [Int]) {
         guard beginEdit() else { return }
         codeBlocks.setRepeatCount(count, at: path)
@@ -252,7 +252,7 @@ final class GameViewModel {
 
     /// 특정 위치에 블럭 삽입 (팔레트 드래그-앤-드롭 위치 지정 삽입)
     func insertBlock(_ type: BlockType, at index: Int) {
-        guard isAllowed(type), beginEdit() else { return }
+        guard isAllowed(type), codeBlocks.canAddTopLevel(type), beginEdit() else { return }
         let block = Block(type: type)
         // 인덱스가 범위를 벗어나지 않도록 클램핑
         let safeIndex = min(max(0, index), codeBlocks.count)
@@ -396,6 +396,9 @@ final class GameViewModel {
             // 실행 중단됐으면 멈춤 (reset() 호출 등)
             guard isRunActive else { return }
 
+            // 함수 정의는 실행 순서에서 건너뜀 — 강조도, 한 칸씩 실행의 멈춤도 없음 (부를 때만 몸통이 실행됨)
+            if block.type == .functionBlock { continue }
+
             // 현재 블럭의 경로 — 부모 경로에 자신의 인덱스를 추가
             // (최상위 인덱스 공간과 충돌하지 않는 경로 기반 식별)
             let path = parentPath + [offset]
@@ -445,9 +448,17 @@ final class GameViewModel {
                 }
 
             case .functionBlock:
-                // function 블럭: 자식 블럭들을 서브루틴으로 한 번 실행 (블럭 수 계산에서는 자식만 셈 — 묶음 역할)
-                let children = block.children ?? []
-                await executeBlocks(children, parentPath: path)
+                // 함수 정의: 위에서 이미 건너뜀 — "함수 부르기"가 몸통을 실행 (블럭 수는 몸통만 한 번 셈)
+                break
+
+            case .callFunction:
+                // 함수 부르기: 정의해 둔 함수 몸통을 실행 — 하이라이트는 정의 블럭 안 줄에 표시
+                // (함수 몸통 안에는 부르기를 넣을 수 없어 끝없이 부를 일은 없음)
+                guard let index = codeBlocks.functionIndex else {
+                    handleFailure(at: path, message: "먼저 함수를 만들어 주세요 · 라인 \(path[0] + 1)")
+                    return
+                }
+                await executeBlocks(codeBlocks[index].children ?? [], parentPath: [index])
 
             case .collectItem:
                 // 보석 획득 — 현재 칸에 아직 안 모은 보석이 있을 때만 성공, 아니면 벽 부딪힘과 동일하게 실패

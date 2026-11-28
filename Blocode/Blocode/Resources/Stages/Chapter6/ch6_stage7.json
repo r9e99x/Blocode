@@ -2,25 +2,26 @@
   "id": "ch6_stage7",
   "chapter": 6,
   "stageNumber": 7,
-  "name": "보석 종합",
+  "name": "보석 함수",
   "mapData": {
     "grid": [
-      [1, 1, 1, 0, 0, 0, 0],
-      [1, 0, 1, 0, 0, 0, 0],
-      [1, 0, 1, 0, 0, 0, 0],
-      [1, 0, 1, 0, 0, 0, 0],
-      [1, 0, 1, 0, 1, 1, 1],
-      [0, 0, 1, 0, 0, 0, 1],
-      [0, 0, 1, 1, 1, 1, 1]
+      [1, 1, 1, 1, 0, 0, 0, 0, 1],
+      [0, 0, 0, 1, 1, 1, 0, 0, 1],
+      [0, 0, 0, 0, 0, 1, 0, 0, 1],
+      [0, 0, 0, 0, 0, 1, 0, 1, 1],
+      [0, 0, 0, 0, 1, 1, 0, 1, 0],
+      [0, 0, 0, 0, 1, 0, 0, 1, 0],
+      [0, 0, 0, 0, 1, 1, 1, 1, 0]
     ],
-    "start": {"x": 4, "y": 4},
+    "start": {"x": 0, "y": 0},
     "startDirection": "right",
-    "goal": {"x": 0, "y": 4},
+    "goal": {"x": 8, "y": 0},
     "items": [
-      {"x": 4, "y": 6},
-      {"x": 1, "y": 0}
+      {"x": 5, "y": 1},
+      {"x": 8, "y": 1},
+      {"x": 4, "y": 6}
     ]
   },
-  "availableBlocks": ["moveForward", "turnLeft", "turnRight", "repeat", "if", "function", "collectItem"],
-  "starThresholds": {"threeStar": 10, "twoStar": 20}
+  "availableBlocks": ["moveForward", "turnLeft", "turnRight", "repeat", "function", "collectItem"],
+  "starThresholds": {"threeStar": 13, "twoStar": 23}
 }

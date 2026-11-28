@@ -30,7 +30,7 @@ enum CodeLanguage: String, CaseIterable, Codable, Identifiable {
 /// 블럭 목록을 선택한 언어의 텍스트 코드로 바꿈 — 화면과 게임 엔진을 전혀 모르는 순수 변환
 ///  - 실제로 실행되는 전체 프로그램 모양으로 보여 줌 — Python·Swift는 위에서부터 바로 실행되는 코드,
 ///    C는 `#include` + `main`, C++은 `#include` + `main`, Java는 `Main` 클래스 + `main` 메서드
-///  - 함수 블럭은 "그 자리에서 한 번 실행하는 묶음"이라, 이름을 붙인 보조 함수로 위에 정의하고 그 자리에서 호출
+///  - 함수 블럭은 이름을 붙인 보조 함수 정의로 위에 두고, "함수 부르기" 블럭이 있는 자리마다 그 함수를 호출
 ///  - 중첩 반복은 변수 이름을 i, j, k 순서로 구분
 enum CodeRenderer {
 
@@ -99,7 +99,10 @@ enum CodeRenderer {
                 let inner = renderList(block.children ?? [], language: language, depth: language == .java ? 2 : 1,
                                        loopDepth: 0, helpers: &helpers, counter: &counter)
                 helpers.append(function(named: name, body: inner, language: language))
-                lines.append(pad + call(name, language: language))
+
+            case .callFunction:
+                // 함수는 코드에 하나만 둘 수 있어 언제나 첫 번째 함수 이름을 부름
+                lines.append(pad + call(functionName, language: language))
 
             default:
                 lines.append(pad + call(commandName(block.type, language: language), language: language))
@@ -107,6 +110,9 @@ enum CodeRenderer {
         }
         return lines
     }
+
+    /// 함수 블럭이 정의하는 함수 이름 — 함수는 하나뿐이라 고정
+    static let functionName = "step1"
 
     /// 함수 정의 — 본문이 비어 있으면 "아무것도 안 함"을 뜻하는 자리 채움을 넣음
     private static func function(named name: String, body: [String], language: CodeLanguage) -> String {
@@ -159,7 +165,7 @@ enum CodeRenderer {
         case .collectItem:    ("collect_item", "collectItem")
         case .activateSwitch: ("activate_switch", "activateSwitch")
         // 컨테이너 블럭은 renderList에서 따로 처리하므로 여기 오지 않음
-        case .repeatBlock, .ifBlock, .functionBlock: ("", "")
+        case .repeatBlock, .ifBlock, .functionBlock, .callFunction: ("", "")
         }
         return isSnake(language) ? names.snake : names.camel
     }

@@ -2,23 +2,22 @@
   "id": "ch4_stage6",
   "chapter": 4,
   "stageNumber": 6,
-  "name": "긴 C자",
+  "name": "작은 함수",
   "mapData": {
     "grid": [
-      [1, 1, 1, 1, 1, 1, 1, 1, 1],
-      [1, 0, 0, 0, 0, 0, 0, 0, 0],
-      [1, 0, 1, 1, 1, 1, 1, 0, 0],
-      [1, 0, 1, 0, 0, 0, 1, 0, 0],
-      [1, 0, 1, 0, 1, 0, 1, 0, 0],
-      [1, 0, 1, 0, 1, 0, 1, 0, 0],
-      [1, 0, 1, 1, 1, 0, 1, 0, 0],
-      [1, 0, 0, 0, 0, 0, 1, 0, 0],
-      [1, 1, 1, 1, 1, 1, 1, 0, 0]
+      [0, 0, 0, 0, 0, 0, 0, 1, 1, 1],
+      [0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+      [1, 1, 1, 1, 0, 0, 0, 0, 0, 1],
+      [1, 0, 0, 1, 1, 1, 0, 0, 1, 1],
+      [1, 0, 0, 0, 0, 1, 0, 0, 1, 0],
+      [1, 1, 1, 0, 0, 0, 0, 1, 1, 0],
+      [0, 0, 1, 1, 1, 0, 0, 1, 0, 0],
+      [0, 0, 0, 0, 1, 1, 1, 1, 0, 0]
     ],
-    "start": {"x": 4, "y": 4},
-    "startDirection": "down",
-    "goal": {"x": 8, "y": 0}
+    "start": {"x": 7, "y": 0},
+    "startDirection": "right",
+    "goal": {"x": 5, "y": 4}
   },
-  "availableBlocks": ["moveForward", "moveBackward", "turnLeft", "turnRight", "repeat", "if", "function"],
-  "starThresholds": {"threeStar": 2, "twoStar": 54}
+  "availableBlocks": ["moveForward", "turnLeft", "turnRight", "repeat", "function"],
+  "starThresholds": {"threeStar": 11, "twoStar": 22}
 }

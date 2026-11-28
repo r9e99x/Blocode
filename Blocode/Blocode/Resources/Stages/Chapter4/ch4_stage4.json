@@ -2,21 +2,23 @@
   "id": "ch4_stage4",
   "chapter": 4,
   "stageNumber": 4,
-  "name": "함수와 세 벽",
+  "name": "함수와 반복",
   "mapData": {
     "grid": [
-      [1, 1, 1, 1, 1, 1, 1, 1, 1],
-      [0, 0, 0, 0, 0, 0, 0, 0, 1],
-      [0, 0, 1, 1, 1, 1, 1, 0, 1],
-      [0, 0, 1, 0, 0, 0, 1, 0, 1],
-      [0, 0, 1, 0, 1, 1, 1, 0, 1],
-      [0, 0, 1, 0, 0, 0, 0, 0, 1],
-      [0, 0, 1, 1, 1, 1, 1, 1, 1]
+      [0, 1, 1, 1, 1, 1, 1, 0, 0, 0],
+      [0, 1, 0, 0, 0, 0, 1, 1, 1, 1],
+      [0, 1, 0, 0, 0, 0, 0, 0, 0, 1],
+      [1, 1, 0, 0, 0, 0, 0, 0, 0, 1],
+      [1, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+      [1, 0, 0, 0, 0, 0, 0, 0, 1, 1],
+      [1, 1, 1, 1, 0, 0, 0, 0, 1, 0],
+      [0, 0, 0, 1, 0, 0, 0, 0, 1, 0],
+      [0, 0, 0, 0, 0, 1, 1, 1, 1, 0]
     ],
-    "start": {"x": 4, "y": 4},
+    "start": {"x": 5, "y": 8},
     "startDirection": "right",
-    "goal": {"x": 0, "y": 0}
+    "goal": {"x": 3, "y": 7}
   },
-  "availableBlocks": ["moveForward", "turnLeft", "turnRight", "repeat", "if", "function"],
-  "starThresholds": {"threeStar": 2, "twoStar": 44}
+  "availableBlocks": ["moveForward", "turnLeft", "turnRight", "repeat", "function"],
+  "starThresholds": {"threeStar": 10, "twoStar": 21}
 }

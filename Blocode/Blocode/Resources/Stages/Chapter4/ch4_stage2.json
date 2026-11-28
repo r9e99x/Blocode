@@ -2,19 +2,23 @@
   "id": "ch4_stage2",
   "chapter": 4,
   "stageNumber": 2,
-  "name": "함수와 반복",
+  "name": "계단 모양",
   "mapData": {
     "grid": [
-      [1, 1, 1, 1, 1, 1],
-      [0, 0, 0, 0, 0, 1],
-      [0, 0, 0, 0, 0, 1],
-      [0, 0, 0, 0, 0, 1],
-      [1, 1, 1, 1, 1, 1]
+      [0, 0, 1, 1, 1, 1, 0, 0, 0],
+      [0, 0, 1, 0, 0, 1, 0, 0, 0],
+      [0, 0, 1, 0, 0, 1, 1, 1, 1],
+      [1, 1, 1, 0, 0, 0, 0, 0, 1],
+      [0, 0, 0, 0, 0, 0, 0, 0, 1],
+      [0, 0, 0, 0, 0, 0, 1, 1, 1],
+      [0, 0, 0, 0, 0, 0, 1, 0, 0],
+      [0, 0, 0, 0, 0, 0, 1, 0, 0],
+      [0, 0, 1, 1, 1, 1, 1, 0, 0]
     ],
-    "start": {"x": 0, "y": 0},
+    "start": {"x": 0, "y": 3},
     "startDirection": "right",
-    "goal": {"x": 0, "y": 4}
+    "goal": {"x": 2, "y": 8}
   },
-  "availableBlocks": ["moveForward", "turnRight", "repeat", "function"],
-  "starThresholds": {"threeStar": 5, "twoStar": 13}
+  "availableBlocks": ["moveForward", "turnLeft", "turnRight", "repeat", "function"],
+  "starThresholds": {"threeStar": 8, "twoStar": 16}
 }

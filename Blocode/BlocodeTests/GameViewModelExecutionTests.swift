@@ -177,18 +177,43 @@ struct GameViewModelExecutionTests {
 
     // MARK: - function 블럭
 
-    @Test("function 블럭은 투명한 래퍼로 동작(호출 비용 없음)")
-    func functionBlock_actsAsTransparentWrapper() async throws {
+    @Test("함수 정의는 그 자리에서 실행되지 않음 — 부르기가 없으면 도착 못 함")
+    func functionDefinition_doesNotRunByItself() async throws {
         let grid = [[0, 1, 0], [0, 1, 0], [0, 1, 0]]
         let vm = makeFixture(grid: grid, start: Position(x: 1, y: 2), goal: Position(x: 1, y: 0))
+        vm.codeBlocks = [Block(type: .functionBlock, children: [Block(type: .moveForward), Block(type: .moveForward)])]
+
+        vm.run()
+        try await waitUntilFinished(vm)
+
+        #expect(vm.gameState == .idle)  // 도착 못 하고 끝나면 대기로 — 몸통이 실행됐다면 두 칸 올라가 도착했을 것
+    }
+
+    @Test("함수 부르기를 두 번 하면 몸통이 두 번 실행됨 — 블럭 수는 몸통 1번 + 부르기마다 1")
+    func callFunction_runsBodyEachTime() async throws {
+        let grid = [[1, 1, 1, 1, 1]]
+        let vm = makeFixture(grid: grid, start: Position(x: 0, y: 0), startDirection: .right, goal: Position(x: 4, y: 0))
         let function = Block(type: .functionBlock, children: [Block(type: .moveForward), Block(type: .moveForward)])
-        vm.codeBlocks = [function]
+        vm.codeBlocks = [function, Block(type: .callFunction), Block(type: .callFunction)]
 
         vm.run()
         try await waitUntilFinished(vm)
 
         #expect(vm.gameState == .success)
-        #expect(vm.totalBlockCount == 2)  // function 자체는 0, 자식 2개만 카운트 — 호출 비용 없음
+        #expect(vm.totalBlockCount == 4)  // 몸통 2 + 부르기 2
+    }
+
+    @Test("함수 없이 부르기만 있으면 실패하고 그 줄이 표시됨")
+    func callFunction_withoutFunctionFails() async throws {
+        let grid = [[1, 1, 1]]
+        let vm = makeFixture(grid: grid, start: Position(x: 0, y: 0), startDirection: .right, goal: Position(x: 2, y: 0))
+        vm.codeBlocks = [Block(type: .callFunction)]
+
+        vm.run()
+        try await waitUntilFinished(vm)
+
+        #expect(vm.gameState == .failure)
+        #expect(vm.isRowFailed(0))
     }
 
     // MARK: - 보석 획득 (collectItem)

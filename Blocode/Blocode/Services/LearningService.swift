@@ -61,7 +61,8 @@ final class LearningService {
     /// 사용자가 만든 맵·에디터 테스트는 제외 (거기선 모든 블럭이 한꺼번에 나와서 설명이 쏟아지지 않도록)
     func unseenBlocks(for stage: Stage) -> [BlockType] {
         guard !stage.isCustomMap else { return [] }
-        return (stage.availableBlocks ?? []).filter { !seenBlocks.contains($0) }
+        // paletteBlocks — 함수가 있으면 자동으로 붙는 "함수 부르기"까지 포함 (목록이 없는 스테이지는 예전처럼 비움)
+        return (stage.availableBlocks == nil ? [] : stage.paletteBlocks).filter { !seenBlocks.contains($0) }
     }
 
     /// 이미 진행한 사용자를 위한 채우기 — 어떤 블럭이 처음 나오는 스테이지(또는 그 뒤 스테이지)를 클리어했다면 만난 것으로 침
@@ -95,7 +96,7 @@ enum FirstAppearance {
             for number in 1...chapter.stageCount {
                 guard let stage = StageLoader.load(chapter: chapter.number, stage: number) else { continue }
                 // availableBlocks가 없으면 모든 블럭이 나오는 스테이지지만 기본 스테이지는 모두 목록이 있음
-                for block in stage.availableBlocks ?? [] where result[block] == nil {
+                for block in (stage.availableBlocks == nil ? [] : stage.paletteBlocks) where result[block] == nil {
                     result[block] = Position(chapter: chapter.number, stage: number)
                 }
             }

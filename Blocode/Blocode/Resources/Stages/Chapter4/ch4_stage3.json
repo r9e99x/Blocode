@@ -2,19 +2,23 @@
   "id": "ch4_stage3",
   "chapter": 4,
   "stageNumber": 3,
-  "name": "함수와 조건",
+  "name": "세 번 부르기",
   "mapData": {
     "grid": [
-      [1, 1, 1, 1, 1, 1, 1],
-      [1, 0, 0, 0, 0, 0, 0],
-      [1, 0, 1, 1, 1, 0, 0],
-      [1, 0, 0, 0, 1, 0, 0],
-      [1, 1, 1, 1, 1, 0, 0]
+      [0, 0, 0, 0, 1, 1, 1, 0, 0],
+      [0, 0, 0, 0, 1, 0, 1, 0, 0],
+      [0, 0, 1, 1, 1, 0, 1, 1, 1],
+      [0, 0, 1, 0, 0, 0, 0, 0, 1],
+      [0, 0, 1, 1, 1, 0, 0, 0, 1],
+      [0, 0, 0, 0, 1, 0, 0, 0, 1],
+      [0, 0, 1, 1, 1, 0, 0, 0, 1],
+      [0, 0, 1, 0, 0, 0, 0, 0, 0],
+      [1, 1, 1, 0, 0, 0, 0, 0, 0]
     ],
-    "start": {"x": 2, "y": 2},
+    "start": {"x": 0, "y": 8},
     "startDirection": "right",
-    "goal": {"x": 6, "y": 0}
+    "goal": {"x": 8, "y": 6}
   },
-  "availableBlocks": ["moveForward", "turnLeft", "turnRight", "repeat", "if", "function"],
-  "starThresholds": {"threeStar": 2, "twoStar": 27}
+  "availableBlocks": ["moveForward", "turnLeft", "turnRight", "repeat", "function"],
+  "starThresholds": {"threeStar": 10, "twoStar": 19}
 }

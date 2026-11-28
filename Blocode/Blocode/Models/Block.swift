@@ -32,7 +32,8 @@ nonisolated enum BlockType: String, Codable, CaseIterable {
     case turnRight     = "turnRight"     // 오른쪽으로 90도 회전
     case repeatBlock   = "repeat"        // 반복 (자식 블럭들을 N번 반복 실행)
     case ifBlock       = "if"            // 조건문 (앞 칸 상태에 따라 자식 블럭 실행)
-    case functionBlock = "function"      // 함수 (자식 블럭들을 서브루틴으로 묶어 실행)
+    case functionBlock = "function"      // 함수 정의 (자식 블럭이 몸통 — 그 자리에선 실행 안 하고 "함수 부르기"로 실행)
+    case callFunction  = "callFunction"  // 함수 부르기 (정의해 둔 함수 몸통을 이 자리에서 실행 — 여러 번 부를수록 블럭 절약)
     case collectItem   = "collectItem"   // 보석 획득 (현재 칸에 보석이 있을 때만 성공, 아니면 실패 — 챕터6+ 전용)
     case activateSwitch = "activateSwitch" // 스위치 작동 (현재 칸에 스위치가 있을 때만 성공, 아니면 실패 — 챕터7+ 전용)
 
@@ -46,6 +47,7 @@ nonisolated enum BlockType: String, Codable, CaseIterable {
         case .repeatBlock: "반복"
         case .ifBlock: "만약에"
         case .functionBlock: "함수"
+        case .callFunction: "함수 부르기"
         case .collectItem: "보석 획득"
         case .activateSwitch: "스위치 작동"
         }
@@ -61,6 +63,7 @@ nonisolated enum BlockType: String, Codable, CaseIterable {
         case .repeatBlock: "repeat"
         case .ifBlock: "arrow.triangle.branch"  // 분기 경로 아이콘
         case .functionBlock: "curlybraces"            // 코드 함수 아이콘
+        case .callFunction: "play.square"             // 함수를 실행하는 버튼 모양
         case .collectItem: "diamond.fill"           // 맵 위 보석 마커와 동일한 다이아몬드 모양
         case .activateSwitch: "hand.tap.fill"          // 스위치를 누르는 동작을 표현
         }
@@ -76,6 +79,7 @@ nonisolated enum BlockType: String, Codable, CaseIterable {
         case .repeatBlock: "반복"
         case .ifBlock: "만약에"
         case .functionBlock: "함수"
+        case .callFunction: "부르기"
         case .collectItem: "획득"
         case .activateSwitch: "스위치"
         }
@@ -168,12 +172,15 @@ nonisolated extension Array where Element == Block {
     }
 
     /// 경로의 컨테이너에 넣을 수 있는 블럭 — 스테이지 팔레트 안에서 중첩 규칙을 적용
-    /// 규칙: function 중첩 불허, 동일 타입 중첩 불허, 증손자는 기본 동작 블럭만(4단 이상 중첩 방지)
+    /// 규칙: function 중첩 불허, 함수 몸통 안에서 함수 부르기 불허(자기 자신을 끝없이 부름), 동일 타입 중첩 불허,
+    /// 증손자는 기본 동작 블럭만(4단 이상 중첩 방지)
     func allowedChildTypes(at path: [Int], palette: [BlockType]) -> [BlockType] {
         guard let parent = block(at: path), parent.hasChildren else { return [] }
         let isDeepestContainer = path.count >= 3
+        let isInsideFunction = block(at: [path[0]])?.type == .functionBlock
         return palette.filter { type in
             if type == .functionBlock || type == parent.type { return false }
+            if type == .callFunction && isInsideFunction { return false }
             if isDeepestContainer && (type == .repeatBlock || type == .ifBlock) { return false }
             return true
         }
@@ -201,10 +208,20 @@ nonisolated extension Array where Element == Block {
         editBlock(at: path) { $0.ifCondition = condition }
     }
 
-    /// 경로의 repeat 블럭 반복 횟수 변경 (1~10회로 제한)
+    /// 경로의 repeat 블럭 반복 횟수 변경 (최소 1회, 최대 제한 없음)
     mutating func setRepeatCount(_ count: Int, at path: [Int]) {
         guard block(at: path)?.isRepeatBlock == true else { return }
-        editBlock(at: path) { $0.repeatCount = Swift.max(1, Swift.min(10, count)) }
+        editBlock(at: path) { $0.repeatCount = Swift.max(1, count) }
+    }
+
+    /// 최상위 함수 정의 블럭의 위치 — 함수는 코드에 하나만 둘 수 있음 (없으면 nil)
+    var functionIndex: Int? {
+        firstIndex { $0.type == .functionBlock }
+    }
+
+    /// 최상위에 이 블럭을 더 놓을 수 있는지 — 함수 정의는 하나만
+    func canAddTopLevel(_ type: BlockType) -> Bool {
+        type != .functionBlock || functionIndex == nil
     }
 
     /// 최상위 블럭 순서 변경 — destination은 옮기기 전 배열 기준의 삽입 위치 (0...count), 옮겼으면 true

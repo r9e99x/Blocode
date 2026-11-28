@@ -125,7 +125,7 @@ struct GameViewModelStateTests {
     @Test("실행 강조 — 자식이 실행 중이면 부모 행과 자식 경로가 함께 강조됨")
     func activeHighlight_followsCurrentPath() async throws {
         let (vm, gate) = makeGatedFixture()
-        vm.codeBlocks = [Block(type: .functionBlock, children: [Block(type: .moveForward)]), Block(type: .moveForward)]
+        vm.codeBlocks = [Block(type: .repeatBlock, repeatCount: 1, children: [Block(type: .moveForward)]), Block(type: .moveForward)]
         vm.run()
         await gate.yield(until: { gate.waitingCount == 1 })  // 첫 이동 애니메이션 도중
         #expect(vm.isRowActive(0))
@@ -141,7 +141,7 @@ struct GameViewModelStateTests {
     @Test("실패 강조 — 자식이 실패하면 부모 행과 자식 경로가 함께 표시됨")
     func failedHighlight_followsFailedPath() async throws {
         let vm = makeFixture()
-        vm.codeBlocks = [Block(type: .functionBlock, children: [Block(type: .collectItem)])]  // 보석이 없어 실패
+        vm.codeBlocks = [Block(type: .repeatBlock, repeatCount: 1, children: [Block(type: .collectItem)])]  // 보석이 없어 실패
         vm.run()
         try await waitUntilFinished(vm)
         #expect(vm.gameState == .failure)

@@ -223,7 +223,7 @@ extension BlockType {
         case .turnRight: Self.pastel(142/255, 176/255, 200/255) // 뮤트 블루
         case .repeatBlock: Self.pastel(168/255, 141/255, 192/255) // 라벤더
         case .ifBlock: Self.pastel(240/255, 196/255, 100/255) // 골든 옐로우
-        case .functionBlock: Self.pastel(94/255,  198/255, 208/255) // 틸
+        case .functionBlock, .callFunction: Self.pastel(94/255,  198/255, 208/255) // 틸 (부르기도 함수와 같은 색)
         case .collectItem: Self.pastel(0.42, 0.82, 0.68)          // 민트 보석 — AppColors.gemMint와 동일 톤
         case .activateSwitch: Self.pastel(0.93, 0.62, 0.28)          // 주황 스위치 — AppColors.switchOrange와 동일 톤
         }
