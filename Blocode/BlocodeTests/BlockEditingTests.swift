@@ -164,6 +164,9 @@ struct BlockEditingTests {
         vm.addBlock(.functionBlock)                 // 두 번째 함수는 무시
         vm.insertBlock(.functionBlock, at: 0)       // 끌어다 놓기도 무시
         #expect(types(vm.codeBlocks) == [.functionBlock])
+        #expect(vm.showsSingleFunctionNotice)       // 대신 안내 팝업
+        vm.dismissSingleFunctionNotice()
+        #expect(!vm.showsSingleFunctionNotice)
 
         vm.addChildBlock(.callFunction, at: [0])    // 자기 자신을 부르면 끝나지 않음
         vm.addChildBlock(.repeatBlock, at: [0])

@@ -214,10 +214,21 @@ struct StageView: View {
                     .transition(.opacity)
             }
 
+            // MARK: 함수를 하나 더 넣으려 할 때 — 함수는 코드에 하나만
+            if viewModel.showsSingleFunctionNotice {
+                ConfirmCardOverlay(icon: BlockType.functionBlock.iconName, title: "함수는 하나만 만들 수 있어요",
+                                   message: "이미 만든 함수에 블럭을 더 넣고, \"함수 부르기\"로 필요한 곳마다 불러 보세요.",
+                                   accentColor: BlockType.functionBlock.blockColor, primaryTitle: "알겠어요",
+                                   onPrimary: viewModel.dismissSingleFunctionNotice,
+                                   onDismiss: viewModel.dismissSingleFunctionNotice)
+                    .transition(.opacity)
+            }
+
             // MARK: 끌기 고스트 — 모든 UI 위에 렌더링 (손가락 위치는 이 층만 읽음)
             DragGhostLayer(drag: drag, viewModel: viewModel)
         }
         .animation(.spring(duration: 0.3), value: viewModel.gameState)
+        .animation(.easeInOut(duration: 0.2), value: viewModel.showsSingleFunctionNotice)
         .background(Color.appBackground.ignoresSafeArea())
         .onAppear { setupScene() }  // 씬 초기화
         // 실행 중에 화면을 떠나면 실행을 멈춤 — 실행 중엔 설정 버튼이 비활성이라 이 조건은 화면 이탈 때만 걸림

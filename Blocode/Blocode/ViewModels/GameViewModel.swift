@@ -198,9 +198,29 @@ final class GameViewModel {
         return true
     }
 
+    /// 함수를 하나 더 넣으려 할 때 띄우는 안내 팝업 표시 여부 — 화면(StageView)이 카드로 보여 줌
+    private(set) var showsSingleFunctionNotice = false
+
+    /// 안내 팝업 닫기
+    func dismissSingleFunctionNotice() {
+        showsSingleFunctionNotice = false
+    }
+
+    /// 최상위에 놓을 수 있는지 — 이미 함수가 있는데 또 넣으려 하면 안내 팝업을 띄우고 false
+    private func canPlaceTopLevel(_ type: BlockType) -> Bool {
+        guard codeBlocks.canAddTopLevel(type) else {
+            if canEdit {
+                SoundService.shared.play(.lockButton)
+                showsSingleFunctionNotice = true
+            }
+            return false
+        }
+        return true
+    }
+
     /// 팔레트에서 블럭 추가 — idle 상태일 때만 허용
     func addBlock(_ type: BlockType) {
-        guard isAllowed(type), codeBlocks.canAddTopLevel(type), beginEdit() else { return }
+        guard isAllowed(type), canPlaceTopLevel(type), beginEdit() else { return }
         let block = Block(type: type)
         codeBlocks.append(block)
         SoundService.shared.play(.blockAdd)
@@ -252,7 +272,7 @@ final class GameViewModel {
 
     /// 특정 위치에 블럭 삽입 (팔레트 드래그-앤-드롭 위치 지정 삽입)
     func insertBlock(_ type: BlockType, at index: Int) {
-        guard isAllowed(type), codeBlocks.canAddTopLevel(type), beginEdit() else { return }
+        guard isAllowed(type), canPlaceTopLevel(type), beginEdit() else { return }
         let block = Block(type: type)
         // 인덱스가 범위를 벗어나지 않도록 클램핑
         let safeIndex = min(max(0, index), codeBlocks.count)
