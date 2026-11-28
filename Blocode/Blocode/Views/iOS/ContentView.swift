@@ -21,7 +21,7 @@ struct ContentView: View {
     }
 
     @State private var tab: PhoneTab = .home
-    /// 탭별 내비게이션 스택 — 챕터 화면·게임·에디터를 올림
+    /// 탭별 내비게이션 스택 — 게임·에디터를 올림
     @State private var homePath = NavigationPath()
     @State private var chaptersPath = NavigationPath()
     @State private var myMapsPath = NavigationPath()
@@ -123,23 +123,18 @@ struct ContentView: View {
 // MARK: - 탭 안 화면 연결
 
 private extension View {
-    /// 탭 스택에 올라오는 화면 — 챕터 화면은 탭 막대를 그대로 두고, 게임·에디터는 숨겨 화면을 다 씀
+    /// 탭 스택에 올라오는 게임·에디터 화면 — 탭 막대를 숨겨 화면을 다 씀 (챕터는 지도 위 시트라 스택에 안 올라옴)
     func phoneDestinations(path: Binding<NavigationPath>,
                            onReturnToChapterList: @escaping (Int?) -> Void) -> some View {
         navigationDestination(for: AppRoute.self) { route in
-            switch route {
-            case .chapter(let number):
-                ChapterView(navPath: path, chapter: number)
-            default:
-                GameRouteDestination(route: route, navPath: path) {
-                    if case .stage(let chapter, _) = route {
-                        onReturnToChapterList(chapter)
-                    } else {
-                        onReturnToChapterList(nil)
-                    }
+            GameRouteDestination(route: route, navPath: path) {
+                if case .stage(let chapter, _) = route {
+                    onReturnToChapterList(chapter)
+                } else {
+                    onReturnToChapterList(nil)
                 }
-                .toolbar(.hidden, for: .tabBar)
             }
+            .toolbar(.hidden, for: .tabBar)
         }
     }
 }

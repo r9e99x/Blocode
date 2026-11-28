@@ -9,7 +9,7 @@ import Foundation
 import Observation
 
 // MARK: - ChapterViewModel
-/// 챕터 스테이지 목록 화면(ChapterView)의 상태/로직 담당 ViewModel
+/// 챕터 스테이지 목록(아이폰 챕터 시트·아이패드 챕터 화면·맥 챕터 화면)의 상태/로직 담당 ViewModel
 /// 스테이지 데이터 로딩, 진행 위치 계산, 스테이지별 잠금/클리어/별점을 보유한다.
 ///
 /// 잠금·별 계산이 ProgressService(@Observable)를 읽으므로 진행도가 바뀌면 화면이 자동으로 갱신됨

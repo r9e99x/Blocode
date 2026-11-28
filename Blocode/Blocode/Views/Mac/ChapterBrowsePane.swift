@@ -157,7 +157,7 @@ struct ChapterBrowsePane: View {
             VStack(alignment: .leading, spacing: 10) {
                 thumbnail(stage, locked: locked)
                 HStack(spacing: 10) {
-                    // 3D 스테이지 아이콘 — 아이폰 챕터 화면과 공용 부품
+                    // 3D 스테이지 아이콘 — 아이폰 챕터 시트와 공용 부품
                     StageIcon3D(number: stage.stageNumber, locked: locked, cleared: vm.isCleared(stage),
                                 isCurrent: vm.isCurrent(stage), chapterColor: chapterColor,
                                 metrics: .init(size: 28, cornerRadius: 9, lockFontSize: 11, checkFontSize: 12, numberFontSize: 13),

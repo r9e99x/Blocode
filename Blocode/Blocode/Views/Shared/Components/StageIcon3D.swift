@@ -9,7 +9,7 @@ import SwiftUI
 
 // MARK: - StageIcon3D
 /// 스테이지 상태를 보여주는 3D 아이콘 — 잠김(자물쇠) / 클리어(체크) / 그 외(번호)
-/// 아이폰 챕터 화면·맥/아이패드 챕터 브라우저 공용 (예전엔 세 화면에 같은 코드가 따로 있었음)
+/// 아이폰 챕터 시트·맥/아이패드 챕터 화면 공용 (예전엔 세 화면에 같은 코드가 따로 있었음)
 /// 화면마다 다른 것(크기, 눌림 표시, "지금 여기" 아래 뒷면 색)만 매개변수로 받고 나머지는 동일
 struct StageIcon3D: View {
 
@@ -29,10 +29,10 @@ struct StageIcon3D: View {
     let chapterColor: Color    // 열린 스테이지 앞면 색
     let metrics: Metrics
     var isPressed: Bool = false
-    /// 눌림 시 앞면에 검정 0.10을 덮을지 (아이폰 챕터 화면만 사용, 브라우저는 내려앉기만)
+    /// 눌림 시 앞면에 검정 0.10을 덮을지 (아이폰 챕터 시트만 사용, 맥·아이패드는 내려앉기만)
     var showsPressedOverlay: Bool = false
     /// "지금 여기" 아이콘의 아래 뒷면 색 — nil이면 다른 상태처럼 앞면 + 검정 0.28 (맥/아이패드 브라우저),
-    /// 아이폰 챕터 화면은 연한 탄색 단색을 넘김 (플랫폼별로 라이트 외형이 원래 달라 그대로 유지)
+    /// 아이폰 챕터 시트는 연한 탄색 단색을 넘김 (플랫폼별로 라이트 외형이 원래 달라 그대로 유지)
     var currentBottomBack: Color? = nil
 
     @Environment(\.colorScheme) private var colorScheme

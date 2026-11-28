@@ -42,34 +42,8 @@ struct LockInfoOverlay: View {
     }
 }
 
-// MARK: - RetryConfirmInfo
-/// "이미 클리어한 스테이지 다시 도전" 확인 팝업에 표시할 내용
-struct RetryConfirmInfo: Identifiable {
-    let id = UUID()
-    let title: String        // 팝업 제목
-    let message: String      // 안내 문구 (스테이지 이름 등)
-    let accentColor: Color   // 강조 색 (챕터 색)
-    let onRetry: () -> Void  // "다시 하기" 선택 시 실행할 동작
-}
-
-// MARK: - RetryConfirmOverlay
-/// 이미 클리어한 스테이지를 탭했을 때 재도전 여부를 물어보는 커스텀 팝업
-/// LockInfoOverlay와 같은 카드 — 시스템 기본 Alert 대신 앱 톤에 맞춘 UI로 통일
-struct RetryConfirmOverlay: View {
-
-    let info: RetryConfirmInfo
-    let onCancel: () -> Void  // "취소" 또는 배경 탭 시 닫기 콜백
-
-    var body: some View {
-        // 체크 아이콘 — 이미 클리어했음을 시각화 / "다시 하기"는 잠금 팝업 확인 버튼과 같은 3D 버튼(탭 효과음 포함)
-        ConfirmCardOverlay(icon: "checkmark", title: info.title, message: info.message,
-                           accentColor: info.accentColor, primaryTitle: "다시 하기",
-                           onPrimary: info.onRetry, onDismiss: onCancel, showsCancel: true)
-    }
-}
-
 // MARK: - ConfirmCardOverlay
-/// 잠금 안내·재도전 확인 팝업이 함께 쓰는 카드 — 딤 배경 + 아이콘 원 + 제목 + 안내 문구 + 3D 주 버튼 (+ 선택적 "취소")
+/// 잠금 안내·확인 팝업이 함께 쓰는 카드 — 딤 배경 + 아이콘 원 + 제목 + 안내 문구 + 3D 주 버튼 (+ 선택적 "취소")
 /// (예전엔 두 팝업에 같은 카드 코드가 따로 있었고, 재도전 "다시 하기"에만 탭 효과음이 빠져 있었음)
 struct ConfirmCardOverlay: View {
     let icon: String               // 원 안 아이콘 (SF Symbol)
@@ -149,7 +123,6 @@ struct ConfirmCardOverlay: View {
 
 // MARK: - 팝업 표시 공용 수정자
 /// 값이 있으면 화면 위에 팝업을 띄우고, 닫으면 애니메이션과 함께 값을 nil로 되돌림
-/// (예전엔 잠금 안내·재도전 확인이 같은 모양의 수정자를 따로 하나씩 가졌음)
 private struct ItemPopupModifier<Item, Popup: View>: ViewModifier {
     @Binding var item: Item?
     let popup: (_ item: Item, _ close: @escaping () -> Void) -> Popup
@@ -167,13 +140,6 @@ private struct ItemPopupModifier<Item, Popup: View>: ViewModifier {
 }
 
 extension View {
-    /// 재도전 확인 팝업 오버레이 — 값이 있으면 표시, 취소/배경 탭 시 nil로 닫힘
-    func retryConfirmPopup(_ retryConfirmInfo: Binding<RetryConfirmInfo?>) -> some View {
-        modifier(ItemPopupModifier(item: retryConfirmInfo) { info, close in
-            RetryConfirmOverlay(info: info, onCancel: close)
-        })
-    }
-
     /// 잠금 안내 팝업 오버레이 — 값이 있으면 표시, 확인/배경 탭 시 nil로 닫힘
     func lockInfoPopup(_ lockInfo: Binding<LockInfo?>) -> some View {
         modifier(ItemPopupModifier(item: lockInfo) { info, close in
@@ -190,17 +156,5 @@ extension View {
             accentColor: Color(red: 0.58, green: 0.76, blue: 0.88)
         ),
         onClose: {}
-    )
-}
-
-#Preview("재도전 확인") {
-    RetryConfirmOverlay(
-        info: RetryConfirmInfo(
-            title: "이미 클리어한 스테이지예요",
-            message: "첫 반복 — 다시 도전하겠습니까?",
-            accentColor: Color(red: 0.58, green: 0.76, blue: 0.88),
-            onRetry: {}
-        ),
-        onCancel: {}
     )
 }

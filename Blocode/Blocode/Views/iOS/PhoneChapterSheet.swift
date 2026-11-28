@@ -22,7 +22,7 @@ struct PhoneChapterSheet: View {
     @State private var selectedStage: Int?
     @State private var lockInfo: LockInfo?
 
-    /// "지금 여기" 아이콘 아래 뒷면 색 — 아이폰 챕터 화면과 같은 값
+    /// "지금 여기" 아이콘 아래 뒷면 색 — 예전 아이폰 챕터 화면과 같은 값
     private static let currentBottomBack = Color.dynamic(light: (195/255, 189/255, 172/255),
                                                          dark: (56/255, 61/255, 76/255))
 
@@ -127,7 +127,7 @@ struct PhoneChapterSheet: View {
             }
         } label: { isPressed in
             HStack(spacing: 14) {
-                // 3D 스테이지 아이콘 — 아이폰 챕터 화면과 같은 부품·모양
+                // 3D 스테이지 아이콘 — 예전 아이폰 챕터 화면과 같은 부품·모양
                 StageIcon3D(number: stage.stageNumber, locked: locked, cleared: cleared, isCurrent: isCurrent,
                             chapterColor: chapterColor,
                             metrics: .init(size: 44, cornerRadius: 15, lockFontSize: 16, checkFontSize: 18, numberFontSize: 22),
