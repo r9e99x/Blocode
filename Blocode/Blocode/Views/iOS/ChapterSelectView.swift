@@ -69,6 +69,9 @@ struct ChapterSelectView: View {
                     pendingStage = (chapter, stage)
                     presentedChapter = nil  // 시트를 닫고, 다 닫히면 onDismiss에서 게임을 올림
                 }
+                // 시트가 떠 있는 채 지도에서 다른 장을 누르면 시트 내용(ViewModel)을 새 챕터로 다시 만듦
+                // (없으면 번호만 바뀌고 스테이지 목록은 이전 챕터로 남았음)
+                .id(chapter)
             }
         }
         // 게임에서 지도로 돌아오면 방금 하던 챕터 시트를 다시 열어 줌

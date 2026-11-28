@@ -21,6 +21,8 @@ struct PhoneChapterSheet: View {
     @State private var vm: ChapterViewModel
     @State private var selectedStage: Int?
     @State private var lockInfo: LockInfo?
+    /// 세로 공간 — 가로 화면(compact)에선 아래 미리보기 줄을 빼서 스테이지 목록 칸을 넓힘
+    @Environment(\.verticalSizeClass) private var verticalSizeClass
 
     /// "지금 여기" 아이콘 아래 뒷면 색 — 예전 아이폰 챕터 화면과 같은 값
     private static let currentBottomBack = Color.dynamic(light: (195/255, 189/255, 172/255),
@@ -164,22 +166,25 @@ struct PhoneChapterSheet: View {
     private func startBar(_ stage: Stage) -> some View {
         let locked = vm.isLocked(stage)
         return VStack(spacing: 12) {
-            HStack(spacing: 12) {
-                // 실제 게임과 같은 SpriteKit 미리보기 — 고른 스테이지가 바뀌면 새로 그림
-                StagePreviewMapView(stage: stage)
-                    .id(stage.id)
-                    .frame(width: 64, height: 64)
-                VStack(alignment: .leading, spacing: 3) {
-                    Text("STAGE \(chapterNumber)-\(stage.stageNumber)")
-                        .font(.system(size: 11, weight: .semibold)).foregroundStyle(.secondary).tracking(1)
-                    Text(stage.name)
-                        .font(.system(size: 16, weight: .bold))
-                        .lineLimit(1)
-                    Label("\(stage.starThresholds.threeStar)블럭 이하면 별 3개", systemImage: "star.fill")
-                        .font(.system(size: 11, weight: .medium))
-                        .foregroundStyle(.secondary)
+            // 가로 화면은 높이가 모자라 미리보기 줄을 빼고 시작 버튼만 (목록이 두 줄 반밖에 안 보였음)
+            if verticalSizeClass != .compact {
+                HStack(spacing: 12) {
+                    // 실제 게임과 같은 SpriteKit 미리보기 — 고른 스테이지가 바뀌면 새로 그림
+                    StagePreviewMapView(stage: stage)
+                        .id(stage.id)
+                        .frame(width: 64, height: 64)
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text("STAGE \(chapterNumber)-\(stage.stageNumber)")
+                            .font(.system(size: 11, weight: .semibold)).foregroundStyle(.secondary).tracking(1)
+                        Text(stage.name)
+                            .font(.system(size: 16, weight: .bold))
+                            .lineLimit(1)
+                        Label("\(stage.starThresholds.threeStar)블럭 이하면 별 3개", systemImage: "star.fill")
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundStyle(.secondary)
+                    }
+                    Spacer(minLength: 0)
                 }
-                Spacer(minLength: 0)
             }
             // 시작 버튼 — 공용 SolidThreeDButton + 눌림 효과 (잠긴 스테이지면 회색)
             PressableButton {

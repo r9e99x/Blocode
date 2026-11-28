@@ -238,7 +238,7 @@ struct LearningLibraryView: View {
                         cardTexts(card, unlocked: unlocked)
                         Spacer(minLength: 0)
                     }
-                    .frame(minHeight: 112, alignment: .topLeading)
+                    .frame(minHeight: 80, alignment: .topLeading)  // 요약이 한 줄인 카드도 두 줄 카드와 높이가 비슷하게
                 } else {
                     HStack(spacing: 12) {
                         cardIcon(unlocked)

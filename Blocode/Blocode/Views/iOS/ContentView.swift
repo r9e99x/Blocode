@@ -44,6 +44,7 @@ struct ContentView: View {
                                   showChapters: { showChapters(nil) })
                         .phoneDestinations(path: $homePath, onReturnToChapterList: returnToChapters)
                 }
+                .tint(.accentColor)
             }
 
             Tab("챕터", systemImage: "map", value: PhoneTab.chapters) {
@@ -52,6 +53,7 @@ struct ContentView: View {
                     ChapterSelectView(navPath: $chaptersPath, presentedChapter: $chapterSheet, showsHomeButton: false)
                         .phoneDestinations(path: $chaptersPath, onReturnToChapterList: returnToChapters)
                 }
+                .tint(.accentColor)
             }
 
             Tab("내 맵", systemImage: homeVM.isUnlocked(.customMaps) ? "pencil.and.ruler" : "lock.fill",
@@ -64,12 +66,16 @@ struct ContentView: View {
                     )
                     .phoneDestinations(path: $myMapsPath, onReturnToChapterList: returnToChapters)
                 }
+                .tint(.accentColor)
             }
 
             Tab("개념", systemImage: "books.vertical", value: PhoneTab.library) {
                 LearningLibraryView()
+                    .tint(.accentColor)
             }
         }
+        // 탭 막대 선택 색 — 앱 강조 민트("solution." 글자색, 진갈색은 선택 안 된 검은 아이콘과 구분이 안 됐음), 탭 안 화면은 .tint(.accentColor)로 시스템 기본 색 유지
+        .tint(Color.accentMint)
         // 복습 알림을 눌렀으면 오늘의 퍼즐로 (앱이 꺼진 채 눌렀을 때는 화면이 준비된 뒤 onAppear에서 처리)
         .onAppear { openPendingDailyPuzzle() }
         .onChange(of: homeVM.hasPendingDailyPuzzle) { _, _ in openPendingDailyPuzzle() }
@@ -87,6 +93,11 @@ struct ContentView: View {
             set: { newTab in
                 if newTab == .myMaps && !homeVM.isUnlocked(.customMaps) {
                     $lockInfo.present(homeVM.lockHint(for: .customMaps))
+                    // 탭 막대는 값을 안 바꿔도 눌린 탭으로 먼저 넘어가 버림 — 잠깐 넘겼다가 바로 원래 탭으로 되돌려 막대도 따라오게
+                    // (값을 그대로 두면 바뀐 게 없어 다시 그리지 않아서, 막대만 "내 맵"에 머물렀음)
+                    let previous = tab
+                    tab = newTab
+                    Task { @MainActor in tab = previous }
                 } else {
                     if newTab != tab { SoundService.shared.play(.buttonTap) }  // 다른 버튼들과 같은 탭 효과음
                     tab = newTab

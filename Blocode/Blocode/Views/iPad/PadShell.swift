@@ -43,6 +43,7 @@ struct PadShell: View {
                                 showChapters: showChapters)
                         .padGameDestinations(path: $homePath, onReturnToChapterList: returnToChapters)
                 }
+                .tint(.accentColor)
             }
 
             Tab("챕터", systemImage: "square.grid.2x2", value: PadTab.chapters) {
@@ -50,6 +51,7 @@ struct PadShell: View {
                     chaptersContent
                         .padGameDestinations(path: $chaptersPath, onReturnToChapterList: returnToChapters)
                 }
+                .tint(.accentColor)
             }
 
             Tab("나만의 맵", systemImage: homeVM.isUnlocked(.customMaps) ? "pencil.and.ruler" : "lock.fill",
@@ -63,19 +65,24 @@ struct PadShell: View {
                     .background(Color.appBackground.ignoresSafeArea())
                     .padGameDestinations(path: $myMapsPath, onReturnToChapterList: returnToChapters)
                 }
+                .tint(.accentColor)
             }
 
             Tab("개념 카드", systemImage: "books.vertical", value: PadTab.library) {
                 LearningLibraryView()
                     .background(Color.appBackground.ignoresSafeArea())
+                    .tint(.accentColor)
             }
 
             Tab("설정", systemImage: "gearshape", value: PadTab.settings) {
                 SettingsView(isEmbedded: true)
                     .background(Color.appBackground.ignoresSafeArea())
+                    .tint(.accentColor)
             }
         }
         .tabViewStyle(.sidebarAdaptable)
+        // 탭 막대·사이드바 선택 색 — 앱 강조 민트("solution." 글자색), 탭 안 화면은 .tint(.accentColor)로 시스템 기본 색 유지
+        .tint(Color.accentMint)
         // 사이드바로 펼쳤을 때 위에는 로고, 아래에는 별·연속 요약 (맥 사이드바와 같은 내용)
         .tabViewSidebarHeader { sidebarLogo }
         .tabViewSidebarBottomBar { sidebarStats }
@@ -95,6 +102,11 @@ struct PadShell: View {
             set: { newTab in
                 if newTab == .myMaps && !homeVM.isUnlocked(.customMaps) {
                     $lockInfo.present(homeVM.lockHint(for: .customMaps))
+                    // 탭 막대는 값을 안 바꿔도 눌린 탭으로 먼저 넘어가 버림 — 잠깐 넘겼다가 바로 원래 탭으로 되돌려 막대도 따라오게
+                    // (값을 그대로 두면 바뀐 게 없어 다시 그리지 않아서, 막대만 "내 맵"에 머물렀음)
+                    let previous = tab
+                    tab = newTab
+                    Task { @MainActor in tab = previous }
                 } else {
                     if newTab != tab { SoundService.shared.play(.buttonTap) }  // 다른 버튼들과 같은 탭 효과음
                     tab = newTab

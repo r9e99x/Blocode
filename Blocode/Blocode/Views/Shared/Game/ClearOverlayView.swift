@@ -34,6 +34,10 @@ struct ClearOverlayView: View {
     @State private var contentVisible = false                   // 메인 콘텐츠 표시 여부
     @State private var buttonsVisible = false                   // 버튼 영역 표시 여부
     @State private var showCodeView = false                     // "코드로 보기" 시트 표시 여부
+    #if os(iOS)
+    /// 세로 공간 — 아이폰 가로(compact)면 두 칸 레이아웃
+    @Environment(\.verticalSizeClass) private var verticalSizeClass
+    #endif
 
     // MARK: - Body
 
@@ -60,16 +64,11 @@ struct ClearOverlayView: View {
                 .contentShape(Rectangle())
                 .onTapGesture {}
 
-            Group {
-                if stars == 3 {
-                    threeStarLayout
-                } else {
-                    lowStarLayout
-                }
+            // 들어가면 내용 높이만큼, 그래도 화면보다 길면(작은 기기 가로 등) 시트 안에서 스크롤
+            ViewThatFits(in: .vertical) {
+                phoneSheetContent
+                ScrollView(showsIndicators: false) { phoneSheetContent }
             }
-            .padding(.top, 8)
-            // 늘어나는 빈칸(Spacer)을 최소 크기로 — 시트 높이가 내용만큼
-            .fixedSize(horizontal: false, vertical: true)
             .frame(maxWidth: .infinity)
             .background(
                 UnevenRoundedRectangle(topLeadingRadius: 28, topTrailingRadius: 28)
@@ -80,6 +79,21 @@ struct ClearOverlayView: View {
             .sheet(isPresented: $showCodeView) { CodeViewSheet(blocks: codeBlocks) }
         }
         .task { await animateIn() }  // 화면 등장 시 순차 애니메이션 시작 — 닫히면 남은 단계는 자동 취소
+    }
+
+    /// 아이폰 시트 안 내용 — 늘어나는 빈칸(Spacer)을 최소 크기로 줄여 높이가 내용만큼
+    private var phoneSheetContent: some View {
+        Group {
+            if verticalSizeClass == .compact {
+                phoneLandscapeLayout  // 가로 — 두 칸으로 나눠 스크롤 없이 한 화면에
+            } else if stars == 3 {
+                threeStarLayout
+            } else {
+                lowStarLayout
+            }
+        }
+        .padding(.top, 8)
+        .fixedSize(horizontal: false, vertical: true)
     }
     #endif
 
@@ -216,89 +230,119 @@ struct ClearOverlayView: View {
             Spacer(minLength: 0)
 
             // 스테이지 레이블 (예: "STAGE 1-5 CLEARED")
-            Text("\(heading ?? "STAGE \(stageLabel)") CLEARED")
-                .font(.system(size: 12, weight: .semibold))
-                .foregroundStyle(.secondary)
-                .tracking(2.5)
+            threeStarHeading
                 .opacity(contentVisible ? 1 : 0)
 
             // 메인 메시지 — "beautiful solution."
-            VStack(spacing: -6) {
-                Text("beautiful")
-                    .font(.custom("Georgia-Italic", size: 50))
-                    .foregroundStyle(Color.primary)
-                Text("solution.")
-                    .font(.custom("Georgia-Italic", size: 50))
-                    .foregroundStyle(Color.accentMint)  // 민트 그린
-            }
-            .multilineTextAlignment(.center)
-            .padding(.top, 6)
-            .opacity(contentVisible ? 1 : 0)
-            .offset(y: contentVisible ? 0 : 12)  // 아래에서 올라오는 효과
+            threeStarMessage
+                .padding(.top, 6)
+                .opacity(contentVisible ? 1 : 0)
+                .offset(y: contentVisible ? 0 : 12)  // 아래에서 올라오는 효과
 
             // 캐릭터 + 컨페티 영역
-            ZStack {
-                confettiView   // 배경 컨페티 도트
-                characterIcon  // 캐릭터 아이콘
-            }
-            .frame(height: Self.characterAreaHeight)
-            .padding(.vertical, Self.characterAreaPadding)
-            .opacity(contentVisible ? 1 : 0)
+            threeStarCelebration
+                .frame(height: Self.characterAreaHeight)
+                .padding(.vertical, Self.characterAreaPadding)
+                .opacity(contentVisible ? 1 : 0)
 
             // 별 3개 행 — 순차적으로 등장
-            HStack(spacing: 14) {
-                ForEach(0..<3, id: \.self) { i in starView(index: i) }
-            }
-            .padding(.bottom, 28)
+            starsRow
+                .padding(.bottom, 28)
 
             // 스탯 카드 3개 (블럭 수 / 시간 / 도전 횟수)
-            HStack(spacing: 10) {
-                statCard(label: "BLOCKS", value: "\(blockCount)", sub: "최적")
-                statCard(label: "TIME",   value: formattedTime,   sub: "걸린 시간")
-                statCard(label: "TRIES",  value: "\(attemptCount)", sub: "도전 횟수")
-            }
-            .padding(.horizontal, 24)
-            .opacity(contentVisible ? 1 : 0)
-            .offset(y: contentVisible ? 0 : 10)
+            threeStarStats
+                .padding(.horizontal, 24)
+                .opacity(contentVisible ? 1 : 0)
+                .offset(y: contentVisible ? 0 : 10)
 
             contentButtonGap
 
             // 하단 버튼 영역
-            VStack(spacing: 14) {
-                // 다음 스테이지 / 챕터 목록 버튼
-                Button {
-                    SoundService.shared.play(.buttonTap)
-                    onNext()
-                } label: {
-                    Text(isLastStage ? lastStageButtonTitle : "다음 스테이지로")
-                        .font(.system(size: 17, weight: .bold))
-                        .foregroundStyle(.white)
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 56)
-                        .background(Color.slateButtonFace)  // 라이트: 기존 다크 브라운 / 다크: 슬레이트
-                        .clipShape(RoundedRectangle(cornerRadius: 28))
-                }
-                .buttonStyle(.plain)
-
-                // 다시 도전 버튼 (텍스트 버튼)
-                Button {
-                    SoundService.shared.play(.buttonTap)
-                    onRetry()
-                } label: {
-                    Text("다시 도전하기")
-                        .font(.system(size: 15))
-                        .foregroundStyle(.secondary)
-                }
-                .buttonStyle(.plain)
-
-                codeViewButton
-            }
-            .padding(.horizontal, 24)
-            .padding(.bottom, 40)
-            .opacity(buttonsVisible ? 1 : 0)
-            .offset(y: buttonsVisible ? 0 : 8)  // 아래에서 올라오는 효과
+            threeStarButtons
+                .padding(.horizontal, 24)
+                .padding(.bottom, 40)
+                .opacity(buttonsVisible ? 1 : 0)
+                .offset(y: buttonsVisible ? 0 : 8)  // 아래에서 올라오는 효과
 
             if isPadIdiom { Spacer(minLength: 0) }  // 아이패드 — 위 Spacer와 짝을 이뤄 가운데 정렬
+        }
+    }
+
+    /// "STAGE 1-5 CLEARED"
+    private var threeStarHeading: some View {
+        Text("\(heading ?? "STAGE \(stageLabel)") CLEARED")
+            .font(.system(size: 12, weight: .semibold))
+            .foregroundStyle(.secondary)
+            .tracking(2.5)
+    }
+
+    /// "beautiful solution." 두 줄
+    private var threeStarMessage: some View {
+        VStack(spacing: -6) {
+            Text("beautiful")
+                .font(.custom("Georgia-Italic", size: 50))
+                .foregroundStyle(Color.primary)
+            Text("solution.")
+                .font(.custom("Georgia-Italic", size: 50))
+                .foregroundStyle(Color.accentMint)  // 민트 그린
+        }
+        .multilineTextAlignment(.center)
+    }
+
+    /// 캐릭터 + 컨페티 — 높이는 쓰는 쪽에서 정함
+    private var threeStarCelebration: some View {
+        ZStack {
+            confettiView   // 배경 컨페티 도트
+            characterIcon  // 캐릭터 아이콘
+        }
+    }
+
+    /// 별 3개 줄 (별 1~2개 결과 카드 안에서도 같은 모양)
+    private var starsRow: some View {
+        HStack(spacing: 14) {
+            ForEach(0..<3, id: \.self) { i in starView(index: i) }
+        }
+    }
+
+    /// 블럭 수 / 시간 / 도전 횟수 카드 3개
+    private var threeStarStats: some View {
+        HStack(spacing: 10) {
+            statCard(label: "BLOCKS", value: "\(blockCount)", sub: "최적")
+            statCard(label: "TIME",   value: formattedTime,   sub: "걸린 시간")
+            statCard(label: "TRIES",  value: "\(attemptCount)", sub: "도전 횟수")
+        }
+    }
+
+    /// 다음 스테이지(챕터 목록) / 다시 도전하기 / 코드로 보기
+    private var threeStarButtons: some View {
+        VStack(spacing: 14) {
+            // 다음 스테이지 / 챕터 목록 버튼
+            Button {
+                SoundService.shared.play(.buttonTap)
+                onNext()
+            } label: {
+                Text(isLastStage ? lastStageButtonTitle : "다음 스테이지로")
+                    .font(.system(size: 17, weight: .bold))
+                    .foregroundStyle(.white)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 56)
+                    .background(Color.slateButtonFace)  // 라이트: 기존 다크 브라운 / 다크: 슬레이트
+                    .clipShape(RoundedRectangle(cornerRadius: 28))
+            }
+            .buttonStyle(.plain)
+
+            // 다시 도전 버튼 (텍스트 버튼)
+            Button {
+                SoundService.shared.play(.buttonTap)
+                onRetry()
+            } label: {
+                Text("다시 도전하기")
+                    .font(.system(size: 15))
+                    .foregroundStyle(.secondary)
+            }
+            .buttonStyle(.plain)
+
+            codeViewButton
         }
     }
 
@@ -309,10 +353,7 @@ struct ClearOverlayView: View {
 
             // 상단 — 스테이지 레이블 + 닫기 버튼
             HStack {
-                Text("\(heading ?? "STAGE \(stageLabel)")  —  \(stageName)")
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundStyle(.secondary)
-                    .tracking(0.5)
+                lowStarHeading
                 Spacer()
                 // x 버튼으로 닫기 — 맥·아이패드는 화면 우상단에 별도 고정되므로 여기선 숨김(중복 방지)
                 #if !os(macOS)
@@ -326,29 +367,10 @@ struct ClearOverlayView: View {
             Spacer(minLength: 0)
 
             // 메인 메시지 — 별 수에 따라 다른 메시지
-            VStack(spacing: 8) {
-                Text(stars == 2 ? "거의 다!" : "클리어!")
-                    .font(.custom("Georgia-Italic", size: 52))
-                    .foregroundStyle(Color.primary)
-
-                Text(stars == 2
-                     ? "한 번만 더 — 별 3개에 도전해봐요"
-                     : "조금 더 줄여봐요 — 별 2개까지 파이팅")
-                    .font(.system(size: 14))
-                    .foregroundStyle(.secondary)
-
-                // 보석을 다 못 모아서 별 3개를 놓쳤을 때만 추가 안내 (기믹 없는 스테이지는 itemHint가 항상 nil이라 무해)
-                if let itemHint {
-                    Text(itemHint)
-                        .font(.system(size: 13, weight: .medium))
-                        .foregroundStyle(Color.accentMint)
-                        .padding(.top, 2)
-                }
-            }
-            .multilineTextAlignment(.center)
-            .padding(.horizontal, 28)
-            .opacity(contentVisible ? 1 : 0)
-            .offset(y: contentVisible ? 0 : 12)
+            lowStarMessage
+                .padding(.horizontal, 28)
+                .opacity(contentVisible ? 1 : 0)
+                .offset(y: contentVisible ? 0 : 12)
 
             // 결과 카드 (별 + 블럭수 + 시간)
             lowStarCard
@@ -361,43 +383,8 @@ struct ClearOverlayView: View {
 
             // 하단 버튼 2개 (+ 코드로 보기)
             VStack(spacing: 14) {
-            codeViewButton
-            HStack(spacing: 12) {
-                // 왼쪽 — 다시 (라이트: 기존 다크 브라운 / 다크: 슬레이트)
-                Button {
-                    SoundService.shared.play(.buttonTap)
-                    onRetry()
-                } label: {
-                    HStack(spacing: 6) {
-                        Image(systemName: "arrow.counterclockwise")
-                            .font(.system(size: 14, weight: .semibold))
-                        Text("다시")
-                            .font(.system(size: 16, weight: .bold))
-                    }
-                    .foregroundStyle(.white)
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 54)
-                    .background(Color.slateButtonFace)
-                    .clipShape(RoundedRectangle(cornerRadius: 27))
-                }
-                .buttonStyle(.plain)
-
-                // 오른쪽 — 넘어가기 / 마무리 (마지막 스테이지면 onFinish로 스테이지 목록 이동)
-                Button {
-                    SoundService.shared.play(.buttonTap)
-                    if isLastStage { onFinish() } else { onNext() }
-                } label: {
-                    Text(isLastStage ? "마무리" : "넘어가기")
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundStyle(.primary)
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 54)
-                        .background(Color.statCardBackground)  // 라이트 #fbf6e8 / 다크 미드 남색 (기존 값과 동일)
-                        .clipShape(RoundedRectangle(cornerRadius: 27))
-                        .shadow(color: Color.black.opacity(0.06), radius: 8, x: 0, y: 2)
-                }
-                .buttonStyle(.plain)
-            }
+                codeViewButton
+                lowStarButtons
             }
             .padding(.horizontal, 24)
             .padding(.bottom, 40)
@@ -407,6 +394,139 @@ struct ClearOverlayView: View {
             if isPadIdiom { Spacer(minLength: 0) }  // 아이패드 — 위 Spacer와 짝을 이뤄 가운데 정렬
         }
     }
+
+    /// "STAGE 1-5  —  지그재그"
+    private var lowStarHeading: some View {
+        Text("\(heading ?? "STAGE \(stageLabel)")  —  \(stageName)")
+            .font(.system(size: 12, weight: .medium))
+            .foregroundStyle(.secondary)
+            .tracking(0.5)
+    }
+
+    /// "거의 다!" / "클리어!" + 안내 문구 (+ 보석 안내)
+    private var lowStarMessage: some View {
+        VStack(spacing: 8) {
+            Text(stars == 2 ? "거의 다!" : "클리어!")
+                .font(.custom("Georgia-Italic", size: 52))
+                .foregroundStyle(Color.primary)
+
+            Text(stars == 2
+                 ? "한 번만 더 — 별 3개에 도전해봐요"
+                 : "조금 더 줄여봐요 — 별 2개까지 파이팅")
+                .font(.system(size: 14))
+                .foregroundStyle(.secondary)
+
+            // 보석을 다 못 모아서 별 3개를 놓쳤을 때만 추가 안내 (기믹 없는 스테이지는 itemHint가 항상 nil이라 무해)
+            if let itemHint {
+                Text(itemHint)
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundStyle(Color.accentMint)
+                    .padding(.top, 2)
+            }
+        }
+        .multilineTextAlignment(.center)
+    }
+
+    /// 다시(왼쪽) / 넘어가기·마무리(오른쪽)
+    private var lowStarButtons: some View {
+        HStack(spacing: 12) {
+            // 왼쪽 — 다시 (라이트: 기존 다크 브라운 / 다크: 슬레이트)
+            Button {
+                SoundService.shared.play(.buttonTap)
+                onRetry()
+            } label: {
+                HStack(spacing: 6) {
+                    Image(systemName: "arrow.counterclockwise")
+                        .font(.system(size: 14, weight: .semibold))
+                    Text("다시")
+                        .font(.system(size: 16, weight: .bold))
+                }
+                .foregroundStyle(.white)
+                .frame(maxWidth: .infinity)
+                .frame(height: 54)
+                .background(Color.slateButtonFace)
+                .clipShape(RoundedRectangle(cornerRadius: 27))
+            }
+            .buttonStyle(.plain)
+
+            // 오른쪽 — 넘어가기 / 마무리 (마지막 스테이지면 onFinish로 스테이지 목록 이동)
+            Button {
+                SoundService.shared.play(.buttonTap)
+                if isLastStage { onFinish() } else { onNext() }
+            } label: {
+                Text(isLastStage ? "마무리" : "넘어가기")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(.primary)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 54)
+                    .background(Color.statCardBackground)  // 라이트 #fbf6e8 / 다크 미드 남색 (기존 값과 동일)
+                    .clipShape(RoundedRectangle(cornerRadius: 27))
+                    .shadow(color: Color.black.opacity(0.06), radius: 8, x: 0, y: 2)
+            }
+            .buttonStyle(.plain)
+        }
+    }
+
+    // MARK: - 아이폰 가로 레이아웃
+
+    #if os(iOS)
+    /// 아이폰 가로 — 세로가 짧아 한 줄로 쌓으면 화면 밖으로 넘치므로 두 칸으로 나눔
+    /// 위: 스테이지 레이블 + X / 왼쪽: 축하 문구·캐릭터·별 / 오른쪽: 기록 카드·버튼 (색·버튼 모양은 세로와 같음)
+    private var phoneLandscapeLayout: some View {
+        VStack(spacing: 0) {
+            HStack {
+                if stars == 3 { threeStarHeading } else { lowStarHeading }
+                Spacer()
+                xButton
+            }
+            .padding(.top, 14)
+            .opacity(contentVisible ? 1 : 0)
+
+            HStack(alignment: .center, spacing: 32) {
+                // 왼쪽 칸 — 결과 문구
+                VStack(spacing: 0) {
+                    if stars == 3 {
+                        threeStarMessage
+                            .opacity(contentVisible ? 1 : 0)
+                            .offset(y: contentVisible ? 0 : 12)
+                        threeStarCelebration
+                            .frame(height: 96)
+                            .padding(.vertical, 6)  // 컨페티 도트가 위 문구·아래 별에 닿지 않게
+                            .opacity(contentVisible ? 1 : 0)
+                        starsRow
+                    } else {
+                        lowStarMessage
+                            .opacity(contentVisible ? 1 : 0)
+                            .offset(y: contentVisible ? 0 : 12)
+                        codeViewButton
+                            .padding(.top, 20)
+                            .opacity(buttonsVisible ? 1 : 0)
+                    }
+                }
+                .frame(maxWidth: .infinity)
+
+                // 오른쪽 칸 — 기록과 버튼
+                VStack(spacing: 20) {
+                    Group {
+                        if stars == 3 { threeStarStats } else { lowStarCard }
+                    }
+                    .opacity(contentVisible ? 1 : 0)
+                    .offset(y: contentVisible ? 0 : 10)
+
+                    Group {
+                        if stars == 3 { threeStarButtons } else { lowStarButtons }
+                    }
+                    .opacity(buttonsVisible ? 1 : 0)
+                    .offset(y: buttonsVisible ? 0 : 8)
+                }
+                .frame(maxWidth: .infinity)
+            }
+            .padding(.top, 8)
+            .padding(.bottom, 16)
+        }
+        .padding(.horizontal, 24)
+    }
+    #endif
 
     /// "코드로 보기" 텍스트 버튼 — 내 풀이가 있을 때만 (다시 도전하기와 같은 보조 버튼 톤)
     @ViewBuilder
